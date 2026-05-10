@@ -2,9 +2,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 # from fastapi_template.core import Token
-from fastapi_template.schemas import UserInfo, TokenResponse
-from fastapi_template import factory
-from fastapi_template.factory import (
+from docmesh_doc.schemas import UserInfo, TokenResponse
+from docmesh_doc import factory
+from docmesh_doc.factory import (
     create_app,
 )
 

@@ -1,8 +1,8 @@
 import pytest
 
-from fastapi_template.core.exceptions import AuthError
-from fastapi_template.core.security import User
-from fastapi_template.dependencies.security import require_permissions
+from docmesh_doc.core.exceptions import AuthError
+from docmesh_doc.core.security import User
+from docmesh_doc.dependencies.security import require_permissions
 
 
 def _build_user(roles: set[str], scopes: set[str]) -> User:

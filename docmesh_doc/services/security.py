@@ -1,9 +1,9 @@
 from functools import lru_cache
 import httpx
 
-from fastapi_template.core.config import KeycloakConfig, AuthConfig
-from fastapi_template.core.exceptions import AuthError
-from fastapi_template.core.security import KeycloakAuthProvider, Token
+from docmesh_doc.core.config import KeycloakConfig, AuthConfig
+from docmesh_doc.core.exceptions import AuthError
+from docmesh_doc.core.security import KeycloakAuthProvider, Token
 
 
 # @lru_cache(maxsize=1)

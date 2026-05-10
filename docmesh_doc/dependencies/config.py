@@ -1,6 +1,6 @@
 from fastapi import Request
 
-from fastapi_template.core.config import ServiceConfig, EnvSettings
+from docmesh_doc.core.config import ServiceConfig, EnvSettings
 
 
 def get_env(request: Request) -> EnvSettings:

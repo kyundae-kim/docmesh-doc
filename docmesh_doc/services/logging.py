@@ -1,5 +1,5 @@
-from fastapi_template.core import logging
-from fastapi_template.core.config import LoggingConfig, LoggingLevel
+from docmesh_doc.core import logging
+from docmesh_doc.core.config import LoggingConfig, LoggingLevel
 
 
 def setup_logging(config: LoggingConfig):

@@ -1,5 +1,5 @@
 [project]
-name = "fastapi-template"
+name = "DocMesh_Doc"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -11,13 +11,13 @@ dependencies = [
 ]
 
 [tool.fastapi]
-entrypoint = "fastapi_template.main:app"
+entrypoint = "docmesh_doc.main:app"
 
 [tool.ruff]
 line-length = 88
 indent-width = 4
 
 [tool.pytest.ini_options]
-testpaths = ["test_fastapi_template"]
+testpaths = ["test_docmesh_doc"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]

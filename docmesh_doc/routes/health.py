@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends
 import httpx
 import logging
 
-from fastapi_template.dependencies.config import get_config, ServiceConfig
-from fastapi_template.schemas import HealthCheckResponse
+from docmesh_doc.dependencies.config import get_config, ServiceConfig
+from docmesh_doc.schemas import HealthCheckResponse
 
 
 logger = logging.getLogger(__name__)

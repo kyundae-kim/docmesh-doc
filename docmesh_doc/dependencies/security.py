@@ -4,10 +4,10 @@ from fastapi.security import OAuth2PasswordBearer
 from jwt import InvalidTokenError
 import logging
 
-from fastapi_template.core.exceptions import AuthError
-from fastapi_template.core.security import User, KeycloakAuthProvider
-from fastapi_template.services.security import decode_token
-from fastapi_template.dependencies.config import get_config, ServiceConfig
+from docmesh_doc.core.exceptions import AuthError
+from docmesh_doc.core.security import User, KeycloakAuthProvider
+from docmesh_doc.services.security import decode_token
+from docmesh_doc.dependencies.config import get_config, ServiceConfig
 
 
 logger = logging.getLogger(__name__)

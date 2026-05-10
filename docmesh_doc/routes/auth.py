@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, Form
 import logging
 
-from fastapi_template.schemas import TokenResponse, UserInfo
-from fastapi_template.dependencies.security import (
+from docmesh_doc.schemas import TokenResponse, UserInfo
+from docmesh_doc.dependencies.security import (
     get_current_user,
     require_permissions,
     require_roles,
@@ -10,7 +10,7 @@ from fastapi_template.dependencies.security import (
     get_auth_provider,
     User,
 )
-from fastapi_template.services.security import authenticate, refresh_token
+from docmesh_doc.services.security import authenticate, refresh_token
 
 logger = logging.getLogger(__name__)
 router = APIRouter()

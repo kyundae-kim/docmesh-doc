@@ -1,7 +1,7 @@
 import pytest
 
-from fastapi_template.core.config import EnvSettings, load_config
-from fastapi_template.core.security import (
+from docmesh_doc.core.config import EnvSettings, load_config
+from docmesh_doc.core.security import (
     User,
     KeycloakAuthProvider,
     Token

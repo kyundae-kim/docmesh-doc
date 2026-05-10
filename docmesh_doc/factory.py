@@ -4,11 +4,11 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from fastapi_template.core.config import EnvSettings, load_config
-from fastapi_template.core.exceptions import register_exception_handlers
-from fastapi_template.services.security import get_auth_provider
-from fastapi_template.services.logging import setup_logging
-from fastapi_template.routes import include_routes
+from docmesh_doc.core.config import EnvSettings, load_config
+from docmesh_doc.core.exceptions import register_exception_handlers
+from docmesh_doc.services.security import get_auth_provider
+from docmesh_doc.services.logging import setup_logging
+from docmesh_doc.routes import include_routes
 
 
 def create_app() -> FastAPI:

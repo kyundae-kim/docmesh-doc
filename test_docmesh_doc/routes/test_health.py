@@ -1,8 +1,8 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from fastapi_template import factory
-from fastapi_template.schemas import HealthCheckResponse
+from docmesh_doc import factory
+from docmesh_doc.schemas import HealthCheckResponse
 
 
 @pytest.fixture(scope="module")
