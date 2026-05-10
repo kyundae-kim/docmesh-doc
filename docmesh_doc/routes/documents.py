@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from fastapi.responses import Response
 
 from docmesh_doc.dependencies.security import get_current_user, User
@@ -10,34 +10,45 @@ from docmesh_doc.services.document import DocumentService
 router = APIRouter(tags=["Documents"])
 
 
+def _current_username(current_user: User) -> str:
+    return current_user.preferred_username or current_user.sub
+
+
 @router.post("/documents", response_model=DocumentUploadResponse)
 async def upload_document(
+    file_path: str = Form(...),
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
     document_service: DocumentService = Depends(get_document_service),
 ):
-    _ = current_user
+    username = _current_username(current_user)
+    stream = file.file
+    stream.seek(0, 2)
+    content_length = stream.tell()
+    stream.seek(0)
 
-    content = await file.read()
     content_type = file.content_type or "application/octet-stream"
     document_id = document_service.upload(
+        username=username,
+        file_path=file_path,
         filename=file.filename,
         content_type=content_type,
-        content=content,
+        data_stream=stream,
+        content_length=content_length,
     )
 
     return DocumentUploadResponse(document_id=document_id)
 
 
-@router.get("/documents/{document_id}")
+@router.get("/documents/{file_path:path}")
 def download_document(
-    document_id: str,
+    file_path: str,
     current_user: User = Depends(get_current_user),
     document_service: DocumentService = Depends(get_document_service),
 ):
-    _ = current_user
+    username = _current_username(current_user)
 
-    document = document_service.get(document_id)
+    document = document_service.get(username, file_path)
     if document is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -53,15 +64,15 @@ def download_document(
     )
 
 
-@router.delete("/documents/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/documents/{file_path:path}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_document(
-    document_id: str,
+    file_path: str,
     current_user: User = Depends(get_current_user),
     document_service: DocumentService = Depends(get_document_service),
 ):
-    _ = current_user
+    username = _current_username(current_user)
 
-    deleted = document_service.soft_delete(document_id)
+    deleted = document_service.soft_delete(username, file_path)
     if not deleted:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

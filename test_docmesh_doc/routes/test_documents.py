@@ -7,14 +7,16 @@ from docmesh_doc.core.security import User
 from docmesh_doc.dependencies.security import get_current_user
 
 
-CREATED_DOCUMENT_IDS: list[str] = []
+TEST_USERNAME = "test-user"
+CREATED_FILE_PATHS: list[str] = []
 
 
 @pytest.fixture(scope="module")
 def app():
     app = factory.create_app()
     app.dependency_overrides[get_current_user] = lambda: User(
-        sub="test-user",
+        sub=TEST_USERNAME,
+        preferred_username=TEST_USERNAME,
         roles={"create", "read", "delete"},
         scopes={"profile"},
     )
@@ -29,18 +31,21 @@ def app():
 
         yield client
 
-        for document_id in CREATED_DOCUMENT_IDS:
+        for file_path in CREATED_FILE_PATHS:
+            object_key = f"{TEST_USERNAME}/{file_path}"
             try:
-                minio_client.remove_object(bucket_name, document_id)
+                minio_client.remove_object(bucket_name, object_key)
             except S3Error:
                 # Deletion is best-effort so test failures are not masked.
                 pass
-        CREATED_DOCUMENT_IDS.clear()
+        CREATED_FILE_PATHS.clear()
 
 
 def test_upload_and_download_document(app):
+    file_path = "projects/specs/example.txt"
     upload_response = app.post(
         "/documents",
+        data={"file_path": file_path},
         files={"file": ("example.txt", b"hello docmesh", "text/plain")},
     )
 
@@ -48,9 +53,9 @@ def test_upload_and_download_document(app):
     payload = upload_response.json()
     assert "document_id" in payload
 
-    document_id = payload["document_id"]
-    CREATED_DOCUMENT_IDS.append(document_id)
-    download_response = app.get(f"/documents/{document_id}")
+    CREATED_FILE_PATHS.append(file_path)
+    assert payload["document_id"] == f"{TEST_USERNAME}/{file_path}"
+    download_response = app.get(f"/documents/{file_path}")
 
     assert download_response.status_code == 200
     assert download_response.content == b"hello docmesh"
@@ -58,20 +63,21 @@ def test_upload_and_download_document(app):
 
 
 def test_soft_delete_document(app):
+    file_path = "projects/specs/delete-me.txt"
     upload_response = app.post(
         "/documents",
+        data={"file_path": file_path},
         files={"file": ("delete-me.txt", b"to delete", "text/plain")},
     )
-    document_id = upload_response.json()["document_id"]
-    CREATED_DOCUMENT_IDS.append(document_id)
+    CREATED_FILE_PATHS.append(file_path)
 
-    delete_response = app.delete(f"/documents/{document_id}")
+    delete_response = app.delete(f"/documents/{file_path}")
     assert delete_response.status_code == 204
 
-    download_response = app.get(f"/documents/{document_id}")
+    download_response = app.get(f"/documents/{file_path}")
     assert download_response.status_code == 404
 
 
 def test_delete_missing_document_returns_404(app):
-    response = app.delete("/documents/not-found")
+    response = app.delete("/documents/projects/specs/not-found.txt")
     assert response.status_code == 404
