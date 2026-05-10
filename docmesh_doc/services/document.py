@@ -4,6 +4,7 @@ from threading import Lock
 from uuid import uuid4
 
 from minio import Minio
+from minio.commonconfig import Tags
 from minio.error import S3Error
 
 
@@ -45,6 +46,8 @@ class DocumentService:
 
         document_id = str(uuid4())
         data = BytesIO(content)
+        tags = Tags(for_object=True)
+        tags["deleted"] = "false"
 
         self._minio_client.put_object(
             self._bucket_name,
@@ -53,7 +56,7 @@ class DocumentService:
             length=len(content),
             content_type=content_type,
             metadata={"filename": filename},
-            tags={"deleted": "false"},
+            tags=tags,
         )
 
         return document_id
@@ -63,7 +66,7 @@ class DocumentService:
 
         try:
             tags = self._minio_client.get_object_tags(self._bucket_name, document_id)
-            if tags.get("deleted") == "true":
+            if tags is not None and tags.get("deleted") == "true":
                 return None
 
             stat_result = self._minio_client.stat_object(self._bucket_name, document_id)
@@ -93,6 +96,8 @@ class DocumentService:
         try:
             self._minio_client.stat_object(self._bucket_name, document_id)
             tags = self._minio_client.get_object_tags(self._bucket_name, document_id)
+            if tags is None:
+                tags = Tags(for_object=True)
             tags["deleted"] = "true"
             self._minio_client.set_object_tags(self._bucket_name, document_id, tags)
         except S3Error as exc:
