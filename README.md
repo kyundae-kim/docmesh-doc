@@ -1,132 +1,160 @@
-# fastapi-template
+# DocMesh Document Service
 
-## 주요 기능
+MinIO 기반 파일 저장을 담당하는 DocMesh Document Service입니다.
 
-- **Keycloak 기반 인증/인가**
-	- OAuth2 Password Grant로 토큰 발급 및 검증
-	- JWT 서명 검증 및 사용자 정보 추출
-	- 역할(Role), 스코프(Scope) 기반 권한 체크
+이 서비스는 문서 바이너리의 업로드, 다운로드, 삭제(Soft Delete)를 단일 진입점으로 제공하는 것을 목표로 합니다.
 
-- **환경별 설정 분리**
-	- 환경 변수와 YAML 기반 서비스 설정 지원
-	- 개발/테스트/운영 환경 분리
+## PRD 기반 서비스 정의
 
-- **의존성 주입(DI) 구조**
-	- FastAPI Depends를 활용한 설정/인증/권한 체크 모듈화
+- 목적: 조직 내 문서를 객체 스토리지(MinIO)에 안전하게 저장하고, 다른 서비스가 참조할 수 있는 파일 저장 전담 서비스를 제공
+- 역할: 파일 업로드/다운로드/삭제의 유일한 진입점
+- 원칙: 파일 바이너리 관리에 집중하고 메타데이터/검색/AI 처리는 범위에서 제외
 
-- **API 라우팅 및 문서화**
-	- 인증/헬스체크 등 RESTful 엔드포인트 제공
-	- OpenAPI(Swagger UI) 자동 문서화 지원
+### 포함 범위 (In Scope)
 
-- **테스트 코드 내장**
-	- 계층별 단위 테스트 및 통합 테스트 예시 포함
+- 파일 업로드/다운로드
+- 파일 삭제(Soft Delete)
+- MinIO 버킷 기반 저장
+- document_id 생성 및 관리
 
-- **로깅 및 예외 처리**
-	- 커스텀 로깅 레벨 및 예외 핸들러 확장
+### 제외 범위 (Out of Scope)
 
-uv 환경의 FastAPI 템플릿입니다.
+- 메타데이터 관리
+- 검색/인덱싱
+- OCR/AI 처리
+- 문서 버전 비교 UX
+
+## 목표 API 스펙 (PRD 초안)
+
+- POST /documents: 파일 업로드 후 document_id 반환
+- GET /documents/{document_id}: 파일 다운로드
+- DELETE /documents/{document_id}: 파일 Soft Delete
+
+업로드 응답 예시:
+
+```json
+{
+  "document_id": "string"
+}
+```
+
+## 현재 구현 상태
+
+현재 코드는 Document API 완성본 이전 단계로, 인증/보안 및 헬스체크 기반이 구현되어 있습니다.
+
+### 현재 제공 엔드포인트
+
+- POST /token
+- GET /user
+- POST /example
+- GET /example
+- GET /example/scope
+- DELETE /example
+- GET /health/live
+- GET /health/ready
+
+### 현재 상태 요약
+
+- 구현 완료: Keycloak 기반 인증/인가, JWT 검증, 역할/스코프 체크, 헬스체크
+- 다음 단계: MinIO 연동 Document API(업로드/다운로드/삭제) 및 Metadata/Audit 연계
+
+## 아키텍처 개요
+
+- 저장소: MinIO(S3 호환 Object Storage)
+- 연동 대상:
+  - Auth Service(Keycloak): 인증/권한 검증
+  - Metadata Service: 파일 메타데이터 및 삭제 플래그 관리
+  - Audit Service: 업로드/다운로드/삭제 이벤트 로그 기록
 
 ## 프로젝트 구조
 
+- docmesh_doc/
+  - main.py: FastAPI 앱 엔트리포인트
+  - factory.py: 앱 조립(설정 로딩, 미들웨어, 라우트 등록)
+  - core/
+    - config.py: 환경 변수 + YAML 설정 모델
+    - security.py: 인증 제공자 및 JWT 처리
+    - logging.py: 로깅 초기화
+    - exceptions.py: 예외 타입/핸들러
+  - dependencies/
+    - config.py: 설정 DI
+    - security.py: 인증/인가 DI
+  - routes/
+    - auth.py: 인증 및 권한 예제 엔드포인트
+    - health.py: liveness/readiness 엔드포인트
+  - services/
+    - security.py: 인증 서비스 레이어
+  - schemas/
+    - health.py, token.py, user.py: 응답 스키마
+- test_docmesh_doc/: 계층별 테스트
 
-아래는 실제 폴더 및 파일 구조와 각 역할별 설명입니다.
+## 빠른 시작
 
-- `fastapi_template/`
-	- `main.py`: 앱 진입점
-	- `factory.py`: FastAPI 앱 조립(로깅, CORS, lifespan, 라우트 등록)
-	- `core/`: 공통 인프라 계층
-		- `config.py`: 환경 변수 및 서비스 설정 관리
-		- `security.py`: JWT 검증/디코드, Keycloak 토큰 발급
-		- `logging.py`: 로깅 레벨 초기화
-		- `exceptions.py`: 예외 처리 확장 포인트
-	- `dependencies/`: FastAPI 의존성 주입 모듈
-		- `config.py`: 설정 의존성
-		- `iam.py`: 인증/인가 관련 의존성
-	- `routes/`: API 라우팅 계층 (HTTP 입출력 중심)
-		- `auth.py`: 인증/인가 엔드포인트
-		- `health.py`: liveness/readiness 엔드포인트
-		- `__init__.py`: 라우트 등록 함수
-	- `schemas/`: 요청/응답 스키마(Pydantic)
-		- `health.py`, `token.py`, `user.py`: 각 도메인별 스키마
-	- `services/`: 외부 서비스 연동/도메인 서비스
-		- `security.py`: 인증/보안 관련 서비스
-
-- `test_fastapi_template/`: 계층별 테스트 코드
-	- `core/`
-		- `test_security.py`: core.security 테스트
-	- `dependencies/`
-		- `test_security.py`: dependencies.security 테스트
-	- `routes/`
-		- `test_auth.py`: 인증 라우트 테스트
-		- `test_health.py`: 헬스체크 라우트 테스트
-	- `services/`
-		- `test_security.py`: 서비스 계층 보안 테스트
-
-- `.devcontainer/`: 개발 환경 및 설정 파일
-
-## 설정 체계
-
-이 템플릿은 설정을 두 레이어로 분리합니다.
-
-- 환경 변수(`env_settings`): 실행 환경별 값(환경 타입, 설정 파일 경로, 시크릿)
-- 서비스 설정(`service_config`): 기능 동작 값(로깅, CORS, JWT 정책, Keycloak URL 등)
-
-## 환경 변수
-
-환경 변수는 `fastapi_template/core/config.py`의 `EnvSettings` 기준입니다.
-
-| 변수명 | 타입 | 기본값 | 설명 |
-| --- | --- | --- | --- |
-| `ENVIRONMENT` | `dev` \| `test` \| `prod` | `dev` | 실행 환경 구분 |
-| `CONFIG_PATH` | `str` | `.devcontainer/config.yaml` | 서비스 설정 YAML 파일 경로 |
-| `KEYCLOAK_USERNAME` | `str` | `test` | Keycloak 사용자명(테스트/개발용) |
-| `KEYCLOAK_PASSWORD` | `str` | `test` | Keycloak 비밀번호(테스트/개발용) |
-
-## 서비스 설정 변수 (YAML)
-
-서비스 설정은 기본적으로 `.devcontainer/config.yaml`에서 관리합니다.
-
-### logging
-
-| 키 | 타입 | 기본값 | 사용 위치 |
-| --- | --- | --- | --- |
-| `logging.level` | `WARNING` \| `INFO` \| `DEBUG` | `DEBUG` | 애플리케이션 로그 레벨 설정 (`core/logging.py`) |
-
-### cors
-
-| 키 | 타입 | 기본값 | 사용 위치 |
-| --- | --- | --- | --- |
-| `cors.origins` | `list[str]` 또는 `comma-separated str` | `[*]` | CORS 허용 Origin (`factory.py`) |
-| `cors.credentials` | `bool` | `false` | CORS credentials 허용 여부 (`factory.py`) |
-
-### auth
-
-| 키 | 타입 | 기본값 | 사용 위치 |
-| --- | --- | --- | --- |
-| `auth.verify_jwt` | `bool` | `true` | JWT 서명 검증 사용 여부 (`core/security.py`) |
-| `auth.allow_insecure_jwt_decode` | `bool` | `false` | 비검증 디코드 허용 여부 (`core/security.py`) |
-
-보안 정책:
-
-- `ENVIRONMENT=prod`에서는 항상 JWT 검증 경로를 사용합니다.
-- `dev/test`에서 `auth.verify_jwt=false`일 때는 `auth.allow_insecure_jwt_decode=true`를 명시해야만 비검증 디코드가 허용됩니다.
-
-### keycloak
-
-| 키 | 타입 | 기본값 | 사용 위치 |
-| --- | --- | --- | --- |
-| `keycloak.http_url` | `HttpUrl` | `http://keycloak:8080/` | 토큰 발급/JWKS/issuer URL 구성 |
-| `keycloak.manage_url` | `HttpUrl` | `http://keycloak:9000/` | readiness check URL 구성 (`routes/health.py`) |
-| `keycloak.realm` | `str` | `restapi` | Keycloak Realm |
-| `keycloak.client_id` | `str` | `fastapi` | JWT audience 및 토큰 요청 client_id |
-
-## Keycloak DB 백업
+### 1) 가상환경 활성화
 
 ```bash
-docker compose -p fastapi-template_devcontainer exec keycloak-postgres pg_dump -U postgres -d postgres > .devcontainer/init.sql
+source .venv/bin/activate
 ```
 
-## Reference
+### 2) 의존성 설치
 
-- [uv - fastapi](https://docs.astral.sh/uv/guides/integration/fastapi/)
-- [fastapi - deployment](https://fastapi.tiangolo.com/deployment/docker/)
+```bash
+pip install -e .
+```
+
+### 3) 애플리케이션 실행
+
+```bash
+fastapi dev docmesh_doc/main.py
+```
+
+또는
+
+```bash
+uvicorn docmesh_doc.main:app --reload
+```
+
+### 4) 테스트 실행
+
+```bash
+pytest
+```
+
+## 설정
+
+환경 변수(기본값은 core/config.py 기준):
+
+- ENVIRONMENT: dev | test | prod (기본값: dev)
+- CONFIG_PATH: 서비스 YAML 설정 경로 (기본값: .devcontainer/config.yaml)
+- KEYCLOAK_USERNAME: 기본 테스트 계정
+- KEYCLOAK_PASSWORD: 기본 테스트 비밀번호
+
+YAML 설정 파일(.devcontainer/config.yaml) 주요 키:
+
+- logging.level
+- cors.origins
+- cors.credentials
+- auth.verify_jwt
+- auth.allow_insecure_jwt_decode
+- keycloak.http_url
+- keycloak.manage_url
+- keycloak.realm
+- keycloak.client_id
+- keycloak.client_secret
+
+## 비기능 요구사항 (PRD)
+
+- 성능: 대용량 파일 스트리밍 처리 고려
+- 확장성: Stateless 수평 확장, MinIO scale-out 대응
+- 보안: OAuth2/SSO, MinIO 직접 접근 차단
+- 신뢰성: 데이터 유실 방지, 장애 재시도 가능 구조
+- 감사성: 업로드/다운로드/삭제 이벤트 로깅
+
+## 로드맵
+
+1. MinIO 클라이언트 도입 및 버킷 전략 수립
+2. POST /documents 구현(document_id 생성 및 저장)
+3. GET /documents/{document_id} 구현(권한 검증 포함)
+4. DELETE /documents/{document_id} 구현(Soft Delete 연계)
+5. Metadata/Audit 서비스 연동
+6. 대용량 파일 스트리밍 및 장애 복구 시나리오 보강

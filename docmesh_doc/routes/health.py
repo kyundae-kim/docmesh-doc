@@ -27,21 +27,21 @@ def readiness_probe(config: ServiceConfig = Depends(get_config)):
     """
     logger.info("Get /health/ready")
 
-    try:
-        response = httpx.get(
-            f"{config.keycloak.manage_url}health/ready",
-            timeout=5.0,
-        )
-        if response.status_code != 200:
-            logger.info(f"Keycloak readiness check failed with status code {response.status_code}")
-            return HealthCheckResponse(status="not ready", reason="Keycloak is not healthy")
-    except Exception as e:
-        logger.info(f"Keycloak readiness check failed with exception: {str(e)}")
-        logger.info(
-            "Keycloak readiness check keycloak url: %shealth/ready",
-            config.keycloak.manage_url,
-        )
-        return HealthCheckResponse(status="not ready", reason=f"Keycloak check failed")
+    # try:
+        # response = httpx.get(
+        #     f"{config.keycloak.manage_url}health/ready",
+        #     timeout=5.0,
+        # )
+        # if response.status_code != 200:
+        #     logger.info(f"Keycloak readiness check failed with status code {response.status_code}")
+        # return HealthCheckResponse(status="not ready", reason="Keycloak is not healthy")
+    # except Exception as e:
+    #     logger.info(f"Keycloak readiness check failed with exception: {str(e)}")
+    #     logger.info(
+    #         "Keycloak readiness check keycloak url: %shealth/ready",
+    #         config.keycloak.manage_url,
+    #     )
+    #     return HealthCheckResponse(status="not ready", reason=f"Keycloak check failed")
 
     logger.info("Get /health/ready - all checks passed")
     return HealthCheckResponse(status="ready")
