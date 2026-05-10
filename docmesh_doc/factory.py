@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from docmesh_doc.core.config import EnvSettings, load_config
 from docmesh_doc.core.exceptions import register_exception_handlers
 from docmesh_doc.services.security import get_auth_provider
+from docmesh_doc.services.document import DocumentService
 from docmesh_doc.services.logging import setup_logging
 from docmesh_doc.routes import include_routes
 
@@ -28,6 +29,7 @@ def create_app() -> FastAPI:
         app.state.env_settings = env_settings
         app.state.app_config = config
         app.state.auth_provider = get_auth_provider(config=config.keycloak)
+        app.state.document_service = DocumentService()
 
         yield
 
