@@ -48,7 +48,7 @@ MinIO 기반 파일 저장을 담당하는 DocMesh Document Service입니다.
 | 접근 제어 (Auth Service) | Implemented | Keycloak 기반 JWT 검증/역할/스코프 체크 구현 |
 | 헬스체크/운영성 | Implemented | `/health/live`, `/health/ready` 제공 |
 | Metadata/Audit 연동 | Planned | 삭제 플래그/이벤트 로그 연계 예정 |
-| MinIO 영속 저장소 연동 | Planned | 현재는 인메모리 저장, 다음 단계에서 MinIO 연동 |
+| MinIO 영속 저장소 연동 | Implemented | FastAPI state의 MinIO client를 통해 객체 저장/조회 |
 
 ## 현재 구현 상태
 
@@ -70,8 +70,8 @@ MinIO 기반 파일 저장을 담당하는 DocMesh Document Service입니다.
 
 ### 현재 상태 요약
 
-- 구현 완료: Keycloak 기반 인증/인가, JWT 검증, 역할/스코프 체크, 헬스체크, Document API MVP(인메모리)
-- 다음 단계: MinIO 연동 영속화, Metadata/Audit 연계
+- 구현 완료: Keycloak 기반 인증/인가, JWT 검증, 역할/스코프 체크, 헬스체크, Document API MVP(MinIO)
+- 다음 단계: Metadata/Audit 연계
 
 ## 아키텍처 개요
 

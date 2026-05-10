@@ -20,6 +20,7 @@ class MinioConfig(BaseModel):
     access_key: str = Field(default="admin")
     secret_key: str = Field(default="password123")
     bucket_name: str = Field(default="docmesh")
+    secure: bool = Field(default=False)
     
 
 class EnvSettings(BaseSettings):

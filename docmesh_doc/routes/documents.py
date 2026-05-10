@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from fastapi.responses import Response
 
 from docmesh_doc.dependencies.security import get_current_user, User
+from docmesh_doc.dependencies.storage import get_document_service
 from docmesh_doc.schemas.document import DocumentUploadResponse
 from docmesh_doc.services.document import DocumentService
 
@@ -9,15 +10,11 @@ from docmesh_doc.services.document import DocumentService
 router = APIRouter(tags=["Documents"])
 
 
-def get_document_service_from_request(request: Request) -> DocumentService:
-    return request.app.state.document_service
-
-
 @router.post("/documents", response_model=DocumentUploadResponse)
 async def upload_document(
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
-    document_service: DocumentService = Depends(get_document_service_from_request),
+    document_service: DocumentService = Depends(get_document_service),
 ):
     _ = current_user
 
@@ -36,7 +33,7 @@ async def upload_document(
 def download_document(
     document_id: str,
     current_user: User = Depends(get_current_user),
-    document_service: DocumentService = Depends(get_document_service_from_request),
+    document_service: DocumentService = Depends(get_document_service),
 ):
     _ = current_user
 
@@ -60,7 +57,7 @@ def download_document(
 def delete_document(
     document_id: str,
     current_user: User = Depends(get_current_user),
-    document_service: DocumentService = Depends(get_document_service_from_request),
+    document_service: DocumentService = Depends(get_document_service),
 ):
     _ = current_user
 
