@@ -13,6 +13,13 @@ class Environment(str, Enum):
     DEV = "dev"
     TEST = "test"
     PROD = "prod"
+
+
+class MinioConfig(BaseModel):
+    endpoint: str = Field(default="localhost:9000")
+    access_key: str = Field(default="admin")
+    secret_key: str = Field(default="password123")
+    bucket_name: str = Field(default="docmesh")
     
 
 class EnvSettings(BaseSettings):
@@ -21,6 +28,8 @@ class EnvSettings(BaseSettings):
 
     keycloak_username: str = Field(default="test")
     keycloak_password: str = Field(default="test")
+
+    minio: MinioConfig = Field(default_factory=MinioConfig)
 
 
 class LoggingConfig(BaseModel):
