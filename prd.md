@@ -39,8 +39,8 @@ DocMesh Document Service는 MinIO(S3 호환)를 사용해 사용자별 파일을
 
 ### 4.1 파일 식별 방식
 
-- API 입력 경로 식별자: `file_path`
-- 내부/응답 식별자(`document_id`): `{username}/{file_path}`
+- API 입력/응답 경로 식별자: `file_path`
+- 내부 저장소 키: `{username}/{file_path}`
 
 ### 4.2 Soft Delete 방식
 
@@ -74,7 +74,7 @@ DocMesh Document Service는 MinIO(S3 호환)를 사용해 사용자별 파일을
 	- 업로드 시 metadata에 `filename`, `file_path` 저장
 	- 태그 `deleted=false` 저장
 - 출력:
-	- `{"document_id": "{username}/{file_path}"}`
+	- `{"file_path": "{file_path}"}`
 
 ### 5.4 문서 다운로드
 
@@ -83,9 +83,10 @@ DocMesh Document Service는 MinIO(S3 호환)를 사용해 사용자별 파일을
 - 처리:
 	- 사용자별 object key로 조회
 	- 없거나 soft-deleted면 404
-	- 있으면 바이너리 원문 반환
+	- 파일 스트림 방식으로 응답 전달
 - 응답 헤더:
 	- `Content-Disposition: attachment; filename="..."`
+	- `Content-Type`: 원본 파일의 content-type
 
 ### 5.5 문서 삭제 (Soft Delete)
 
@@ -163,9 +164,9 @@ DocMesh Document Service는 MinIO(S3 호환)를 사용해 사용자별 파일을
 
 - 일반 문서 업로드/다운로드 요청은 안정적으로 처리되어야 한다.
 - 대용량 파일 처리 시 타임아웃/메모리 과사용을 방지해야 한다.
-- 현재 구현 메모:
-	- 업로드는 파일 스트림을 사용해 MinIO에 저장한다.
-	- 다운로드는 현재 응답 생성 전 메모리로 읽는 방식이며, 대용량 최적화(스트리밍 응답)는 개선 과제로 관리한다.
+- 현재 구현:
+	- 업로드: 파일 스트림을 사용해 MinIO에 저장한다.
+	- 다운로드: 파일 스트림 방식으로 응답을 전달해 메모리 효율성을 확보한다.
 
 ### 9.2 가용성 (Availability)
 
