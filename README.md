@@ -50,8 +50,12 @@ fastapi dev
 
 ### 3. 테스트 실행
 
-```bash
 vscode Testing
+
+of 
+
+```bash
+cd /workspaces/docmesh-doc && /workspaces/docmesh-doc/.venv/bin/python -m pytest -v
 ```
 
 ***

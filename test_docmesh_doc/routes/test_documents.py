@@ -51,10 +51,10 @@ def test_upload_and_download_document(app):
 
     assert upload_response.status_code == 200
     payload = upload_response.json()
-    assert "document_id" in payload
+    assert "file_path" in payload
 
     CREATED_FILE_PATHS.append(file_path)
-    assert payload["document_id"] == f"{TEST_USERNAME}/{file_path}"
+    assert payload["file_path"] == file_path
     download_response = app.get(f"/documents/{file_path}")
 
     assert download_response.status_code == 200

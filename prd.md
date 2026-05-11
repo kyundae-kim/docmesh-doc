@@ -73,6 +73,7 @@ DocMesh Document Service는 MinIO(S3 호환)를 사용해 사용자별 파일을
 	- 사용자명은 `preferred_username` 우선, 없으면 `sub` 사용
 	- 업로드 시 metadata에 `filename`, `file_path` 저장
 	- 태그 `deleted=false` 저장
+	- MinIO에 파일 스트림 방식으로 저장
 - 출력:
 	- `{"file_path": "{file_path}"}`
 
@@ -83,7 +84,8 @@ DocMesh Document Service는 MinIO(S3 호환)를 사용해 사용자별 파일을
 - 처리:
 	- 사용자별 object key로 조회
 	- 없거나 soft-deleted면 404
-	- 파일 스트림 방식으로 응답 전달
+	- StreamingResponse를 사용해 MinIO에서 파일 스트림을 직접 전달
+	- 메모리 로드 없이 스트리밍 방식으로 전송
 - 응답 헤더:
 	- `Content-Disposition: attachment; filename="..."`
 	- `Content-Type`: 원본 파일의 content-type
@@ -166,7 +168,7 @@ DocMesh Document Service는 MinIO(S3 호환)를 사용해 사용자별 파일을
 - 대용량 파일 처리 시 타임아웃/메모리 과사용을 방지해야 한다.
 - 현재 구현:
 	- 업로드: 파일 스트림을 사용해 MinIO에 저장한다.
-	- 다운로드: 파일 스트림 방식으로 응답을 전달해 메모리 효율성을 확보한다.
+	- 다운로드: StreamingResponse를 사용해 MinIO에서 직접 스트리밍하므로 메모리 효율성을 확보한다.
 
 ### 9.2 가용성 (Availability)
 

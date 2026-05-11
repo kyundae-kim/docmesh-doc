@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
-from fastapi.responses import Response
+from fastapi.responses import StreamingResponse
+from io import BytesIO
 
 from docmesh_doc.dependencies.security import get_current_user, User
 from docmesh_doc.dependencies.storage import get_document_service
@@ -37,7 +38,7 @@ async def upload_document(
         content_length=content_length,
     )
 
-    return DocumentUploadResponse(document_id=document_id)
+    return DocumentUploadResponse(file_path=file_path)
 
 
 @router.get("/documents/{file_path:path}")
@@ -55,8 +56,10 @@ def download_document(
             detail="Document not found",
         )
 
-    return Response(
-        content=document.content,
+    stream = BytesIO(document.content)
+    
+    return StreamingResponse(
+        iter([stream.read()]),
         media_type=document.content_type,
         headers={
             "Content-Disposition": f'attachment; filename="{document.filename}"',
@@ -78,5 +81,3 @@ def delete_document(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Document not found",
         )
-
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
