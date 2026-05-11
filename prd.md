@@ -1,189 +1,243 @@
-# 📄 DocMesh Document Service PRD
+# DocMesh Document Service PRD
 
-**(MinIO 기반 파일 관리 서비스)**
+## 1. 개요
 
-## 1. 개요 (Overview)
+DocMesh Document Service는 MinIO(S3 호환)를 사용해 사용자별 파일을 저장/조회/삭제(Soft Delete)하는 FastAPI 서비스다.
 
-### 1.1 목적
+현재 구현은 "개발 완료된 동작"을 기준으로 하며, 아래 내용은 코드 베이스 현행 상태를 반영한다.
 
-Document Service는 조직 내 문서를 **객체 스토리지(MinIO)** 에 안전하게 저장·관리하고,
+## 2. 제품 목표
 
-다른 서비스(Metadata, Search 등)가 참조할 수 있는 **파일 저장의 단일 책임 서비스**를 제공한다. 
+- 사용자 인증 기반 문서 API 제공
+- MinIO 객체 스토리지 기반 파일 영속화
+- 사용자별 논리 경로 분리
+- 삭제 이력 보존을 위한 Soft Delete 지원
 
-### 1.2 서비스 역할 (MSA 내 위치)
+## 3. 아키텍처
 
-- DMS 전체 구조에서 **파일 업로드/다운로드/삭제의 유일한 진입점**
-- 파일 바이너리 관리에만 집중 (검색·분류 로직 ❌)
+### 3.1 애플리케이션
 
-### 1.3 범위 (Scope)
+- 프레임워크: FastAPI
+- 앱 생성: `docmesh_doc.factory:create_app`
+- 라우트 구성: Health, Auth, Documents
+- 예외 처리: `AuthError`를 공통 JSON 포맷으로 반환
 
-**포함**
+### 3.2 스토리지
 
-- 파일 업로드 / 다운로드
-- 파일 삭제 (Soft delete)
-- MinIO 버킷 기반 파일 저장
-- 파일 식별자(document_id) 생성 및 관리
+- 저장소: MinIO
+- 버킷: 환경변수/설정 기반(`minio.bucket_name`, 기본값 `docmesh`)
+- 버킷 미존재 시 자동 생성
+- Object Key 정책: `{username}/{file_path}`
 
-**제외**
+### 3.3 인증/인가
 
-- 메타데이터 관리 (Metadata Service 담당)
-- 검색 / 인덱싱
-- OCR / AI 처리
-- 문서 버전 비교 UX
+- OAuth2 Bearer 토큰 (`tokenUrl=/token`)
+- Keycloak provider 기반 인증/토큰 디코딩
+- 문서 API는 인증 사용자 컨텍스트 기반 접근
 
----
+## 4. 도메인 모델
 
-## 2. 목표 (Goals)
+### 4.1 파일 식별 방식
 
-- 안정적인 파일 저장소 제공 (데이터 유실 방지)
-- 대용량 파일 업로드/다운로드 지원
-- 서비스 확장 시 스토리지 독립성 확보 (S3 호환)
+- API 입력 경로 식별자: `file_path`
+- 내부/응답 식별자(`document_id`): `{username}/{file_path}`
 
----
+### 4.2 Soft Delete 방식
 
-## 3. 시스템 아키텍처
+- MinIO 객체는 물리 삭제하지 않음
+- 객체 태그 `deleted=true`로 상태 전환
+- 조회 시 `deleted=true`면 미존재와 동일하게 404 처리
 
-### 3.1 저장소
+## 5. 기능 요구사항
 
-- **MinIO (S3-compatible Object Storage)**
-- 버킷 단위로 논리적 분리 (예: `documents`)*(버킷 정책/암호화 방식은 인프라 설계에서 결정 — PRD 범위 외)*
+### 5.1 토큰 발급 (개발용)
 
-### 3.2 연동 서비스
+- 엔드포인트: `POST /token`
+- 입력: form-data `username`, `password`
+- 출력: `access_token`, `token_type`, `refresh_token`, `expires_in`, `refresh_expires_in`, `scope`
+- 실패 시 AuthError 포맷 반환
 
-- Auth Service: 사용자 인증/권한 검증
-- Metadata Service: 파일 메타데이터 저장
-- Audit Service: 파일 접근 로그 기록
+### 5.2 사용자 정보 조회 (개발용)
 
----
+- 엔드포인트: `GET /user`
+- 설명: 현재 토큰의 사용자 정보를 반환 (개발 목적)
 
-## 4. 기능 요구사항 (Functional Requirements)
+### 5.3 문서 업로드
 
-### 4.1 파일 업로드
+- 엔드포인트: `POST /documents`
+- 인증: 필요(Bearer)
+- 입력:
+	- form-data `file_path` (필수)
+	- form-data `file` (필수)
+- 처리:
+	- 사용자명은 `preferred_username` 우선, 없으면 `sub` 사용
+	- 업로드 시 metadata에 `filename`, `file_path` 저장
+	- 태그 `deleted=false` 저장
+- 출력:
+	- `{"document_id": "{username}/{file_path}"}`
 
-- 단일 파일 업로드 지원
-- 업로드 성공 시 **document_id 반환**
-- MinIO Object Key = document_id 기반 생성
+### 5.4 문서 다운로드
 
-**입력**
+- 엔드포인트: `GET /documents/{file_path:path}`
+- 인증: 필요(Bearer)
+- 처리:
+	- 사용자별 object key로 조회
+	- 없거나 soft-deleted면 404
+	- 있으면 바이너리 원문 반환
+- 응답 헤더:
+	- `Content-Disposition: attachment; filename="..."`
 
-- 파일(Binary)
-- 기본 메타 정보 (filename, content-type)
+### 5.5 문서 삭제 (Soft Delete)
 
-**출력**
+- 엔드포인트: `DELETE /documents/{file_path:path}`
+- 인증: 필요(Bearer)
+- 처리:
+	- 객체 존재 시 `deleted=true`로 태그 업데이트
+	- 미존재 시 404
+- 응답: 204 No Content
 
+### 5.6 헬스체크
+
+- `GET /health/live` -> `{"status": "live"}`
+- `GET /health/ready` -> `{"status": "ready"}`
+- 현재 readiness는 외부 의존성 활성 점검 없이 통과하도록 구현됨
+
+### 5.7 권한 샘플 엔드포인트
+
+- `POST /example` (`create` role 필요)
+- `GET /example` (`read` role 필요)
+- `DELETE /example` (`delete` role 필요)
+- `GET /example/scope` (`profile` scope 필요)
+
+## 6. API 요약
+
+| Method | Endpoint | Auth | 설명 |
+| --- | --- | --- | --- |
+| POST | `/token` | No | Keycloak 토큰 발급 |
+| GET | `/user` | Yes | 현재 사용자 정보 조회(개발용) |
+| POST | `/documents` | Yes | 파일 업로드 |
+| GET | `/documents/{file_path:path}` | Yes | 파일 다운로드 |
+| DELETE | `/documents/{file_path:path}` | Yes | 파일 Soft Delete |
+| GET | `/health/live` | No | Liveness |
+| GET | `/health/ready` | No | Readiness |
+
+## 7. 오류 응답 규격
+
+인증/인가 관련 오류는 아래 포맷을 사용한다.
+
+```json
 {
-
-"document_id": "string"
-
+	"error": "string",
+	"error_description": "string"
 }
-
-``
-
----
-
-### 4.2 파일 다운로드
-
-- document_id 기반 파일 조회
-- 권한 없는 요청은 접근 불가
-- 원본 파일 그대로 반환
-
----
-
-### 4.3 파일 삭제 (Soft Delete)
-
-- 실제 MinIO 객체는 유지
-- 삭제 플래그만 변경 (Metadata Service와 연계)
-- 삭제된 파일은 기본 다운로드 불가
-
----
-
-### 4.4 파일 접근 제어
-
-- Auth Service를 통한 사용자 인증
-- 권한 없는 document_id 접근 차단
-
----
-
-## 5. API 설계 (초안)
-
-### 5.1 파일 업로드
-
-```
-POST /documents
 ```
 
-**Response**
+대표 오류:
 
-{
+- 401 `invalid_token` 또는 `invalid_grant`
+- 403 `insufficient_scope`
+- 502/504 인증 제공자 연동 오류
 
-"document_id": "string"
+## 8. 설정
 
-}
+### 8.1 환경 설정
 
----
+- `environment`: `dev | test | prod`
+- `config_path`: YAML 설정 파일 경로
+- `minio.endpoint`
+- `minio.access_key`
+- `minio.secret_key`
+- `minio.bucket_name`
+- `minio.secure`
 
-### 5.2 파일 다운로드
+### 8.2 서비스 설정(YAML)
 
-```
-GET /documents/{document_id}
-```
+- `logging.level`
+- `cors.origins`, `cors.credentials`
+- `auth.verify_jwt`, `auth.allow_insecure_jwt_decode`, `auth.use_introspection`
+- `keycloak.http_url`, `keycloak.manage_url`, `keycloak.realm`, `keycloak.client_id`, `keycloak.client_secret`
 
----
+## 9. 비기능 요구사항 (NFR)
 
-### 5.3 파일 삭제
+### 9.1 성능 (Performance)
 
-```
-DELETE /documents/{document_id}
-```
+- 일반 문서 업로드/다운로드 요청은 안정적으로 처리되어야 한다.
+- 대용량 파일 처리 시 타임아웃/메모리 과사용을 방지해야 한다.
+- 현재 구현 메모:
+	- 업로드는 파일 스트림을 사용해 MinIO에 저장한다.
+	- 다운로드는 현재 응답 생성 전 메모리로 읽는 방식이며, 대용량 최적화(스트리밍 응답)는 개선 과제로 관리한다.
 
----
+### 9.2 가용성 (Availability)
 
-## 6. 비기능 요구사항 (Non-Functional)
+- `/health/live`, `/health/ready` 엔드포인트를 통해 오케스트레이션 환경에서 헬스 상태를 확인할 수 있어야 한다.
+- 애플리케이션 재기동 후에도 MinIO에 저장된 객체는 유지되어야 한다.
 
-### 6.1 성능
+### 9.3 확장성 (Scalability)
 
-- 일반 파일 업로드/다운로드 지연 최소화
-- 대용량 파일 업로드 시 스트리밍 방식 권장
+- 애플리케이션은 상태 비저장(Stateless) 구조를 유지해 수평 확장이 가능해야 한다.
+- 스토리지는 S3 호환 인터페이스를 사용해 MinIO scale-out 구조에 대응 가능해야 한다.
 
-### 6.2 확장성
+### 9.4 보안 (Security)
 
-- MinIO scale-out 구조 대응
-- Document Service 수평 확장 가능 (Stateless)
+- 문서 API는 Bearer 토큰 인증을 필수로 적용해야 한다.
+- 사용자별 object key 네임스페이스(`{username}/{file_path}`)를 사용해 기본 접근 경계를 분리해야 한다.
+- 인증/인가 실패 시 표준화된 오류 포맷(`error`, `error_description`)을 반환해야 한다.
+- MinIO 접근 자격증명은 환경설정으로 주입되고, 외부에 직접 노출되지 않아야 한다.
 
-### 6.3 보안
+### 9.5 신뢰성/정합성 (Reliability)
 
-- 인증: OAuth2 / SSO
-- MinIO 접근은 서비스 계정으로만 허용
-- 외부 직접 접근 차단
+- Soft Delete는 물리 삭제가 아닌 태그 기반 상태 전환으로 수행되어야 한다.
+- Soft Delete된 객체는 조회 시 404로 처리되어야 한다.
+- 미존재 객체 삭제 요청은 404를 반환해 API 의미론을 일관되게 유지해야 한다.
 
-### 6.4 신뢰성
+### 9.6 관측 가능성 (Observability)
 
-- 파일 데이터 유실 방지
-- 장애 시 재시도 가능 구조
+- 서비스는 요청 처리 및 주요 이벤트(토큰 발급, 헬스체크 등)에 대해 구조화된 로깅이 가능해야 한다.
+- 운영 환경에서 장애 분석이 가능하도록 로그 레벨(`logging.level`)을 설정 가능해야 한다.
 
-### 6.5 감사성
+### 9.7 운영성 (Operability)
 
-- 업로드 / 다운로드 / 삭제 이벤트 로그 기록 (Audit Service 연계)
+- 환경별 설정(`dev/test/prod`)과 YAML 기반 서비스 설정을 통해 동일 코드의 운영 환경 전환이 가능해야 한다.
+- 외부 의존성 상태 점검(Readiness 실제 의존성 체크)은 단계적으로 확장 가능해야 한다.
 
----
+## 10. 테스트 기준
 
-## 7. 성공 기준 (Success Metrics)
+### 10.1 단위 테스트
 
-- 파일 업로드/다운로드 성공률
-- 장애 발생 시 데이터 무결성 유지
-- 평균 파일 다운로드 응답 안정성
+- 문서 업로드 후 다운로드 성공
+- Soft Delete 후 다운로드 404
+- 미존재 문서 삭제 시 404
+- Health live/ready 200 응답
 
----
+### 10.2 Contract 테스트
 
-## 8. Non-Goals (명확히 제외)
+구현 필요
 
-- 파일 내용 검색
-- AI 기반 문서 분석
-- 메타데이터 편집 UI
-- 문서 버전 비교 기능
+### 10.3 통합 테스트
 
----
+스테이징 환경
 
-## ✅ 한 줄 요약
+구현 필요
 
-👉 **Document Service는 MinIO 기반으로 파일을 안전하게 저장·제공하는 “파일 바이너리 전담 서비스”이다.**
+### 10.4 Contract 테슽 재검증
+
+스테이징 환경
+
+구현 필요
+
+### 10.5 성능 테스트
+
+스테이징 환경
+
+구현 필요
+
+## 11. 범위 외/추후 과제
+
+- Metadata Service 연계 저장/조회
+- Audit Service 연계 이벤트 적재
+- Readiness의 외부 의존성 실체크(Keycloak/MinIO)
+- 대용량 파일 스트리밍 최적화(현재는 다운로드 시 메모리 로드)
+
+## 12. 한 줄 요약
+
+DocMesh Document Service는 Keycloak 인증과 MinIO를 기반으로 사용자별 문서를 업로드/다운로드/소프트삭제하는 파일 전담 API 서비스다.
