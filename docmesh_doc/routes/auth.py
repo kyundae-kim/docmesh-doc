@@ -10,17 +10,25 @@ from docmesh_doc.dependencies.security import (
     get_auth_provider,
     User,
 )
-from docmesh_doc.services.security import authenticate, refresh_token
+from docmesh_doc.dependencies.config import get_env, get_config, EnvSettings
+from docmesh_doc.core.config import Environment
+from docmesh_doc.services.security import authenticate
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
 @router.post("/token", response_model=TokenResponse)
-def get_token(username: str = Form(...), password: str = Form(...), provider=Depends(get_auth_provider)):
+def get_token(username: str = Form(...), password: str = Form(...), provider=Depends(get_auth_provider), config: EnvSettings = Depends(get_env)):
     logger.info("Post /token")
     logger.debug("Post /token username=%s", username)
 
+    if config.env == Environment.DEV:
+        logger.debug("Development environment detected, skipping authentication and returning dummy token")
+        return TokenResponse(
+            access_token="dummy-access-token",
+            token_type="Bearer")
+    
     token_response = authenticate(provider=provider, username=username, password=password)
 
     logger.info("Post /token response")

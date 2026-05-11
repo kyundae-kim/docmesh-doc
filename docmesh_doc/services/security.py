@@ -70,6 +70,28 @@ def authenticate(provider: KeycloakAuthProvider, username: str, password: str) -
             error="internal_error",
             error_description="An unexpected error occurred during authentication",
         )
+    
+
+def authenticate_dummy(provider: KeycloakAuthProvider, username: str, password: str) -> Token:
+    """Authenticate user and return a dummy token for development/testing.
+
+    This function simulates authentication by generating a dummy JWT token
+    with hardcoded claims. It is intended for use in development environments
+    where real authentication is not required.
+
+    Args:
+        username: Username string (not validated)
+        password: Password string (not validated)
+
+    Returns:
+        Token object with a dummy access token and token type "Bearer"
+    """
+    if not isinstance(username, str) or not username:
+        raise ValueError("Username must be a non-empty string")
+    if not isinstance(password, str) or not password:
+        raise ValueError("Password must be a non-empty string")
+
+    return provider.dummy_authenticate(username=username, password=password)
 
 
 def refresh_token(provider: KeycloakAuthProvider, token: str):

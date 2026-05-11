@@ -12,6 +12,7 @@ class LoggingLevel(str, Enum):
 class Environment(str, Enum):
     DEV = "dev"
     TEST = "test"
+    STAGE = "stage"
     PROD = "prod"
 
 
@@ -24,7 +25,7 @@ class MinioConfig(BaseModel):
     
 
 class EnvSettings(BaseSettings):
-    environment: Environment = Field(default=Environment.DEV)
+    env: Environment = Field(default=Environment.DEV)
     config_path: str = Field(default=".devcontainer/config.yaml")
 
     keycloak_username: str = Field(default="test")

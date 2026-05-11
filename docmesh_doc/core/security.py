@@ -1,5 +1,7 @@
 import abc
+from datetime import time
 import logging
+import uuid
 import httpx
 import jwt
 from pydantic import BaseModel
@@ -66,6 +68,10 @@ class AuthProvider(abc.ABC):
 
     @abc.abstractmethod
     def authenticate(self, username: str, password: str) -> Token:
+        raise NotImplementedError
+    
+    @abc.abstractmethod
+    def dummy_authenticate(self, username: str, password: str) -> Token:
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -185,6 +191,38 @@ class KeycloakAuthProvider(AuthProvider):
         
         form = TokenRequest(client_id=self.client_id, client_secret=self.client_secret, grant_type="password", username=username, password=password)
         return self._request_token(form=form)
+
+    def dummy_authenticate(self, username: str, password: str) -> Token:
+        """Return a dummy token for development/testing purposes without authenticating against Keycloak.
+
+        Args:
+            username: Ignored, can be any string
+            password: Ignored, can be any string
+
+        Returns:
+            Token: Dummy token object
+
+        """
+        now = int(time.time())
+        payload = {
+            "jti": str(uuid.uuid4()),
+            "iss": "https://auth.example.com/realms/my-realm",
+            "sub": "f81d4fae-7dec-11d0-a765-00a0c91e6bf6",    
+            "aud": "my-api",
+            "azp": "my-client-id",
+            "typ": "Bearer",
+            "iat": now,
+            "nbf": now,
+            "exp": now + 300,
+            "realm_access": {"roles": ["user", "admin"]},
+            "resource_access": {
+                "my-api": {"roles": ["read", "write"]}
+            },
+        }
+
+        token = jwt.encode(payload, key="dummy-secret", algorithm="HS256")
+
+        return Token(access_token=token, token_type="Bearer")
 
     def refresh_access_token(self, token: str):
         if not isinstance(token, str) or not token:

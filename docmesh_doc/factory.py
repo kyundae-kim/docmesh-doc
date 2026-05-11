@@ -23,7 +23,7 @@ def create_app() -> FastAPI:
     async def lifespan(app: FastAPI):
         logger.info(
             "Application startup",
-            extra={"environment": env_settings.environment.value},
+            extra={"environment": env_settings.env.value},
         )
 
         app.state.env_settings = env_settings
