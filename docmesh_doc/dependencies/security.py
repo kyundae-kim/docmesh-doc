@@ -12,7 +12,8 @@ from docmesh_doc.dependencies.config import get_config, ServiceConfig, get_env, 
 
 
 logger = logging.getLogger(__name__)
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/token")
+# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/doc/token")
 
 
 def get_auth_provider(request: Request) -> KeycloakAuthProvider:

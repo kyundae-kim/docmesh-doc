@@ -17,7 +17,7 @@ class Environment(str, Enum):
 
 
 class MinioConfig(BaseModel):
-    endpoint: str = Field(default="localhost:9000")
+    endpoint: str = Field(default="document-db:9000")
     access_key: str = Field(default="admin")
     secret_key: str = Field(default="password123")
     bucket_name: str = Field(default="docmesh")

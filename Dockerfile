@@ -12,4 +12,4 @@ COPY . /app
 
 EXPOSE 8000
 
-CMD ["uv", "run", "python", "-m", "fastapi", "dev"]
+CMD ["uv", "run", "python", "-m", "fastapi", "dev", "--host", "0.0.0.0"]
