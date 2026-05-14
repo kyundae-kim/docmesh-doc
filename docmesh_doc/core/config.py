@@ -27,6 +27,7 @@ class MinioConfig(BaseModel):
 class EnvSettings(BaseSettings):
     env: Environment = Field(default=Environment.DEV)
     config_path: str = Field(default=".devcontainer/config.yaml")
+    root_path: str = Field(default="/doc")
 
     keycloak_username: str = Field(default="test")
     keycloak_password: str = Field(default="test")
