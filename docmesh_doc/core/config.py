@@ -1,6 +1,6 @@
 from enum import Enum
 from pydantic import BaseModel, Field, HttpUrl, field_validator
-from pydantic_settings import BaseSettings, YamlConfigSettingsSource
+from pydantic_settings import BaseSettings, SettingsConfigDict, YamlConfigSettingsSource
 import logging
 
 class LoggingLevel(str, Enum):
@@ -33,6 +33,8 @@ class EnvSettings(BaseSettings):
     keycloak_password: str = Field(default="test")
 
     minio: MinioConfig = Field(default_factory=MinioConfig)
+
+    model_config = SettingsConfigDict(env_nested_delimiter="__", populate_by_name=True)
 
 
 class LoggingConfig(BaseModel):
