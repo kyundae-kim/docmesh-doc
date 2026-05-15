@@ -17,7 +17,7 @@ class Environment(str, Enum):
 
 
 class MinioConfig(BaseModel):
-    endpoint: str = Field(default="localhost:9000")
+    endpoint: str = Field(default="document-db:9000")
     access_key: str = Field(default="admin")
     secret_key: str = Field(default="password123")
     bucket_name: str = Field(default="docmesh")
@@ -27,6 +27,7 @@ class MinioConfig(BaseModel):
 class EnvSettings(BaseSettings):
     env: Environment = Field(default=Environment.DEV)
     config_path: str = Field(default=".devcontainer/config.yaml")
+    root_path: str = Field(default="/doc")
 
     keycloak_username: str = Field(default="test")
     keycloak_password: str = Field(default="test")

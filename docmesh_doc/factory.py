@@ -40,7 +40,7 @@ def create_app() -> FastAPI:
 
         # 앱 종료 동작
 
-    app = FastAPI(lifespan=lifespan)
+    app = FastAPI(lifespan=lifespan, root_path=env_settings.root_path)
 
     app.add_middleware(
         CORSMiddleware,
