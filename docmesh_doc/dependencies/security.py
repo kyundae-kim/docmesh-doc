@@ -6,7 +6,7 @@ import logging
 
 from docmesh_doc.core.exceptions import AuthError
 from docmesh_doc.core.security import User, KeycloakAuthProvider
-from docmesh_doc.core.config import Environmentm, EnvSettings
+from docmesh_doc.core.config import Environment, EnvSettings
 from docmesh_doc.services.security import decode_token
 from docmesh_doc.dependencies.config import get_config, ServiceConfig, get_env, EnvSettings
 
@@ -14,7 +14,6 @@ from docmesh_doc.dependencies.config import get_config, ServiceConfig, get_env, 
 logger = logging.getLogger(__name__)
 
 settings = EnvSettings()
-# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/token")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.root_path}/token")
 
 

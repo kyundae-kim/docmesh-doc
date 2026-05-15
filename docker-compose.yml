@@ -1,7 +1,6 @@
 services:
   document:
-    # image: ghcr.io/kyundae-kim/docmesh-doc:v0.1.0
-    image: doc:latest
+    image: ghcr.io/kyundae-kim/docmesh-doc:v0.1.2
     env_file:
       - .release/.env
     restart: unless-stopped
@@ -12,11 +11,9 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=docmesh-infra_net"
-      - "traefik.http.routers.document.rule=PathPrefix(`/doc`)"
+      - "traefik.http.routers.document.rule=PathPrefix(`/documents`)"
       - "traefik.http.routers.document.entrypoints=web"
       - "traefik.http.services.document.loadbalancer.server.port=8000"
-      - "traefik.http.middlewares.doc-strip.stripprefix.prefixes=/doc"
-      - "traefik.http.routers.document.middlewares=doc-strip"
     ports:
       - 8000
 
