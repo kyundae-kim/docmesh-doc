@@ -1,7 +1,7 @@
 [project]
 name = "DocMesh_Doc"
 version = "0.1.0"
-description = "Add your description here"
+description = "DocMesh document service built on FastAPI"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [

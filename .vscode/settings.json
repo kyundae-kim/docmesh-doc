@@ -2,7 +2,7 @@
     "python.testing.unittestArgs": [
         "-v",
         "-s",
-        "./test_fastapi_template",
+        "./test_docmesh_doc",
         "-p",
         "test_*.py"
     ],

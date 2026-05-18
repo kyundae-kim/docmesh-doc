@@ -3,6 +3,15 @@
 MinIO 기반의 문서 파일 저장 서비스입니다.  
 파일 업로드, 다운로드, 삭제를 위한 단일 API를 제공합니다.
 
+## 템플릿 기반 및 반영 사항
+
+이 프로젝트는 [aman-kim/fastapi-template](https://github.com/aman-kim/fastapi-template)을 기반으로 시작했으며, 현재는 DocMesh 문서 서비스 요구사항에 맞게 아래 항목을 반영했습니다.
+
+- 프로젝트/패키지 이름을 `docmesh_doc` 기준으로 정리
+- MinIO 기반 문서 업로드/다운로드/삭제 API 구성
+- Keycloak + JWT 인증/인가 흐름 적용
+- 문서 Soft Delete(태그 기반) 처리
+
 ***
 
 ## ✅ 주요 기능
