@@ -1,6 +1,6 @@
 services:
   document:
-    image: ghcr.io/kyundae-kim/docmesh-doc:v0.1.2
+    image: ghcr.io/kyundae-kim/docmesh-doc:v0.1.3
     env_file:
       - .release/.env
     restart: unless-stopped
