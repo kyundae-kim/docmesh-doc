@@ -1,10 +1,4 @@
-import logging
-import sys
+"""Deprecated module.
 
-
-def setup_logging(level: int):
-    logging.basicConfig(
-        level=level,
-        format="%(levelname)s: %(asctime)s - %(message)s",
-        handlers=[logging.StreamHandler(sys.stdout)]
-    )
+Use fastapi_core.core.logging directly.
+"""

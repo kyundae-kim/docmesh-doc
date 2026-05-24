@@ -12,5 +12,5 @@ def get_document_service(
     request: Request,
     minio_client: Minio = Depends(get_minio_client),
 ) -> DocumentService:
-    bucket_name = request.app.state.env_settings.minio.bucket_name
+    bucket_name = request.app.state.env_config.minio.bucket
     return DocumentService(minio_client=minio_client, bucket_name=bucket_name)

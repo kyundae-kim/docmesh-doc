@@ -4,7 +4,6 @@ from fastapi_core.core.auth import KeycloakAuthProvider
 from fastapi_core.core.config import AuthSettings, KeycloakConfig
 
 from docmesh_doc.core.exceptions import AuthError
-from docmesh_doc.core.security import Token
 
 
 def get_auth_provider(config: KeycloakConfig) -> KeycloakAuthProvider:
