@@ -1,18 +1,17 @@
 import pytest
 
 from docmesh_doc.core.exceptions import AuthError
-from docmesh_doc.core.security import User
-from docmesh_doc.dependencies.security import require_permissions
+from docmesh_doc.dependencies.security import User, require_permissions
 
 
 def _build_user(roles: set[str], scopes: set[str]) -> User:
     return User(
         sub="subject",
-        preferred_username="tester",
+        username="tester",
         email="tester@example.com",
         name="Tester",
-        roles=roles,
-        scopes=scopes,
+        roles=sorted(roles),
+        scopes=sorted(scopes),
     )
 
 

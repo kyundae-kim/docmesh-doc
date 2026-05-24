@@ -1,82 +1,54 @@
 # DocMesh Document Service
 
-MinIO 기반의 문서 파일 저장 서비스입니다.  
-파일 업로드, 다운로드, 삭제를 위한 단일 API를 제공합니다.
+DocMesh Document Service는 사용자 문서를 MinIO에 저장/조회/삭제(Soft Delete)하는 FastAPI 서비스입니다.
 
-***
+이 저장소의 문서는 목적별로 분리되어 있습니다.
 
-## ✅ 주요 기능
+- 제품 요구사항: `prd.md`
+- API 명세: `api.md`
+- 테스트 가이드: `test.md`
+- 현재 문서: `README.md` (빠른 시작/구조 개요)
 
-*   파일 업로드
-*   파일 조회
-*   파일 다운로드
-*   파일 삭제
-*   인증 기반 접근 제어 (Keycloak + JWT)
-*   사용자, 그룹별 파일 관리 및 접근 제어
+## 빠른 시작
 
-***
-
-## 📦 API 개요
-
-| Method | Endpoint                   | 설명      |
-| ------ | -------------------------- | ------- |
-| POST   | `/documents`               | 파일 업로드  |
-| GET    | `/documents/{document_id}` | 파일 다운로드 |
-| DELETE | `/documents/{document_id}` | 파일 삭제   |
-
-***
-
-## 🏗 아키텍처
-
-*   **Storage**: MinIO (S3 호환)
-*   **Auth**: Keycloak (JWT 기반 인증/인가)
-*   **연동 예정**
-    *   Metadata Service
-    *   Audit Service
-
-## 🚀 빠른 시작
-
-### 1. 의존성 설치
+1) 의존성 설치
 
 ```bash
 uv sync
 ```
 
-### 2. 애플리케이션 실행
+2) 앱 실행
 
 ```bash
-fastapi dev
+uv run fastapi dev docmesh_doc/main.py
 ```
 
-### 3. 테스트 실행
-
-vscode Testing
-
-of 
+3) 테스트 실행
 
 ```bash
-cd /workspaces/docmesh-doc && /workspaces/docmesh-doc/.venv/bin/python -m pytest -v
+uv run python -m pytest -q
 ```
 
-***
+## 아키텍처 요약
 
-## ⚙️ 설정
+- 앱 팩토리: `docmesh_doc.factory:create_app`
+- 공통 기반: `fastapi-core`
+  - auth 라우트(`/token`, `/user`) 포함
+  - Keycloak provider, MinIO client를 앱 시작 시 state에 등록
+- 로컬 라우트:
+  - `/documents` (업로드/다운로드/삭제)
+  - `/health/live`, `/health/ready`
 
-### 주요 환경 변수
+## 핵심 동작
 
-*   `ENVIRONMENT`: dev | test | prod
-*   `CONFIG_PATH`: YAML 설정 경로
-*   `KEYCLOAK_USERNAME`
-*   `KEYCLOAK_PASSWORD`
+- 객체 키 규칙: `{username}/{file_path}`
+- 사용자명 우선순위: `preferred_username -> username -> sub`
+- 삭제 정책: 물리 삭제 대신 MinIO tag `deleted=true`로 Soft Delete
 
-### 주요 설정 항목
+## 설정
 
-*   인증 (Keycloak 설정)
-*   CORS
-*   로깅 레벨
+- 환경 변수: `fastapi_core.core.config.EnvConfig`
+- 서비스 YAML: `fastapi_core.core.config.ServiceSettings`
+- 기본 YAML 경로: `.devcontainer/config.yaml` (`CONFIG_PATH`로 변경 가능)
 
-## 🎯 설계 원칙
-
-*   파일 저장에만 집중 (Single Responsibility)
-*   Stateless 구조로 확장성 고려
-*   보안 중심 설계 (Direct Storage 접근 차단)
+자세한 키는 `api.md`의 "설정" 섹션을 참고하세요.
