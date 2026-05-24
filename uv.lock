@@ -371,14 +371,18 @@ wheels = [
 
 [[package]]
 name = "docmesh-doc"
-version = "0.1.0"
+version = "0.1.1"
 source = { virtual = "." }
 dependencies = [
     { name = "fastapi-core" },
+    { name = "hermes-agent" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "fastapi-core", git = "https://github.com/kyundae-kim/fastapi-core.git" }]
+requires-dist = [
+    { name = "fastapi-core", git = "https://github.com/kyundae-kim/fastapi-core.git" },
+    { name = "hermes-agent", specifier = ">=0.14.0" },
+]
 
 [[package]]
 name = "email-validator"

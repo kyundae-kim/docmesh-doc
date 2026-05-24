@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi-core",
+    "hermes-agent>=0.14.0",
 ]
 
 [tool.uv.sources]
