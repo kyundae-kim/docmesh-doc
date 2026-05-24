@@ -1,82 +1,61 @@
 # DocMesh Document Service
 
-MinIO 기반의 문서 파일 저장 서비스입니다.  
-파일 업로드, 다운로드, 삭제를 위한 단일 API를 제공합니다.
+DocMesh Document Service는 사용자별 문서를 MinIO에 저장/조회/삭제(Soft Delete)하는 FastAPI 서비스입니다.
+현재 애플리케이션 부트스트랩, 인증, 공통 헬스체크는 `fastapi-core`를 기반으로 구성되어 있습니다.
 
-***
+## 핵심 구조
 
-## ✅ 주요 기능
+- 앱 팩토리: `docmesh_doc.factory:create_app`
+  - `fastapi_core.factory.create_app(...)`를 사용
+  - `include_auth_router=True`로 core auth 라우트(`/token`, `/user`) 포함
+  - lifespan에서 `set_auth_provider`, `set_minio_client` 등록
+- 로컬 라우트: `docmesh_doc.routes`
+  - `/documents` 계열 문서 API
+  - `/health/live`, `/health/ready` (서비스 전용 단순 헬스)
+- 스토리지: MinIO (`app.state.minio_client`)
+- 인증/인가: fastapi-core dependency + Keycloak provider
 
-*   파일 업로드
-*   파일 조회
-*   파일 다운로드
-*   파일 삭제
-*   인증 기반 접근 제어 (Keycloak + JWT)
-*   사용자, 그룹별 파일 관리 및 접근 제어
+## API 요약
 
-***
+- POST `/token` (fastapi-core 제공)
+- GET `/user` (fastapi-core 제공)
+- POST `/documents`
+- GET `/documents/{file_path:path}`
+- DELETE `/documents/{file_path:path}`
+- GET `/health/live`
+- GET `/health/ready`
 
-## 📦 API 개요
+## 동작 정책
 
-| Method | Endpoint                   | 설명      |
-| ------ | -------------------------- | ------- |
-| POST   | `/documents`               | 파일 업로드  |
-| GET    | `/documents/{document_id}` | 파일 다운로드 |
-| DELETE | `/documents/{document_id}` | 파일 삭제   |
+- Object Key: `{username}/{file_path}`
+- 사용자명 우선순위: `preferred_username` -> `username` -> `sub`
+- 삭제는 물리 삭제가 아닌 Soft Delete(`deleted=true` 태그)
 
-***
-
-## 🏗 아키텍처
-
-*   **Storage**: MinIO (S3 호환)
-*   **Auth**: Keycloak (JWT 기반 인증/인가)
-*   **연동 예정**
-    *   Metadata Service
-    *   Audit Service
-
-## 🚀 빠른 시작
-
-### 1. 의존성 설치
+## 실행
 
 ```bash
 uv sync
+uv run fastapi dev docmesh_doc/main.py
 ```
 
-### 2. 애플리케이션 실행
+## 테스트
 
 ```bash
-fastapi dev
+uv run python -m pytest -q
 ```
 
-### 3. 테스트 실행
+## 설정
 
-vscode Testing
+주요 설정은 `fastapi-core`의 `EnvConfig`/`ServiceSettings`를 사용합니다.
 
-of 
+- 환경 변수: `.env` (예: `KEYCLOAK__*`, `MINIO__*`, `CONFIG_PATH`)
+- 서비스 YAML: `CONFIG_PATH`가 가리키는 파일 (기본 `.devcontainer/config.yaml`)
 
-```bash
-cd /workspaces/docmesh-doc && /workspaces/docmesh-doc/.venv/bin/python -m pytest -v
-```
+## 참고
 
-***
+아래 모듈은 과거 호환을 위한 deprecated placeholder입니다(실행 경로에서 사용하지 않음).
 
-## ⚙️ 설정
-
-### 주요 환경 변수
-
-*   `ENVIRONMENT`: dev | test | prod
-*   `CONFIG_PATH`: YAML 설정 경로
-*   `KEYCLOAK_USERNAME`
-*   `KEYCLOAK_PASSWORD`
-
-### 주요 설정 항목
-
-*   인증 (Keycloak 설정)
-*   CORS
-*   로깅 레벨
-
-## 🎯 설계 원칙
-
-*   파일 저장에만 집중 (Single Responsibility)
-*   Stateless 구조로 확장성 고려
-*   보안 중심 설계 (Direct Storage 접근 차단)
+- `docmesh_doc/routes/auth.py`
+- `docmesh_doc/services/logging.py`
+- `docmesh_doc/core/logging.py`
+- `docmesh_doc/dependencies/config.py`
