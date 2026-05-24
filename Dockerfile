@@ -2,7 +2,7 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
-RUN apt update && apt install -y curl
+RUN apt update && apt install -y curl git
 RUN pip install uv
 
 COPY pyproject.toml uv.lock* /app/
