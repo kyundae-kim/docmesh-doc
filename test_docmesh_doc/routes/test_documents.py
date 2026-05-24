@@ -3,8 +3,7 @@ from fastapi.testclient import TestClient
 from minio.error import S3Error
 
 from docmesh_doc import factory
-from docmesh_doc.core.security import User
-from docmesh_doc.dependencies.security import get_current_user
+from docmesh_doc.dependencies.security import User, get_current_user
 
 
 TEST_USERNAME = "test-user"
@@ -16,13 +15,13 @@ def app():
     app = factory.create_app()
     app.dependency_overrides[get_current_user] = lambda: User(
         sub=TEST_USERNAME,
-        preferred_username=TEST_USERNAME,
-        roles={"create", "read", "delete"},
-        scopes={"profile"},
+        username=TEST_USERNAME,
+        roles=["create", "read", "delete"],
+        scopes=["profile"],
     )
     with TestClient(app) as client:
         minio_client = client.app.state.minio_client
-        bucket_name = client.app.state.env_settings.minio.bucket_name
+        bucket_name = client.app.state.env_config.minio.bucket
 
         try:
             minio_client.bucket_exists(bucket_name)
@@ -36,7 +35,6 @@ def app():
             try:
                 minio_client.remove_object(bucket_name, object_key)
             except S3Error:
-                # Deletion is best-effort so test failures are not masked.
                 pass
         CREATED_FILE_PATHS.clear()
 
@@ -64,7 +62,7 @@ def test_upload_and_download_document(app):
 
 def test_soft_delete_document(app):
     file_path = "projects/specs/delete-me.txt"
-    upload_response = app.post(
+    app.post(
         "/documents",
         data={"file_path": file_path},
         files={"file": ("delete-me.txt", b"to delete", "text/plain")},

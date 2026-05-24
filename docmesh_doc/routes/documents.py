@@ -12,7 +12,10 @@ router = APIRouter(tags=["Documents"])
 
 
 def _current_username(current_user: User) -> str:
-    return current_user.preferred_username or current_user.sub
+    username = getattr(current_user, "preferred_username", None) or getattr(
+        current_user, "username", None
+    )
+    return username or current_user.sub
 
 
 @router.post("/documents", response_model=DocumentUploadResponse)

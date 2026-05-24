@@ -1,12 +1,9 @@
 from fastapi import FastAPI
 
-
-from docmesh_doc.routes.auth import router as auth_router
 from docmesh_doc.routes.documents import router as documents_router
-from docmesh_doc.routes.health import router as healthcheck_router
+from docmesh_doc.routes.health import router as health_router
 
 
-def include_routes(app: FastAPI):
-    app.include_router(healthcheck_router)
-    app.include_router(auth_router)
+def include_routes(app: FastAPI) -> None:
+    app.include_router(health_router)
     app.include_router(documents_router)
