@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import BinaryIO
-from threading import Lock
+from uuid import UUID, uuid4
 
 from minio import Minio
 from minio.commonconfig import Tags
@@ -9,7 +11,7 @@ from minio.error import S3Error
 
 @dataclass(slots=True)
 class StoredDocument:
-    document_id: str
+    document_id: UUID
     filename: str
     content_type: str
     content: bytes
@@ -26,32 +28,26 @@ class DocumentService:
         if not self._minio_client.bucket_exists(self._bucket_name):
             self._minio_client.make_bucket(self._bucket_name)
 
-    def _normalize_file_path(self, file_path: str) -> str:
-        normalized = file_path.strip().strip("/")
-        if not normalized:
-            raise ValueError("file_path must not be empty")
-        if normalized.startswith(".") or ".." in normalized.split("/"):
-            raise ValueError("file_path contains invalid path traversal")
-        return normalized
-
-    def _object_key(self, username: str, file_path: str) -> str:
-        normalized_file_path = self._normalize_file_path(file_path)
+    def _normalize_username(self, username: str) -> str:
         normalized_username = username.strip().strip("/")
         if not normalized_username:
             raise ValueError("username must not be empty")
-        return f"{normalized_username}/{normalized_file_path}"
+        return normalized_username
+
+    def _object_key(self, username: str, document_id: UUID) -> str:
+        return f"{self._normalize_username(username)}/{document_id}"
 
     def upload(
         self,
         *,
         username: str,
-        file_path: str,
         filename: str,
         content_type: str,
         data_stream: BinaryIO,
         content_length: int,
-    ) -> str:
-        object_key = self._object_key(username, file_path)
+    ) -> UUID:
+        document_id = uuid4()
+        object_key = self._object_key(username, document_id)
         tags = Tags(for_object=True)
         tags["deleted"] = "false"
 
@@ -61,14 +57,14 @@ class DocumentService:
             data_stream,
             length=content_length,
             content_type=content_type,
-            metadata={"filename": filename, "file_path": self._normalize_file_path(file_path)},
+            metadata={"filename": filename, "document_id": str(document_id)},
             tags=tags,
         )
 
-        return object_key
+        return document_id
 
-    def get(self, username: str, file_path: str) -> StoredDocument | None:
-        object_key = self._object_key(username, file_path)
+    def get(self, username: str, document_id: UUID) -> StoredDocument | None:
+        object_key = self._object_key(username, document_id)
 
         try:
             tags = self._minio_client.get_object_tags(self._bucket_name, object_key)
@@ -86,18 +82,18 @@ class DocumentService:
             raise
 
         metadata = getattr(stat_result, "metadata", {}) or {}
-        filename = metadata.get("x-amz-meta-filename", object_key)
+        filename = metadata.get("x-amz-meta-filename", str(document_id))
 
         return StoredDocument(
-            document_id=object_key,
+            document_id=document_id,
             filename=filename,
             content_type=stat_result.content_type or "application/octet-stream",
             content=content,
             is_deleted=False,
         )
 
-    def soft_delete(self, username: str, file_path: str) -> bool:
-        object_key = self._object_key(username, file_path)
+    def soft_delete(self, username: str, document_id: UUID) -> bool:
+        object_key = self._object_key(username, document_id)
 
         try:
             self._minio_client.stat_object(self._bucket_name, object_key)

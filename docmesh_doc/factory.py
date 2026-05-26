@@ -7,7 +7,9 @@ from fastapi_core.dependencies.auth import set_auth_provider
 from fastapi_core.dependencies.storage import set_minio_client
 from fastapi_core.factory import create_app as create_core_app
 
+from docmesh_doc.core.exceptions import register_exception_handlers
 from docmesh_doc.routes import include_routes
+from docmesh_doc.services.metadata import MetadataService
 
 
 def create_app() -> FastAPI:
@@ -18,6 +20,7 @@ def create_app() -> FastAPI:
     async def lifespan(app: FastAPI):
         app.state.env_config = config
         app.state.service_settings = settings
+        app.state.metadata_service = MetadataService()
 
         set_auth_provider(app, config=config)
         set_minio_client(app, config=config)
@@ -31,4 +34,5 @@ def create_app() -> FastAPI:
     )
 
     include_routes(app)
+    register_exception_handlers(app)
     return app
