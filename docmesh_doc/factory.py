@@ -20,7 +20,7 @@ def create_app() -> FastAPI:
     async def lifespan(app: FastAPI):
         app.state.env_config = config
         app.state.service_settings = settings
-        app.state.metadata_service = MetadataService()
+        app.state.metadata_service = MetadataService(config.db)
 
         set_auth_provider(app, config=config)
         set_minio_client(app, config=config)

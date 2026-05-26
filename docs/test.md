@@ -54,12 +54,16 @@ uv run python -m pytest -q
 
 ## 4. 테스트 구조
 
+- `test_docmesh_doc/routes/test_documents_mock.py`
+  - Mock: 문서 업로드/다운로드/삭제 (ID 기반), 입력 검증(422), 서비스 호출 인자 검증
+- `test_docmesh_doc/routes/test_document_metadata_mock.py`
+  - Mock: metadata CRUD 상태코드(201/200/204/404/409), payload 검증(422), 서비스 호출 인자 검증
 - `test_docmesh_doc/routes/test_documents.py`
-  - Mock: 문서 업로드/다운로드/삭제 (ID 기반), 에러 케이스
   - 연동: MinIO 실제 업로드/다운로드/Soft Delete
 - `test_docmesh_doc/routes/test_document_metadata.py`
-  - Mock: metadata CRUD, 요청 검증 실패 케이스
   - 연동: Postgres 반영, 1:1 제약(409)
+- `test_docmesh_doc/services/test_metadata.py`
+  - 연동: SQLAlchemy ORM 기반 metadata 서비스(create/get/update/delete, owner 격리, 충돌 처리)
 - `test_docmesh_doc/routes/test_health.py`
   - Mock: `/health/live`, `/health/ready`
 - `test_docmesh_doc/dependencies/test_security.py`
