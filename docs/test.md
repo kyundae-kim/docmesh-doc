@@ -117,3 +117,25 @@ uv run python -m pytest -q
 - `/token`, `/user` 엔드포인트 연동 테스트 강화
 - 장애 주입(스토리지/DB 일시 실패) 회복 시나리오
 - 대용량 파일 + 동시 요청 성능/안정성 검증
+
+## 10. Alembic 마이그레이션 테스트
+
+### 10.1 마이그레이션 적용 검증 (연동)
+
+실제 Postgres 인스턴스에서 Alembic 마이그레이션이 올바르게 적용/롤백되는지 검증한다.
+
+```bash
+# 마이그레이션 적용 후 상태 확인
+uv run alembic upgrade head
+uv run alembic current
+
+# 롤백 후 재적용
+uv run alembic downgrade -1
+uv run alembic upgrade head
+```
+
+### 10.2 주의 사항
+
+- 연동 테스트 시 `MetadataService` 초기화가 `create_all()`을 호출하지 않는지 확인한다.
+- 테이블이 존재하지 않는 상태에서 마이그레이션 없이 서비스를 시작하면 오류가 발생해야 한다 (프로덕션 시나리오 검증).
+- `autogenerate`로 생성된 마이그레이션 파일은 반드시 수동 검토 후 커밋한다.

@@ -288,3 +288,58 @@ Path Parameter:
 - 문서 식별자/인덱스 및 metadata: Postgres
 - 문서 삭제(Soft Delete) 시 MinIO 객체는 `deleted=true`로 마킹
 - metadata는 문서별 1건만 허용(1:1)
+
+---
+
+## 9. DB 스키마 마이그레이션
+
+Postgres 스키마 변경은 Alembic으로 관리한다. 서비스 초기화 시 `Base.metadata.create_all()` 호출은 개발 환경에서만 허용한다.
+
+### 프로젝트 구조 (마이그레이션 관련)
+
+```
+docmesh_doc/
+  models/
+    base.py          # 공통 Base 클래스 (DeclarativeBase)
+    metadata.py      # DocumentMetadataModel (공통 Base 상속)
+alembic/
+  env.py
+  versions/
+    <revision>_initial_schema.py
+alembic.ini
+```
+
+### 로컬 개발 (마이그레이션 적용)
+
+```bash
+# 최초 설정
+uv run alembic init alembic
+
+# 마이그레이션 파일 자동 생성
+uv run alembic revision --autogenerate -m "initial schema"
+
+# 마이그레이션 적용
+uv run alembic upgrade head
+
+# 이전 버전으로 롤백
+uv run alembic downgrade -1
+```
+
+### alembic/env.py 핵심 설정
+
+```python
+from docmesh_doc.models.base import Base
+from docmesh_doc.models import metadata  # noqa: F401 (모델 임포트로 Base에 등록)
+
+target_metadata = Base.metadata
+```
+
+### 환경변수
+
+마이그레이션 실행 시 DB 연결 정보는 동일한 환경변수를 사용한다.
+
+- `DB__HOST`
+- `DB__PORT`
+- `DB__NAME`
+- `DB__USER`
+- `DB__PASSWORD`
