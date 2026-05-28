@@ -49,6 +49,16 @@ uv run python -m pytest -q
 - 문서 삭제 정책: 물리 삭제 대신 MinIO tag `deleted=true`로 Soft Delete
 - metadata 저장소: Postgres
 - 관계 모델: 문서 1건당 metadata 1건(1:1)
+- DB 스키마 관리: Alembic 마이그레이션 (프로덕션에서 `create_all()` 사용 금지)
+
+## DB 마이그레이션
+
+Postgres 스키마는 Alembic으로 관리한다. 자세한 내용은 `docs/api.md`의 "DB 스키마 마이그레이션" 섹션을 참고한다.
+
+```bash
+# 마이그레이션 적용
+uv run alembic upgrade head
+```
 
 ## 설정
 
