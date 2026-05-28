@@ -4,20 +4,13 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from fastapi.responses import StreamingResponse
 
-from docmesh_doc.dependencies.security import User, get_current_user
+from docmesh_doc.dependencies.security import User, get_current_user, get_username
 from docmesh_doc.dependencies.storage import get_document_service
 from docmesh_doc.schemas.document import DocumentUploadResponse
 from docmesh_doc.services.document import DocumentService
 
 
 router = APIRouter(tags=["Documents"])
-
-
-def _current_username(current_user: User) -> str:
-    username = getattr(current_user, "preferred_username", None) or getattr(
-        current_user, "username", None
-    )
-    return username or current_user.sub
 
 
 @router.post(
@@ -30,7 +23,7 @@ async def upload_document(
     current_user: User = Depends(get_current_user),
     document_service: DocumentService = Depends(get_document_service),
 ):
-    username = _current_username(current_user)
+    username = get_username(current_user)
     stream = file.file
     stream.seek(0, 2)
     content_length = stream.tell()
@@ -54,7 +47,7 @@ def download_document(
     current_user: User = Depends(get_current_user),
     document_service: DocumentService = Depends(get_document_service),
 ):
-    username = _current_username(current_user)
+    username = get_username(current_user)
 
     document = document_service.get(username, document_id)
     if document is None:
@@ -80,7 +73,7 @@ def delete_document(
     current_user: User = Depends(get_current_user),
     document_service: DocumentService = Depends(get_document_service),
 ):
-    username = _current_username(current_user)
+    username = get_username(current_user)
 
     deleted = document_service.soft_delete(username, document_id)
     if not deleted:

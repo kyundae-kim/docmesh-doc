@@ -3,20 +3,13 @@ from uuid import UUID
 from fastapi import APIRouter, Body, Depends, HTTPException, status
 
 from docmesh_doc.dependencies.metadata import get_metadata_service
-from docmesh_doc.dependencies.security import User, get_current_user
+from docmesh_doc.dependencies.security import User, get_current_user, get_username
 from docmesh_doc.dependencies.storage import get_document_service
 from docmesh_doc.schemas.document import DocumentMetadataResponse
 from docmesh_doc.services.metadata import MetadataConflictError, MetadataService
 
 
 router = APIRouter(tags=["Metadata"])
-
-
-def _current_username(current_user: User) -> str:
-    username = getattr(current_user, "preferred_username", None) or getattr(
-        current_user, "username", None
-    )
-    return username or current_user.sub
 
 
 @router.post(
@@ -31,7 +24,7 @@ def create_metadata(
     metadata_service: MetadataService = Depends(get_metadata_service),
     document_service=Depends(get_document_service),
 ):
-    username = _current_username(current_user)
+    username = get_username(current_user)
     if document_service.get(username, document_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
 
@@ -59,7 +52,7 @@ def get_metadata(
     metadata_service: MetadataService = Depends(get_metadata_service),
     document_service=Depends(get_document_service),
 ):
-    username = _current_username(current_user)
+    username = get_username(current_user)
     if document_service.get(username, document_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
 
@@ -83,7 +76,7 @@ def patch_metadata(
     metadata_service: MetadataService = Depends(get_metadata_service),
     document_service=Depends(get_document_service),
 ):
-    username = _current_username(current_user)
+    username = get_username(current_user)
     if document_service.get(username, document_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
 
@@ -110,7 +103,7 @@ def delete_metadata(
     metadata_service: MetadataService = Depends(get_metadata_service),
     document_service=Depends(get_document_service),
 ):
-    username = _current_username(current_user)
+    username = get_username(current_user)
     if document_service.get(username, document_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
 
