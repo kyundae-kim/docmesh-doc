@@ -1,0 +1,132 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from uuid import UUID, uuid4
+
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+from docmesh_doc.dependencies.security import User, get_current_user
+from docmesh_doc.dependencies.storage import get_document_service
+from docmesh_doc.routes.documents import router as documents_router
+
+
+@dataclass
+class _StoredDocument:
+    document_id: UUID
+    filename: str
+    content_type: str
+    content: bytes
+
+
+class _FakeDocumentService:
+    def __init__(self):
+        self.upload_result = uuid4()
+        self.get_result: _StoredDocument | None = None
+        self.soft_delete_result: bool = True
+        self.upload_calls: list[dict] = []
+        self.get_calls: list[tuple[str, UUID]] = []
+        self.soft_delete_calls: list[tuple[str, UUID]] = []
+
+    def upload(self, **kwargs):
+        self.upload_calls.append(kwargs)
+        return self.upload_result
+
+    def get(self, username: str, document_id: UUID):
+        self.get_calls.append((username, document_id))
+        return self.get_result
+
+    def soft_delete(self, username: str, document_id: UUID):
+        self.soft_delete_calls.append((username, document_id))
+        return self.soft_delete_result
+
+
+def _build_client(service: _FakeDocumentService) -> TestClient:
+    app = FastAPI()
+    app.include_router(documents_router)
+    app.dependency_overrides[get_current_user] = lambda: User(sub="sub-1", username="mock-user")
+    app.dependency_overrides[get_document_service] = lambda: service
+    return TestClient(app)
+
+
+def test_upload_document_mock_success_201_and_calls():
+    service = _FakeDocumentService()
+    expected_id = uuid4()
+    service.upload_result = expected_id
+
+    with _build_client(service) as client:
+        response = client.post(
+            "/documents",
+            files={"file": ("hello.txt", b"hello", "text/plain")},
+        )
+
+    assert response.status_code == 201
+    assert response.json()["document_id"] == str(expected_id)
+    assert response.json()["filename"] == "hello.txt"
+    assert len(service.upload_calls) == 1
+    assert service.upload_calls[0]["username"] == "mock-user"
+    assert service.upload_calls[0]["filename"] == "hello.txt"
+    assert service.upload_calls[0]["content_type"] == "text/plain"
+
+
+def test_upload_document_mock_validation_422_when_file_missing():
+    service = _FakeDocumentService()
+
+    with _build_client(service) as client:
+        response = client.post("/documents")
+
+    assert response.status_code == 422
+    assert service.upload_calls == []
+
+
+def test_download_document_mock_success_200():
+    service = _FakeDocumentService()
+    document_id = uuid4()
+    service.get_result = _StoredDocument(
+        document_id=document_id,
+        filename="a.txt",
+        content_type="text/plain",
+        content=b"abc",
+    )
+
+    with _build_client(service) as client:
+        response = client.get(f"/documents/{document_id}")
+
+    assert response.status_code == 200
+    assert response.content == b"abc"
+    assert response.headers["content-type"].startswith("text/plain")
+    assert "filename=\"a.txt\"" in response.headers["content-disposition"]
+
+
+def test_download_document_mock_not_found_404():
+    service = _FakeDocumentService()
+    document_id = uuid4()
+    service.get_result = None
+
+    with _build_client(service) as client:
+        response = client.get(f"/documents/{document_id}")
+
+    assert response.status_code == 404
+
+
+def test_delete_document_mock_success_204_and_calls():
+    service = _FakeDocumentService()
+    document_id = uuid4()
+    service.soft_delete_result = True
+
+    with _build_client(service) as client:
+        response = client.delete(f"/documents/{document_id}")
+
+    assert response.status_code == 204
+    assert service.soft_delete_calls == [("mock-user", document_id)]
+
+
+def test_delete_document_mock_missing_404():
+    service = _FakeDocumentService()
+    document_id = uuid4()
+    service.soft_delete_result = False
+
+    with _build_client(service) as client:
+        response = client.delete(f"/documents/{document_id}")
+
+    assert response.status_code == 404

@@ -1,8 +1,10 @@
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
-from fastapi.responses import StreamingResponse
 from io import BytesIO
+from uuid import UUID
 
-from docmesh_doc.dependencies.security import get_current_user, User
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi.responses import StreamingResponse
+
+from docmesh_doc.dependencies.security import User, get_current_user, get_username
 from docmesh_doc.dependencies.storage import get_document_service
 from docmesh_doc.schemas.document import DocumentUploadResponse
 from docmesh_doc.services.document import DocumentService
@@ -11,21 +13,17 @@ from docmesh_doc.services.document import DocumentService
 router = APIRouter(tags=["Documents"])
 
 
-def _current_username(current_user: User) -> str:
-    username = getattr(current_user, "preferred_username", None) or getattr(
-        current_user, "username", None
-    )
-    return username or current_user.sub
-
-
-@router.post("/documents", response_model=DocumentUploadResponse)
+@router.post(
+    "/documents",
+    response_model=DocumentUploadResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def upload_document(
-    file_path: str = Form(...),
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
     document_service: DocumentService = Depends(get_document_service),
 ):
-    username = _current_username(current_user)
+    username = get_username(current_user)
     stream = file.file
     stream.seek(0, 2)
     content_length = stream.tell()
@@ -34,25 +32,24 @@ async def upload_document(
     content_type = file.content_type or "application/octet-stream"
     document_id = document_service.upload(
         username=username,
-        file_path=file_path,
-        filename=file.filename,
+        filename=file.filename or "uploaded.bin",
         content_type=content_type,
         data_stream=stream,
         content_length=content_length,
     )
 
-    return DocumentUploadResponse(file_path=file_path)
+    return DocumentUploadResponse(document_id=document_id, filename=file.filename or "uploaded.bin")
 
 
-@router.get("/documents/{file_path:path}")
+@router.get("/documents/{document_id}")
 def download_document(
-    file_path: str,
+    document_id: UUID,
     current_user: User = Depends(get_current_user),
     document_service: DocumentService = Depends(get_document_service),
 ):
-    username = _current_username(current_user)
+    username = get_username(current_user)
 
-    document = document_service.get(username, file_path)
+    document = document_service.get(username, document_id)
     if document is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -60,7 +57,7 @@ def download_document(
         )
 
     stream = BytesIO(document.content)
-    
+
     return StreamingResponse(
         iter([stream.read()]),
         media_type=document.content_type,
@@ -70,15 +67,15 @@ def download_document(
     )
 
 
-@router.delete("/documents/{file_path:path}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/documents/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_document(
-    file_path: str,
+    document_id: UUID,
     current_user: User = Depends(get_current_user),
     document_service: DocumentService = Depends(get_document_service),
 ):
-    username = _current_username(current_user)
+    username = get_username(current_user)
 
-    deleted = document_service.soft_delete(username, file_path)
+    deleted = document_service.soft_delete(username, document_id)
     if not deleted:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

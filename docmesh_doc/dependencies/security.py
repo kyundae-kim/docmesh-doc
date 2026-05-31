@@ -25,6 +25,12 @@ def get_current_user(current_user: UserInfo = Depends(core_get_current_user)) ->
     return current_user
 
 
+def get_username(user: UserInfo) -> str:
+    """preferred_username -> username -> sub 우선순위로 사용자 이름을 반환합니다."""
+    username = getattr(user, "preferred_username", None) or getattr(user, "username", None)
+    return username or user.sub
+
+
 def require_permissions(
     *,
     required_roles: tuple[str, ...] = (),
