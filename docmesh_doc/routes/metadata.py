@@ -1,11 +1,12 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Body, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from pydantic import ValidationError
 
 from docmesh_doc.dependencies.metadata import get_metadata_service
 from docmesh_doc.dependencies.security import User, get_current_user, get_username
 from docmesh_doc.dependencies.storage import get_document_service
-from docmesh_doc.schemas.document import DocumentMetadataResponse
+from docmesh_doc.schemas.document import DocumentMetadataRequest, DocumentMetadataResponse
 from docmesh_doc.services.metadata import MetadataConflictError, MetadataService
 
 
@@ -17,13 +18,17 @@ router = APIRouter(tags=["Metadata"])
     response_model=DocumentMetadataResponse,
     status_code=status.HTTP_201_CREATED,
 )
-def create_metadata(
+async def create_metadata(
     document_id: UUID,
-    metadata_value: dict = Body(...),
+    request: Request,
     current_user: User = Depends(get_current_user),
     metadata_service: MetadataService = Depends(get_metadata_service),
     document_service=Depends(get_document_service),
 ):
+    try:
+        payload = DocumentMetadataRequest.model_validate(await request.json())
+    except (ValidationError, Exception) as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
     username = get_username(current_user)
     if document_service.get(username, document_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
@@ -32,7 +37,7 @@ def create_metadata(
         record = metadata_service.create(
             username=username,
             document_id=document_id,
-            metadata_value=metadata_value,
+            metadata_value=payload.metadata_value,
         )
     except MetadataConflictError:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Metadata already exists")
@@ -69,13 +74,17 @@ def get_metadata(
 
 
 @router.patch("/documents/{document_id}/metadata", response_model=DocumentMetadataResponse)
-def patch_metadata(
+async def patch_metadata(
     document_id: UUID,
-    metadata_value: dict = Body(...),
+    request: Request,
     current_user: User = Depends(get_current_user),
     metadata_service: MetadataService = Depends(get_metadata_service),
     document_service=Depends(get_document_service),
 ):
+    try:
+        payload = DocumentMetadataRequest.model_validate(await request.json())
+    except (ValidationError, Exception) as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
     username = get_username(current_user)
     if document_service.get(username, document_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
@@ -83,7 +92,7 @@ def patch_metadata(
     record = metadata_service.update(
         username=username,
         document_id=document_id,
-        metadata_value=metadata_value,
+        metadata_value=payload.metadata_value,
     )
     if record is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Metadata not found")

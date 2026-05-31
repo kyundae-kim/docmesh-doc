@@ -16,7 +16,8 @@ if config.config_file_name is not None:
 
 # Import Base and models for autogenerate support
 from docmesh_doc.models.base import Base
-from docmesh_doc.models import metadata  # noqa: F401 (모델 임포트로 Base에 등록)
+from docmesh_doc.models import metadata  # noqa: F401
+from docmesh_doc.models import document  # noqa: F401
 
 target_metadata = Base.metadata
 

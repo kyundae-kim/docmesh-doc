@@ -12,6 +12,8 @@ from docmesh_doc.dependencies.security import User, get_current_user
 from docmesh_doc.dependencies.storage import get_document_service
 from docmesh_doc.routes.metadata import router as metadata_router
 from docmesh_doc.services.metadata import MetadataConflictError
+from fastapi_core.dependencies.auth import get_settings
+from unittest.mock import MagicMock
 
 
 @dataclass
@@ -72,6 +74,7 @@ def _build_client(doc_service: _FakeDocumentService, meta_service: _FakeMetadata
     app.dependency_overrides[get_current_user] = lambda: User(sub="sub-1", username="mock-user")
     app.dependency_overrides[get_document_service] = lambda: doc_service
     app.dependency_overrides[get_metadata_service] = lambda: meta_service
+    app.dependency_overrides[get_settings] = lambda: MagicMock()
     return TestClient(app)
 
 
