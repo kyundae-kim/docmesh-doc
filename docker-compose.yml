@@ -1,6 +1,9 @@
 services:
   document:
-    image: ghcr.io/kyundae-kim/docmesh-doc:v0.1.3
+    # image: ghcr.io/kyundae-kim/docmesh-doc:v0.1.3
+    build:
+      context: .
+      dockerfile: Dockerfile
     env_file:
       - .release/.env
     restart: unless-stopped
