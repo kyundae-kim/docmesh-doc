@@ -8,7 +8,7 @@ from docmesh_doc import factory
 from docmesh_doc.dependencies.security import User, get_current_user
 
 
-TEST_USERNAME = "test-user"
+TEST_USERNAME = "test"
 CREATED_DOCUMENT_IDS: list[UUID] = []
 
 

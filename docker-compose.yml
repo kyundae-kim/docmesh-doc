@@ -11,7 +11,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=docmesh-infra_net"
-      - "traefik.http.routers.document.rule=PathPrefix(`/documents`)"
+      - "traefik.http.routers.document.rule=PathPrefix(`/dms`)"
       - "traefik.http.routers.document.entrypoints=web"
       - "traefik.http.services.document.loadbalancer.server.port=8000"
 
