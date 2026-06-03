@@ -49,7 +49,6 @@ def upgrade() -> None:
         "document_metadata",
         sa.Column("document_id", UUID(as_uuid=True), primary_key=True, nullable=False),
         sa.Column("owner_username", sa.String(), nullable=False),
-        sa.Column("filename", sa.Text(), nullable=False, server_default=""),
         sa.Column("metadata_value", JSONB(), nullable=False),
         sa.Column(
             "created_at",
