@@ -9,7 +9,7 @@ COPY pyproject.toml uv.lock* /app/
 RUN uv sync --no-dev
 
 COPY . /app
-RUN uv pip install -e .
+# RUN uv pip install -e .
 
 EXPOSE 8000
 
