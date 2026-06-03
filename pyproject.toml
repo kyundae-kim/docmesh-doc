@@ -19,7 +19,7 @@ dependencies = [
 packages = ["docmesh_doc"]
 
 [tool.fastapi]
-entrypoint = "docmesh_doc.main:app"
+entrypoint = "main:app"
 
 [tool.uv.sources]
 fastapi-core = { git = "https://github.com/kyundae-kim/fastapi-core.git" }
