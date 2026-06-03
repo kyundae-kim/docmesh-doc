@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import BinaryIO
 from uuid import UUID, uuid4
 
+from fastapi_core.core.storage import ensure_bucket_exists
 from minio import Minio
 from minio.commonconfig import Tags
 from minio.error import S3Error
@@ -25,8 +26,7 @@ class DocumentService:
         self._ensure_bucket()
 
     def _ensure_bucket(self) -> None:
-        if not self._minio_client.bucket_exists(self._bucket_name):
-            self._minio_client.make_bucket(self._bucket_name)
+        ensure_bucket_exists(self._minio_client, self._bucket_name)
 
     def _normalize_username(self, username: str) -> str:
         normalized_username = username.strip().strip("/")

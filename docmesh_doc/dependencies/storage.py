@@ -1,11 +1,12 @@
 from fastapi import Depends, Request
+from fastapi_core.dependencies.storage import get_minio_client as core_get_minio_client
 from minio import Minio
 
 from docmesh_doc.services.document import DocumentService
 
 
-def get_minio_client(request: Request) -> Minio:
-    return request.app.state.minio_client
+def get_minio_client(minio_client: Minio = Depends(core_get_minio_client)) -> Minio:
+    return minio_client
 
 
 def get_document_service(

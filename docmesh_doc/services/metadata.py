@@ -5,7 +5,9 @@ from datetime import datetime
 from uuid import UUID
 
 from fastapi_core.core.config import DatabaseConfig
-from sqlalchemy import create_engine, select
+from fastapi_core.core.database import create_db_engine
+from sqlalchemy import select
+from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -26,12 +28,18 @@ class MetadataConflictError(Exception):
 
 
 class MetadataService:
-    def __init__(self, db_config: DatabaseConfig) -> None:
-        self._engine = create_engine(
-            db_config.sqlalchemy_database_url,
-            echo=db_config.echo,
-            future=True,
-        )
+    def __init__(
+        self,
+        db_config: DatabaseConfig | None = None,
+        *,
+        engine: Engine | None = None,
+    ) -> None:
+        if engine is None:
+            if db_config is None:
+                raise ValueError("db_config or engine must be provided")
+            engine = create_db_engine(db_config)
+
+        self._engine = engine
         Base.metadata.create_all(self._engine)
 
     def _normalize_username(self, username: str) -> str:
