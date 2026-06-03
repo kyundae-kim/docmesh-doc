@@ -68,6 +68,8 @@ def test_upload_and_download_document(app):
     assert download_response.status_code == 200
     assert download_response.content == b"hello docmesh"
     assert download_response.headers["content-type"].startswith("text/plain")
+    assert download_response.headers["content-length"] == str(len(b"hello docmesh"))
+    assert download_response.headers["accept-ranges"] == "bytes"
 
 
 def test_upload_document_saves_metadata_when_provided(app):

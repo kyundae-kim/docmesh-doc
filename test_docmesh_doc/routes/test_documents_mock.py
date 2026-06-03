@@ -187,6 +187,8 @@ def test_download_document_mock_success_200():
     assert response.status_code == 200
     assert response.content == b"abc"
     assert response.headers["content-type"].startswith("text/plain")
+    assert response.headers["content-length"] == "3"
+    assert response.headers["accept-ranges"] == "bytes"
     assert "filename=\"a.txt\"" in response.headers["content-disposition"]
 
 

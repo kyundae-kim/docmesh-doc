@@ -1,9 +1,11 @@
-from io import BytesIO
 import json
+import os
+from tempfile import NamedTemporaryFile
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse
+from starlette.background import BackgroundTask
 
 from docmesh_doc.dependencies.metadata import get_metadata_service
 from docmesh_doc.dependencies.security import User, get_current_user, get_username
@@ -89,16 +91,20 @@ def download_document(
             detail="Document not found",
         )
 
-    stream = BytesIO(document.content)
     metadata_record = metadata_service.get(username=username, document_id=document_id)
     download_filename = metadata_record.filename if metadata_record is not None else document.filename
+    temp_file = NamedTemporaryFile(delete=False)
+    try:
+        temp_file.write(document.content)
+        temp_file.flush()
+    finally:
+        temp_file.close()
 
-    return StreamingResponse(
-        iter([stream.read()]),
+    return FileResponse(
+        path=temp_file.name,
         media_type=document.content_type,
-        headers={
-            "Content-Disposition": f'attachment; filename="{download_filename}"',
-        },
+        filename=download_filename,
+        background=BackgroundTask(os.unlink, temp_file.name),
     )
 
 
