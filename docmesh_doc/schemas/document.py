@@ -21,6 +21,8 @@ class DocumentMetadataRequest(BaseModel):
 
 class DocumentMetadataResponse(BaseModel):
     document_id: UUID
+    filename: str
+    uploaded_by: str
     metadata_value: dict
     created_at: datetime
     updated_at: datetime

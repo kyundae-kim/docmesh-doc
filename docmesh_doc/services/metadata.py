@@ -6,7 +6,7 @@ from uuid import UUID
 
 from fastapi_core.core.config import DatabaseConfig
 from fastapi_core.core.database import create_db_engine
-from sqlalchemy import select
+from sqlalchemy import inspect, select, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -18,6 +18,8 @@ from docmesh_doc.models.metadata import DocumentMetadataModel
 @dataclass(slots=True)
 class MetadataRecord:
     document_id: UUID
+    filename: str
+    uploaded_by: str
     metadata_value: dict
     created_at: datetime
     updated_at: datetime
@@ -41,6 +43,23 @@ class MetadataService:
 
         self._engine = engine
         Base.metadata.create_all(self._engine)
+        self._ensure_schema()
+
+    def _ensure_schema(self) -> None:
+        inspector = inspect(self._engine)
+        try:
+            columns = {column["name"] for column in inspector.get_columns("document_metadata")}
+        except Exception:
+            return
+
+        if "filename" not in columns:
+            with self._engine.begin() as conn:
+                conn.execute(
+                    text(
+                        "ALTER TABLE document_metadata "
+                        "ADD COLUMN filename TEXT NOT NULL DEFAULT ''"
+                    )
+                )
 
     def _normalize_username(self, username: str) -> str:
         normalized_username = username.strip().strip("/")
@@ -52,17 +71,27 @@ class MetadataService:
     def _to_record(model: DocumentMetadataModel) -> MetadataRecord:
         return MetadataRecord(
             document_id=model.document_id,
+            filename=model.filename,
+            uploaded_by=model.owner_username,
             metadata_value=model.metadata_value,
             created_at=model.created_at,
             updated_at=model.updated_at,
         )
 
-    def create(self, *, username: str, document_id: UUID, metadata_value: dict) -> MetadataRecord:
+    def create(
+        self,
+        *,
+        username: str,
+        document_id: UUID,
+        filename: str,
+        metadata_value: dict,
+    ) -> MetadataRecord:
         normalized_username = self._normalize_username(username)
 
         model = DocumentMetadataModel(
             document_id=document_id,
             owner_username=normalized_username,
+            filename=filename,
             metadata_value=metadata_value,
         )
 

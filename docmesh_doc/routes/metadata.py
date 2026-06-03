@@ -30,13 +30,15 @@ async def create_metadata(
     except (ValidationError, Exception) as e:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
     username = get_username(current_user)
-    if document_service.get(username, document_id) is None:
+    document = document_service.get(username, document_id)
+    if document is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
 
     try:
         record = metadata_service.create(
             username=username,
             document_id=document_id,
+            filename=document.filename,
             metadata_value=payload.metadata_value,
         )
     except MetadataConflictError:
@@ -44,6 +46,8 @@ async def create_metadata(
 
     return DocumentMetadataResponse(
         document_id=record.document_id,
+        filename=record.filename,
+        uploaded_by=record.uploaded_by,
         metadata_value=record.metadata_value,
         created_at=record.created_at,
         updated_at=record.updated_at,
@@ -67,6 +71,8 @@ def get_metadata(
 
     return DocumentMetadataResponse(
         document_id=record.document_id,
+        filename=record.filename,
+        uploaded_by=record.uploaded_by,
         metadata_value=record.metadata_value,
         created_at=record.created_at,
         updated_at=record.updated_at,
@@ -99,6 +105,8 @@ async def patch_metadata(
 
     return DocumentMetadataResponse(
         document_id=record.document_id,
+        filename=record.filename,
+        uploaded_by=record.uploaded_by,
         metadata_value=record.metadata_value,
         created_at=record.created_at,
         updated_at=record.updated_at,

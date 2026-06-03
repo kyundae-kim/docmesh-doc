@@ -37,10 +37,13 @@ def test_create_and_get_metadata(metadata_service: MetadataService, cleanup_reco
     created = metadata_service.create(
         username="tester-a",
         document_id=document_id,
+        filename="architecture.pdf",
         metadata_value={"category": "architecture", "priority": 1},
     )
 
     assert created.document_id == document_id
+    assert created.filename == "architecture.pdf"
+    assert created.uploaded_by == "tester-a"
     assert created.metadata_value == {"category": "architecture", "priority": 1}
     assert created.created_at is not None
     assert created.updated_at is not None
@@ -48,6 +51,8 @@ def test_create_and_get_metadata(metadata_service: MetadataService, cleanup_reco
     fetched = metadata_service.get(username="tester-a", document_id=document_id)
     assert fetched is not None
     assert fetched.document_id == document_id
+    assert fetched.filename == "architecture.pdf"
+    assert fetched.uploaded_by == "tester-a"
     assert fetched.metadata_value == {"category": "architecture", "priority": 1}
 
 
@@ -58,6 +63,7 @@ def test_create_conflict_raises(metadata_service: MetadataService, cleanup_recor
     metadata_service.create(
         username="tester-b",
         document_id=document_id,
+        filename="first.txt",
         metadata_value={"tag": "first"},
     )
 
@@ -65,6 +71,7 @@ def test_create_conflict_raises(metadata_service: MetadataService, cleanup_recor
         metadata_service.create(
             username="tester-b",
             document_id=document_id,
+            filename="second.txt",
             metadata_value={"tag": "second"},
         )
 
@@ -76,6 +83,7 @@ def test_update_metadata(metadata_service: MetadataService, cleanup_records: lis
     created = metadata_service.create(
         username="tester-c",
         document_id=document_id,
+        filename="priority.txt",
         metadata_value={"priority": 1},
     )
 
@@ -87,6 +95,8 @@ def test_update_metadata(metadata_service: MetadataService, cleanup_records: lis
 
     assert updated is not None
     assert updated.document_id == document_id
+    assert updated.filename == "priority.txt"
+    assert updated.uploaded_by == "tester-c"
     assert updated.metadata_value == {"priority": 2}
     assert updated.updated_at >= created.updated_at
 
@@ -97,6 +107,7 @@ def test_delete_metadata(metadata_service: MetadataService, cleanup_records: lis
     metadata_service.create(
         username="tester-d",
         document_id=document_id,
+        filename="delete.txt",
         metadata_value={"k": "v"},
     )
 
@@ -117,6 +128,7 @@ def test_owner_isolation(metadata_service: MetadataService, cleanup_records: lis
     metadata_service.create(
         username="owner-1",
         document_id=document_id,
+        filename="private.txt",
         metadata_value={"visibility": "private"},
     )
 

@@ -57,6 +57,12 @@ def test_upload_and_download_document(app):
     assert payload["filename"] == "example.txt"
     assert payload["metadata_value"] is None
 
+    metadata_response = app.get(f"/documents/{document_id}/metadata")
+    assert metadata_response.status_code == 200
+    assert metadata_response.json()["filename"] == "example.txt"
+    assert metadata_response.json()["uploaded_by"] == TEST_USERNAME
+    assert metadata_response.json()["metadata_value"] == {}
+
     download_response = app.get(f"/documents/{document_id}")
 
     assert download_response.status_code == 200
@@ -67,19 +73,21 @@ def test_upload_and_download_document(app):
 def test_upload_document_saves_metadata_when_provided(app):
     upload_response = app.post(
         "/documents",
-        files={"file": ("with-meta.txt", b"hello metadata", "text/plain")},
+        files={"file": ("한글-메타.txt", b"hello metadata", "text/plain")},
         data={"metadata_value": json.dumps({"category": "reference", "priority": 7})},
     )
 
     assert upload_response.status_code == 201
     payload = upload_response.json()
-    assert payload["filename"] == "with-meta.txt"
+    assert payload["filename"] == "한글-메타.txt"
     assert payload["metadata_value"] == {"category": "reference", "priority": 7}
     document_id = UUID(payload["document_id"])
     CREATED_DOCUMENT_IDS.append(document_id)
 
     metadata_response = app.get(f"/documents/{document_id}/metadata")
     assert metadata_response.status_code == 200
+    assert metadata_response.json()["filename"] == "한글-메타.txt"
+    assert metadata_response.json()["uploaded_by"] == TEST_USERNAME
     assert metadata_response.json()["metadata_value"] == {
         "category": "reference",
         "priority": 7,

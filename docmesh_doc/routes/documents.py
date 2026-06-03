@@ -29,6 +29,7 @@ async def upload_document(
     metadata_service: MetadataService = Depends(get_metadata_service),
 ):
     parsed_metadata: dict | None = None
+    filename = file.filename or "uploaded.bin"
     if metadata_value is not None:
         try:
             parsed_metadata = json.loads(metadata_value)
@@ -52,22 +53,22 @@ async def upload_document(
     content_type = file.content_type or "application/octet-stream"
     document_id = document_service.upload(
         username=username,
-        filename=file.filename or "uploaded.bin",
+        filename=filename,
         content_type=content_type,
         data_stream=stream,
         content_length=content_length,
     )
 
-    if parsed_metadata is not None:
-        metadata_service.create(
-            username=username,
-            document_id=document_id,
-            metadata_value=parsed_metadata,
-        )
+    metadata_service.create(
+        username=username,
+        document_id=document_id,
+        filename=filename,
+        metadata_value=parsed_metadata or {},
+    )
 
     return DocumentUploadResponse(
         document_id=document_id,
-        filename=file.filename or "uploaded.bin",
+        filename=filename,
         metadata_value=parsed_metadata,
     )
 
@@ -77,6 +78,7 @@ def download_document(
     document_id: UUID,
     current_user: User = Depends(get_current_user),
     document_service: DocumentService = Depends(get_document_service),
+    metadata_service: MetadataService = Depends(get_metadata_service),
 ):
     username = get_username(current_user)
 
@@ -88,12 +90,14 @@ def download_document(
         )
 
     stream = BytesIO(document.content)
+    metadata_record = metadata_service.get(username=username, document_id=document_id)
+    download_filename = metadata_record.filename if metadata_record is not None else document.filename
 
     return StreamingResponse(
         iter([stream.read()]),
         media_type=document.content_type,
         headers={
-            "Content-Disposition": f'attachment; filename="{document.filename}"',
+            "Content-Disposition": f'attachment; filename="{download_filename}"',
         },
     )
 

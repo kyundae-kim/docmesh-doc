@@ -19,6 +19,8 @@ from unittest.mock import MagicMock
 @dataclass
 class _Record:
     document_id: UUID
+    filename: str
+    uploaded_by: str
     metadata_value: dict
     created_at: datetime
     updated_at: datetime
@@ -31,7 +33,9 @@ class _FakeDocumentService:
 
     def get(self, username: str, document_id: UUID):
         self.get_calls.append((username, document_id))
-        return object() if self.doc_exists else None
+        if not self.doc_exists:
+            return None
+        return type("StoredDocument", (), {"filename": "stored.txt"})()
 
 
 class _FakeMetadataService:
@@ -41,19 +45,19 @@ class _FakeMetadataService:
         self.update_result: _Record | None = None
         self.delete_result: bool = True
         self.raise_conflict = False
-        self.create_calls: list[tuple[str, UUID, dict]] = []
+        self.create_calls: list[tuple[str, UUID, str, dict]] = []
         self.get_calls: list[tuple[str, UUID]] = []
         self.update_calls: list[tuple[str, UUID, dict]] = []
         self.delete_calls: list[tuple[str, UUID]] = []
 
-    def create(self, *, username: str, document_id: UUID, metadata_value: dict):
-        self.create_calls.append((username, document_id, metadata_value))
+    def create(self, *, username: str, document_id: UUID, filename: str, metadata_value: dict):
+        self.create_calls.append((username, document_id, filename, metadata_value))
         if self.raise_conflict:
             raise MetadataConflictError("conflict")
         if self.create_result is not None:
             return self.create_result
         now = datetime.now(timezone.utc)
-        return _Record(document_id, metadata_value, now, now)
+        return _Record(document_id, filename, username, metadata_value, now, now)
 
     def get(self, *, username: str, document_id: UUID):
         self.get_calls.append((username, document_id))
@@ -83,7 +87,7 @@ def test_create_metadata_mock_success_201_and_calls():
     doc_service = _FakeDocumentService()
     meta_service = _FakeMetadataService()
     now = datetime.now(timezone.utc)
-    meta_service.create_result = _Record(document_id, {"k": "v"}, now, now)
+    meta_service.create_result = _Record(document_id, "stored.txt", "mock-user", {"k": "v"}, now, now)
 
     with _build_client(doc_service, meta_service) as client:
         response = client.post(
@@ -93,9 +97,11 @@ def test_create_metadata_mock_success_201_and_calls():
 
     assert response.status_code == 201
     assert response.json()["document_id"] == str(document_id)
+    assert response.json()["filename"] == "stored.txt"
+    assert response.json()["uploaded_by"] == "mock-user"
     assert response.json()["metadata_value"] == {"k": "v"}
     assert doc_service.get_calls == [("mock-user", document_id)]
-    assert meta_service.create_calls == [("mock-user", document_id, {"k": "v"})]
+    assert meta_service.create_calls == [("mock-user", document_id, "stored.txt", {"k": "v"})]
 
 
 def test_create_metadata_mock_conflict_409():
@@ -146,7 +152,7 @@ def test_patch_metadata_mock_success_200_and_calls():
     doc_service = _FakeDocumentService()
     meta_service = _FakeMetadataService()
     now = datetime.now(timezone.utc)
-    meta_service.update_result = _Record(document_id, {"priority": 2}, now, now)
+    meta_service.update_result = _Record(document_id, "stored.txt", "mock-user", {"priority": 2}, now, now)
 
     with _build_client(doc_service, meta_service) as client:
         response = client.patch(
@@ -155,6 +161,8 @@ def test_patch_metadata_mock_success_200_and_calls():
         )
 
     assert response.status_code == 200
+    assert response.json()["filename"] == "stored.txt"
+    assert response.json()["uploaded_by"] == "mock-user"
     assert response.json()["metadata_value"] == {"priority": 2}
     assert meta_service.update_calls == [("mock-user", document_id, {"priority": 2})]
 

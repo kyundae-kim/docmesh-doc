@@ -46,17 +46,25 @@ class _FakeDocumentService:
 
 class _FakeMetadataService:
     def __init__(self):
-        self.create_calls: list[tuple[str, UUID, dict]] = []
+        self.create_calls: list[tuple[str, UUID, str, dict]] = []
+        self.get_calls: list[tuple[str, UUID]] = []
+        self.get_result = None
 
-    def create(self, *, username: str, document_id: UUID, metadata_value: dict):
-        self.create_calls.append((username, document_id, metadata_value))
+    def create(self, *, username: str, document_id: UUID, filename: str, metadata_value: dict):
+        self.create_calls.append((username, document_id, filename, metadata_value))
         now = datetime.now(timezone.utc)
         return {
             "document_id": document_id,
+            "filename": filename,
+            "uploaded_by": username,
             "metadata_value": metadata_value,
             "created_at": now,
             "updated_at": now,
         }
+
+    def get(self, *, username: str, document_id: UUID):
+        self.get_calls.append((username, document_id))
+        return self.get_result
 
 
 def _build_client(
@@ -75,10 +83,11 @@ def _build_client(
 
 def test_upload_document_mock_success_201_and_calls():
     service = _FakeDocumentService()
+    metadata_service = _FakeMetadataService()
     expected_id = uuid4()
     service.upload_result = expected_id
 
-    with _build_client(service) as client:
+    with _build_client(service, metadata_service) as client:
         response = client.post(
             "/documents",
             files={"file": ("hello.txt", b"hello", "text/plain")},
@@ -88,6 +97,7 @@ def test_upload_document_mock_success_201_and_calls():
     assert response.json()["document_id"] == str(expected_id)
     assert response.json()["filename"] == "hello.txt"
     assert response.json()["metadata_value"] is None
+    assert metadata_service.create_calls == [("mock-user", expected_id, "hello.txt", {})]
     assert len(service.upload_calls) == 1
     assert service.upload_calls[0]["username"] == "mock-user"
     assert service.upload_calls[0]["filename"] == "hello.txt"
@@ -112,7 +122,26 @@ def test_upload_document_mock_saves_metadata_when_provided():
     assert response.json()["filename"] == "hello.txt"
     assert response.json()["metadata_value"] == {"category": "guide", "priority": 1}
     assert metadata_service.create_calls == [
-        ("mock-user", expected_id, {"category": "guide", "priority": 1})
+        ("mock-user", expected_id, "hello.txt", {"category": "guide", "priority": 1})
+    ]
+
+
+def test_upload_document_mock_with_korean_filename_persists_filename_in_document_metadata():
+    service = _FakeDocumentService()
+    metadata_service = _FakeMetadataService()
+    expected_id = uuid4()
+    service.upload_result = expected_id
+
+    with _build_client(service, metadata_service) as client:
+        response = client.post(
+            "/documents",
+            files={"file": ("한글 문서.txt", b"hello", "text/plain")},
+        )
+
+    assert response.status_code == 201
+    assert response.json()["filename"] == "한글 문서.txt"
+    assert metadata_service.create_calls == [
+        ("mock-user", expected_id, "한글 문서.txt", {})
     ]
 
 

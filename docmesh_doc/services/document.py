@@ -57,7 +57,7 @@ class DocumentService:
             data_stream,
             length=content_length,
             content_type=content_type,
-            metadata={"filename": filename, "document_id": str(document_id)},
+            metadata={"document_id": str(document_id)},
             tags=tags,
         )
 

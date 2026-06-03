@@ -43,24 +43,19 @@ def _create_document(app: TestClient) -> UUID:
 def test_metadata_crud(app):
     document_id = _create_document(app)
 
-    create_response = app.post(
-        f"/documents/{document_id}/metadata",
-        json={"metadata_value": {"category": "architecture", "priority": 1}},
-    )
-    assert create_response.status_code == 201
-    created = create_response.json()
-    assert created["document_id"] == str(document_id)
-    assert created["metadata_value"] == {"category": "architecture", "priority": 1}
-
     get_response = app.get(f"/documents/{document_id}/metadata")
     assert get_response.status_code == 200
-    assert get_response.json()["metadata_value"]["priority"] == 1
+    assert get_response.json()["filename"] == "metadata.txt"
+    assert get_response.json()["uploaded_by"] == TEST_USERNAME
+    assert get_response.json()["metadata_value"] == {}
 
     patch_response = app.patch(
         f"/documents/{document_id}/metadata",
         json={"metadata_value": {"category": "architecture", "priority": 2}},
     )
     assert patch_response.status_code == 200
+    assert patch_response.json()["filename"] == "metadata.txt"
+    assert patch_response.json()["uploaded_by"] == TEST_USERNAME
     assert patch_response.json()["metadata_value"]["priority"] == 2
 
     delete_response = app.delete(f"/documents/{document_id}/metadata")
@@ -72,12 +67,6 @@ def test_metadata_crud(app):
 
 def test_metadata_conflict_returns_409(app):
     document_id = _create_document(app)
-
-    first = app.post(
-        f"/documents/{document_id}/metadata",
-        json={"metadata_value": {"tag": "first"}},
-    )
-    assert first.status_code == 201
 
     second = app.post(
         f"/documents/{document_id}/metadata",
