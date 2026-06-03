@@ -28,3 +28,4 @@ indent-width = 4
 testpaths = ["test_docmesh_doc"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
+anyio_mode = "auto"
