@@ -18,7 +18,7 @@ services:
       - "traefik.http.routers.document.entrypoints=web"
       - "traefik.http.services.document.loadbalancer.server.port=8000"
 
-  document-db:
+  postgres:
     image: postgres:17.5
     restart: unless-stopped
     environment:
@@ -30,8 +30,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    networks:
-      - net
+    # networks:
+    #   - net
 
 networks:
   net:
