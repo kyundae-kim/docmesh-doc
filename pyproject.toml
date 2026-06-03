@@ -16,7 +16,7 @@ dependencies = [
 ]
 
 [tool.fastapi]
-entrypoint = "main:app"
+entrypoint = "docmesh_doc.main:app"
 
 [tool.uv.sources]
 fastapi-core = { git = "https://github.com/kyundae-kim/fastapi-core.git" }
