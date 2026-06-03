@@ -1,3 +1,4 @@
+import json
 from uuid import UUID
 
 import pytest
@@ -54,12 +55,35 @@ def test_upload_and_download_document(app):
     document_id = UUID(payload["document_id"])
     CREATED_DOCUMENT_IDS.append(document_id)
     assert payload["filename"] == "example.txt"
+    assert payload["metadata_value"] is None
 
     download_response = app.get(f"/documents/{document_id}")
 
     assert download_response.status_code == 200
     assert download_response.content == b"hello docmesh"
     assert download_response.headers["content-type"].startswith("text/plain")
+
+
+def test_upload_document_saves_metadata_when_provided(app):
+    upload_response = app.post(
+        "/documents",
+        files={"file": ("with-meta.txt", b"hello metadata", "text/plain")},
+        data={"metadata_value": json.dumps({"category": "reference", "priority": 7})},
+    )
+
+    assert upload_response.status_code == 201
+    payload = upload_response.json()
+    assert payload["filename"] == "with-meta.txt"
+    assert payload["metadata_value"] == {"category": "reference", "priority": 7}
+    document_id = UUID(payload["document_id"])
+    CREATED_DOCUMENT_IDS.append(document_id)
+
+    metadata_response = app.get(f"/documents/{document_id}/metadata")
+    assert metadata_response.status_code == 200
+    assert metadata_response.json()["metadata_value"] == {
+        "category": "reference",
+        "priority": 7,
+    }
 
 
 def test_soft_delete_document(app):

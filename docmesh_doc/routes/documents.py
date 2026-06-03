@@ -1,13 +1,16 @@
 from io import BytesIO
+import json
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from fastapi.responses import StreamingResponse
 
+from docmesh_doc.dependencies.metadata import get_metadata_service
 from docmesh_doc.dependencies.security import User, get_current_user, get_username
 from docmesh_doc.dependencies.storage import get_document_service
 from docmesh_doc.schemas.document import DocumentUploadResponse
 from docmesh_doc.services.document import DocumentService
+from docmesh_doc.services.metadata import MetadataService
 
 
 router = APIRouter(tags=["Documents"])
@@ -20,9 +23,26 @@ router = APIRouter(tags=["Documents"])
 )
 async def upload_document(
     file: UploadFile = File(...),
+    metadata_value: str | None = Form(None),
     current_user: User = Depends(get_current_user),
     document_service: DocumentService = Depends(get_document_service),
+    metadata_service: MetadataService = Depends(get_metadata_service),
 ):
+    parsed_metadata: dict | None = None
+    if metadata_value is not None:
+        try:
+            parsed_metadata = json.loads(metadata_value)
+        except json.JSONDecodeError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="metadata_value must be a valid JSON object",
+            ) from exc
+        if not isinstance(parsed_metadata, dict):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="metadata_value must be a JSON object",
+            )
+
     username = get_username(current_user)
     stream = file.file
     stream.seek(0, 2)
@@ -38,7 +58,18 @@ async def upload_document(
         content_length=content_length,
     )
 
-    return DocumentUploadResponse(document_id=document_id, filename=file.filename or "uploaded.bin")
+    if parsed_metadata is not None:
+        metadata_service.create(
+            username=username,
+            document_id=document_id,
+            metadata_value=parsed_metadata,
+        )
+
+    return DocumentUploadResponse(
+        document_id=document_id,
+        filename=file.filename or "uploaded.bin",
+        metadata_value=parsed_metadata,
+    )
 
 
 @router.get("/documents/{document_id}")
