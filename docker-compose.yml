@@ -11,6 +11,7 @@ services:
       - postgres
     networks:
       - net
+      - backend
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=docmesh-infra_net"
@@ -30,11 +31,13 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    # networks:
-    #   - net
+    networks:
+      - backend
 
 networks:
   net:
     external: true
     name: docmesh-infra_net
+  backend:
+    driver: bridge
  
