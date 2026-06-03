@@ -8,7 +8,7 @@ services:
       - .release/.env
     restart: unless-stopped
     depends_on:
-      - document-db
+      - postgres
     networks:
       - net
     labels:
