@@ -31,6 +31,16 @@ DocMesh Document Service는 인증된 사용자가 문서를 안전하게 업로
 - 헬스체크 API
 - fastapi-core 기반 인증/설정/앱 조립
 
+### fastapi-core 제공 기능 (v0.1.2)
+
+- Keycloak OAuth2/OIDC 인증 (`KeycloakAuthProvider`, `get_current_user`)
+- PostgreSQL SQLAlchemy 엔진 관리 (`set_db_engine`, `get_db_session`)
+- MinIO 객체 스토리지 클라이언트 (`set_minio_client`, `get_minio_client`)
+- NATS 메시징 클라이언트 (`set_nats_client`, `get_nats_client`, `publish_json`, `subscribe_json`)
+- 앱 팩토리 (`create_app(include_auth_router=True)`)
+- 공통 설정 모델 (`EnvConfig`, `ServiceSettings`, `NatsConfig`)
+- 공통 라우트: `GET /health/liveness`, `GET /health/readiness`, `POST /token`, `GET /user`
+
 ### 제외(추후)
 
 - metadata 고급 검색(복합 조건/전문 검색)

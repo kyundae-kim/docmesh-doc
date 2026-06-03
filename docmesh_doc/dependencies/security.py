@@ -2,6 +2,7 @@ from collections.abc import Callable
 
 from fastapi import Depends, status
 
+from fastapi_core.core.auth import KeycloakAuthProvider
 from fastapi_core.dependencies.auth import (
     get_auth_provider as core_get_auth_provider,
 )
@@ -17,8 +18,10 @@ from docmesh_doc.core.exceptions import AuthError
 User = UserInfo
 
 
-def get_auth_provider(*args, **kwargs):
-    return core_get_auth_provider(*args, **kwargs)
+def get_auth_provider(
+    provider: KeycloakAuthProvider = Depends(core_get_auth_provider),
+) -> KeycloakAuthProvider:
+    return provider
 
 
 def get_current_user(current_user: UserInfo = Depends(core_get_current_user)) -> UserInfo:

@@ -36,6 +36,10 @@ uv run python -m pytest -q
 - 공통 기반: `fastapi-core`
   - auth 라우트(`/token`, `/user`) 포함
   - Keycloak provider, MinIO client를 앱 시작 시 state에 등록
+  - NATS 메시징 클라이언트 지원 (`set_nats_client`, `publish_json`, `subscribe_json`)
+  - JWT 검증 모드 YAML 제어 (`ServiceSettings.auth.verify_jwt`)
+  - readiness 체크 항목 YAML 제어 (`ServiceSettings.health.*`)
+  - `create_app(include_auth_router=False)` 옵션으로 auth 라우트 선택적 포함
 - 로컬 라우트:
   - `/documents` (업로드/다운로드/삭제, ID 기반)
   - `/documents/{document_id}/metadata` (문서별 metadata CRUD)

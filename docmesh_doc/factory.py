@@ -4,6 +4,7 @@ from fastapi import FastAPI
 
 from fastapi_core.core.config import EnvConfig, ServiceSettings
 from fastapi_core.dependencies.auth import set_auth_provider
+from fastapi_core.dependencies.database import set_db_engine
 from fastapi_core.dependencies.storage import set_minio_client
 from fastapi_core.factory import create_app as create_core_app
 
@@ -20,11 +21,15 @@ def create_app() -> FastAPI:
     async def lifespan(app: FastAPI):
         app.state.env_config = config
         app.state.service_settings = settings
-        app.state.metadata_service = MetadataService(config.db)
 
         set_auth_provider(app, config=config)
+        set_db_engine(app, config=config)
         set_minio_client(app, config=config)
-        yield
+        app.state.metadata_service = MetadataService(engine=app.state.db_engine)
+        try:
+            yield
+        finally:
+            app.state.db_engine.dispose()
 
     app = create_core_app(
         config=config,

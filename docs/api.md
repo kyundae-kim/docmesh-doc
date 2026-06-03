@@ -232,14 +232,14 @@ Path Parameter:
 
 응답 200:
 ```json
-{ "status": "live" }
+{ "status": "ok" }
 ```
 
 ### 5.2 GET /health/ready
 
 응답 200:
 ```json
-{ "status": "ready" }
+{ "status": "ok" }
 ```
 
 ---
@@ -270,15 +270,60 @@ Path Parameter:
 - `KEYCLOAK__HTTP_URL`
 - `KEYCLOAK__REALM`
 - `KEYCLOAK__CLIENT_ID`
+- `KEYCLOAK__CLIENT_SECRET`
 - `MINIO__ENDPOINT`
 - `MINIO__ACCESS_KEY`
 - `MINIO__SECRET_KEY`
 - `MINIO__BUCKET`
+- `MINIO__PRESIGNED_EXPIRES_SEC` (기본값: 900)
 - `DB__HOST`
 - `DB__PORT`
 - `DB__NAME`
 - `DB__USER`
 - `DB__PASSWORD`
+- `DB__URL` (직접 DSN 지정 시 위 개별 항목 무시)
+- `DB__SSLMODE` (기본값: prefer)
+- `DB__POOL_SIZE` (기본값: 5)
+- `LOGGING__LEVEL` (WARNING / INFO / DEBUG, 기본값: DEBUG)
+- `NATS__SERVERS` (기본값: nats://nats:4222, 쉼표 구분 멀티 서버 가능)
+- `NATS__NAME` (기본값: fastapi-core)
+- `NATS__CONNECT_TIMEOUT` (기본값: 2)
+- `NATS__MAX_RECONNECT_ATTEMPTS` (기본값: 60)
+- `NATS__RECONNECT_TIME_WAIT_MS` (기본값: 2000)
+- `NATS__QUEUE_GROUP` (기본값: default-workers)
+
+### 7.1 YAML 서비스 설정 (ServiceSettings)
+
+`CONFIG_PATH`(기본: `.devcontainer/config.yaml`)에서 로드되는 설정 항목:
+
+```yaml
+cors:
+  origins: ["*"]
+  credentials: false
+
+auth:
+  verify_jwt: true              # JWT 서명 검증 여부
+  allow_insecure_jwt_decode: false  # 서명 없이 디코드 허용 여부(개발용)
+  use_introspection: false      # 토큰 인트로스펙션 사용 여부
+
+health:
+  check_keycloak: true          # readiness 시 Keycloak 헬스 확인
+  check_database: true          # readiness 시 DB 연결 확인
+  check_minio: true             # readiness 시 MinIO 연결 확인
+```
+
+### 7.2 create_app 파라미터
+
+```python
+from fastapi_core import create_app
+
+app = create_app(
+    config=None,             # EnvConfig 인스턴스 (None이면 자동 생성)
+    settings=None,           # ServiceSettings 인스턴스 (None이면 YAML에서 로드)
+    lifespan=None,           # FastAPI lifespan 콜백
+    include_auth_router=True # False로 설정 시 /token, /user 라우트 미포함
+)
+```
 
 ---
 
@@ -291,7 +336,7 @@ Path Parameter:
 
 ---
 
-## 9. DB 스키마 마이그레이션
+## 10. DB 스키마 마이그레이션
 
 Postgres 스키마 변경은 Alembic으로 관리한다. 서비스 초기화 시 `Base.metadata.create_all()` 호출은 개발 환경에서만 허용한다.
 
