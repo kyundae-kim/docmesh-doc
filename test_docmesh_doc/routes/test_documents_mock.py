@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from fastapi_core.dependencies.messaging import get_nats_client
 
 from docmesh_doc.dependencies.metadata import get_metadata_service
 from docmesh_doc.dependencies.security import User, get_current_user
@@ -67,9 +68,18 @@ class _FakeMetadataService:
         return self.get_result
 
 
+class _FakeNatsClient:
+    def __init__(self):
+        self.publish_calls: list[tuple[str, bytes]] = []
+
+    async def publish(self, subject: str, payload: bytes):
+        self.publish_calls.append((subject, payload))
+
+
 def _build_client(
     service: _FakeDocumentService,
     metadata_service: _FakeMetadataService | None = None,
+    nats_client: _FakeNatsClient | None = None,
 ) -> TestClient:
     app = FastAPI()
     app.include_router(documents_router)
@@ -77,17 +87,21 @@ def _build_client(
     app.dependency_overrides[get_document_service] = lambda: service
     if metadata_service is None:
         metadata_service = _FakeMetadataService()
+    if nats_client is None:
+        nats_client = _FakeNatsClient()
     app.dependency_overrides[get_metadata_service] = lambda: metadata_service
+    app.dependency_overrides[get_nats_client] = lambda: nats_client
     return TestClient(app)
 
 
 def test_upload_document_mock_success_201_and_calls():
     service = _FakeDocumentService()
     metadata_service = _FakeMetadataService()
+    nats_client = _FakeNatsClient()
     expected_id = uuid4()
     service.upload_result = expected_id
 
-    with _build_client(service, metadata_service) as client:
+    with _build_client(service, metadata_service, nats_client) as client:
         response = client.post(
             "/documents",
             files={"file": ("hello.txt", b"hello", "text/plain")},
@@ -98,6 +112,17 @@ def test_upload_document_mock_success_201_and_calls():
     assert response.json()["filename"] == "hello.txt"
     assert response.json()["metadata_value"] is None
     assert metadata_service.create_calls == [("mock-user", expected_id, "hello.txt", {})]
+    assert len(nats_client.publish_calls) == 1
+    subject, payload = nats_client.publish_calls[0]
+    assert subject == "documents.file.created"
+    assert json.loads(payload) == {
+        "event": "documents.file.created",
+        "schema_version": 1,
+        "document_id": str(expected_id),
+        "username": "mock-user",
+        "filename": "hello.txt",
+        "metadata_value": {},
+    }
     assert len(service.upload_calls) == 1
     assert service.upload_calls[0]["username"] == "mock-user"
     assert service.upload_calls[0]["filename"] == "hello.txt"
@@ -205,14 +230,24 @@ def test_download_document_mock_not_found_404():
 
 def test_delete_document_mock_success_204_and_calls():
     service = _FakeDocumentService()
+    nats_client = _FakeNatsClient()
     document_id = uuid4()
     service.soft_delete_result = True
 
-    with _build_client(service) as client:
+    with _build_client(service, nats_client=nats_client) as client:
         response = client.delete(f"/documents/{document_id}")
 
     assert response.status_code == 204
     assert service.soft_delete_calls == [("mock-user", document_id)]
+    assert len(nats_client.publish_calls) == 1
+    subject, payload = nats_client.publish_calls[0]
+    assert subject == "documents.file.deleted"
+    assert json.loads(payload) == {
+        "event": "documents.file.deleted",
+        "schema_version": 1,
+        "document_id": str(document_id),
+        "username": "mock-user",
+    }
 
 
 def test_delete_document_mock_missing_404():

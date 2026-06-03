@@ -12,6 +12,7 @@ dependencies = [
     "pyjwt[crypto]>=2.12.1",
     "pytest>=9.0.3",
     "alembic>=1.18.4",
+    "nats-py>=2.9.0",
 ]
 
 [tool.fastapi]

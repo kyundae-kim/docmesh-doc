@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
+import json
 from uuid import UUID, uuid4
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from fastapi_core.dependencies.messaging import get_nats_client
 
 from docmesh_doc.dependencies.metadata import get_metadata_service
 from docmesh_doc.dependencies.security import User, get_current_user
@@ -72,12 +74,27 @@ class _FakeMetadataService:
         return self.delete_result
 
 
-def _build_client(doc_service: _FakeDocumentService, meta_service: _FakeMetadataService) -> TestClient:
+class _FakeNatsClient:
+    def __init__(self):
+        self.publish_calls: list[tuple[str, bytes]] = []
+
+    async def publish(self, subject: str, payload: bytes):
+        self.publish_calls.append((subject, payload))
+
+
+def _build_client(
+    doc_service: _FakeDocumentService,
+    meta_service: _FakeMetadataService,
+    nats_client: _FakeNatsClient | None = None,
+) -> TestClient:
     app = FastAPI()
     app.include_router(metadata_router)
     app.dependency_overrides[get_current_user] = lambda: User(sub="sub-1", username="mock-user")
     app.dependency_overrides[get_document_service] = lambda: doc_service
     app.dependency_overrides[get_metadata_service] = lambda: meta_service
+    if nats_client is None:
+        nats_client = _FakeNatsClient()
+    app.dependency_overrides[get_nats_client] = lambda: nats_client
     app.dependency_overrides[get_settings] = lambda: MagicMock()
     return TestClient(app)
 
@@ -86,10 +103,11 @@ def test_create_metadata_mock_success_201_and_calls():
     document_id = uuid4()
     doc_service = _FakeDocumentService()
     meta_service = _FakeMetadataService()
+    nats_client = _FakeNatsClient()
     now = datetime.now(timezone.utc)
     meta_service.create_result = _Record(document_id, "stored.txt", "mock-user", {"k": "v"}, now, now)
 
-    with _build_client(doc_service, meta_service) as client:
+    with _build_client(doc_service, meta_service, nats_client) as client:
         response = client.post(
             f"/documents/{document_id}/metadata",
             json={"metadata_value": {"k": "v"}},
@@ -102,6 +120,17 @@ def test_create_metadata_mock_success_201_and_calls():
     assert response.json()["metadata_value"] == {"k": "v"}
     assert doc_service.get_calls == [("mock-user", document_id)]
     assert meta_service.create_calls == [("mock-user", document_id, "stored.txt", {"k": "v"})]
+    assert len(nats_client.publish_calls) == 1
+    subject, payload = nats_client.publish_calls[0]
+    assert subject == "documents.metadata.created"
+    assert json.loads(payload) == {
+        "event": "documents.metadata.created",
+        "schema_version": 1,
+        "document_id": str(document_id),
+        "username": "mock-user",
+        "filename": "stored.txt",
+        "metadata_value": {"k": "v"},
+    }
 
 
 def test_create_metadata_mock_conflict_409():
@@ -151,10 +180,11 @@ def test_patch_metadata_mock_success_200_and_calls():
     document_id = uuid4()
     doc_service = _FakeDocumentService()
     meta_service = _FakeMetadataService()
+    nats_client = _FakeNatsClient()
     now = datetime.now(timezone.utc)
     meta_service.update_result = _Record(document_id, "stored.txt", "mock-user", {"priority": 2}, now, now)
 
-    with _build_client(doc_service, meta_service) as client:
+    with _build_client(doc_service, meta_service, nats_client) as client:
         response = client.patch(
             f"/documents/{document_id}/metadata",
             json={"metadata_value": {"priority": 2}},
@@ -165,19 +195,40 @@ def test_patch_metadata_mock_success_200_and_calls():
     assert response.json()["uploaded_by"] == "mock-user"
     assert response.json()["metadata_value"] == {"priority": 2}
     assert meta_service.update_calls == [("mock-user", document_id, {"priority": 2})]
+    assert len(nats_client.publish_calls) == 1
+    subject, payload = nats_client.publish_calls[0]
+    assert subject == "documents.metadata.updated"
+    assert json.loads(payload) == {
+        "event": "documents.metadata.updated",
+        "schema_version": 1,
+        "document_id": str(document_id),
+        "username": "mock-user",
+        "filename": "stored.txt",
+        "metadata_value": {"priority": 2},
+    }
 
 
 def test_delete_metadata_mock_success_204_and_calls():
     document_id = uuid4()
     doc_service = _FakeDocumentService()
     meta_service = _FakeMetadataService()
+    nats_client = _FakeNatsClient()
     meta_service.delete_result = True
 
-    with _build_client(doc_service, meta_service) as client:
+    with _build_client(doc_service, meta_service, nats_client) as client:
         response = client.delete(f"/documents/{document_id}/metadata")
 
     assert response.status_code == 204
     assert meta_service.delete_calls == [("mock-user", document_id)]
+    assert len(nats_client.publish_calls) == 1
+    subject, payload = nats_client.publish_calls[0]
+    assert subject == "documents.metadata.deleted"
+    assert json.loads(payload) == {
+        "event": "documents.metadata.deleted",
+        "schema_version": 1,
+        "document_id": str(document_id),
+        "username": "mock-user",
+    }
 
 
 def test_delete_metadata_mock_missing_metadata_404():

@@ -282,6 +282,7 @@ dependencies = [
     { name = "fastapi-core" },
     { name = "httpx" },
     { name = "minio" },
+    { name = "nats-py" },
     { name = "pyjwt", extra = ["crypto"] },
     { name = "pytest" },
 ]
@@ -293,6 +294,7 @@ requires-dist = [
     { name = "fastapi-core", git = "https://github.com/kyundae-kim/fastapi-core.git" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "minio", specifier = ">=7.2.18" },
+    { name = "nats-py", specifier = ">=2.9.0" },
     { name = "pyjwt", extras = ["crypto"], specifier = ">=2.12.1" },
     { name = "pytest", specifier = ">=9.0.3" },
 ]

@@ -1,8 +1,10 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi_core.dependencies.messaging import get_nats_client
 from pydantic import ValidationError
 
+from docmesh_doc.core.messaging import publish_json_event
 from docmesh_doc.dependencies.metadata import get_metadata_service
 from docmesh_doc.dependencies.security import User, get_current_user, get_username
 from docmesh_doc.dependencies.storage import get_document_service
@@ -24,6 +26,7 @@ async def create_metadata(
     current_user: User = Depends(get_current_user),
     metadata_service: MetadataService = Depends(get_metadata_service),
     document_service=Depends(get_document_service),
+    nats_client=Depends(get_nats_client),
 ):
     try:
         payload = DocumentMetadataRequest.model_validate(await request.json())
@@ -43,6 +46,17 @@ async def create_metadata(
         )
     except MetadataConflictError:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Metadata already exists")
+
+    await publish_json_event(
+        nats_client,
+        "documents.metadata.created",
+        {
+            "document_id": str(record.document_id),
+            "username": record.uploaded_by,
+            "filename": record.filename,
+            "metadata_value": record.metadata_value,
+        },
+    )
 
     return DocumentMetadataResponse(
         document_id=record.document_id,
@@ -86,6 +100,7 @@ async def patch_metadata(
     current_user: User = Depends(get_current_user),
     metadata_service: MetadataService = Depends(get_metadata_service),
     document_service=Depends(get_document_service),
+    nats_client=Depends(get_nats_client),
 ):
     try:
         payload = DocumentMetadataRequest.model_validate(await request.json())
@@ -103,6 +118,17 @@ async def patch_metadata(
     if record is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Metadata not found")
 
+    await publish_json_event(
+        nats_client,
+        "documents.metadata.updated",
+        {
+            "document_id": str(record.document_id),
+            "username": record.uploaded_by,
+            "filename": record.filename,
+            "metadata_value": record.metadata_value,
+        },
+    )
+
     return DocumentMetadataResponse(
         document_id=record.document_id,
         filename=record.filename,
@@ -114,11 +140,12 @@ async def patch_metadata(
 
 
 @router.delete("/documents/{document_id}/metadata", status_code=status.HTTP_204_NO_CONTENT)
-def delete_metadata(
+async def delete_metadata(
     document_id: UUID,
     current_user: User = Depends(get_current_user),
     metadata_service: MetadataService = Depends(get_metadata_service),
     document_service=Depends(get_document_service),
+    nats_client=Depends(get_nats_client),
 ):
     username = get_username(current_user)
     if document_service.get(username, document_id) is None:
@@ -127,3 +154,11 @@ def delete_metadata(
     deleted = metadata_service.delete(username=username, document_id=document_id)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Metadata not found")
+    await publish_json_event(
+        nats_client,
+        "documents.metadata.deleted",
+        {
+            "document_id": str(document_id),
+            "username": username,
+        },
+    )

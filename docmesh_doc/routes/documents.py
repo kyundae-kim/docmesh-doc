@@ -5,8 +5,10 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from fastapi.responses import FileResponse
+from fastapi_core.dependencies.messaging import get_nats_client
 from starlette.background import BackgroundTask
 
+from docmesh_doc.core.messaging import publish_json_event
 from docmesh_doc.dependencies.metadata import get_metadata_service
 from docmesh_doc.dependencies.security import User, get_current_user, get_username
 from docmesh_doc.dependencies.storage import get_document_service
@@ -29,6 +31,7 @@ async def upload_document(
     current_user: User = Depends(get_current_user),
     document_service: DocumentService = Depends(get_document_service),
     metadata_service: MetadataService = Depends(get_metadata_service),
+    nats_client=Depends(get_nats_client),
 ):
     parsed_metadata: dict | None = None
     filename = file.filename or "uploaded.bin"
@@ -66,6 +69,16 @@ async def upload_document(
         document_id=document_id,
         filename=filename,
         metadata_value=parsed_metadata or {},
+    )
+    await publish_json_event(
+        nats_client,
+        "documents.file.created",
+        {
+            "document_id": str(document_id),
+            "username": username,
+            "filename": filename,
+            "metadata_value": parsed_metadata or {},
+        },
     )
 
     return DocumentUploadResponse(
@@ -109,10 +122,11 @@ def download_document(
 
 
 @router.delete("/documents/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_document(
+async def delete_document(
     document_id: UUID,
     current_user: User = Depends(get_current_user),
     document_service: DocumentService = Depends(get_document_service),
+    nats_client=Depends(get_nats_client),
 ):
     username = get_username(current_user)
 
@@ -122,3 +136,11 @@ def delete_document(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Document not found",
         )
+    await publish_json_event(
+        nats_client,
+        "documents.file.deleted",
+        {
+            "document_id": str(document_id),
+            "username": username,
+        },
+    )

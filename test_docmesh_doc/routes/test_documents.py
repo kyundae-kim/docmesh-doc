@@ -4,6 +4,7 @@ from uuid import UUID
 import pytest
 from fastapi.testclient import TestClient
 from minio.error import S3Error
+from fastapi_core.dependencies.messaging import get_nats_client
 
 from docmesh_doc import factory
 from docmesh_doc.dependencies.security import User, get_current_user
@@ -13,16 +14,27 @@ TEST_USERNAME = "test"
 CREATED_DOCUMENT_IDS: list[UUID] = []
 
 
+class _FakeNatsClient:
+    def __init__(self):
+        self.publish_calls: list[tuple[str, bytes]] = []
+
+    async def publish(self, subject: str, payload: bytes):
+        self.publish_calls.append((subject, payload))
+
+
 @pytest.fixture(scope="module")
 def app():
     app = factory.create_app()
+    nats_client = _FakeNatsClient()
     app.dependency_overrides[get_current_user] = lambda: User(
         sub=TEST_USERNAME,
         username=TEST_USERNAME,
         roles=["create", "read", "delete"],
         scopes=["profile"],
     )
+    app.dependency_overrides[get_nats_client] = lambda: nats_client
     with TestClient(app) as client:
+        client.app.state.test_nats_client = nats_client
         minio_client = client.app.state.minio_client
         bucket_name = client.app.state.env_config.minio.bucket
 
@@ -70,6 +82,9 @@ def test_upload_and_download_document(app):
     assert download_response.headers["content-type"].startswith("text/plain")
     assert download_response.headers["content-length"] == str(len(b"hello docmesh"))
     assert download_response.headers["accept-ranges"] == "bytes"
+    subject, payload = app.app.state.test_nats_client.publish_calls[-1]
+    assert subject == "documents.file.created"
+    assert json.loads(payload)["document_id"] == str(document_id)
 
 
 def test_upload_document_saves_metadata_when_provided(app):
