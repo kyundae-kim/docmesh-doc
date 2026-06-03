@@ -15,9 +15,6 @@ dependencies = [
     "nats-py>=2.9.0",
 ]
 
-[tool.setuptools]
-packages = ["docmesh_doc"]
-
 [tool.fastapi]
 entrypoint = "main:app"
 
