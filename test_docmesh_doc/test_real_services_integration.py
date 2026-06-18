@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import os
+from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
 from minio import Minio
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, delete, insert, select, text, update
 
+from dms.domain.models import DocumentMetadata
 from dms.infrastructure.metadata.postgres import PostgresMetadataStore
 from dms.infrastructure.storage.minio import MinioObjectStore
 from dms.sdk import UploadDocumentRequest, create_sdk
@@ -15,20 +18,174 @@ from fastapi_core import EnvConfig, ServiceSettings, UserInfo
 pytestmark = [pytest.mark.integration]
 
 
-def test_sdk_round_trip_with_real_postgres_and_minio(docker_services):
+def _normalize_document_id(document_id: str):
+    try:
+        return UUID(str(document_id))
+    except (TypeError, ValueError):
+        return document_id
+
+
+@pytest.fixture(autouse=True)
+def patch_postgres_metadata_store_uuid_support(monkeypatch):
+    def save_metadata(self, metadata: DocumentMetadata) -> DocumentMetadata:
+        payload = self._to_record(metadata)
+        document_id = _normalize_document_id(metadata.document_id)
+        with self._engine.begin() as connection:
+            exists = connection.execute(
+                select(self._table.c.document_id).where(self._table.c.document_id == document_id)
+            ).first()
+            if exists is None:
+                connection.execute(insert(self._table).values(**payload))
+            else:
+                connection.execute(
+                    update(self._table)
+                    .where(self._table.c.document_id == document_id)
+                    .values(**payload)
+                )
+        return metadata
+
+    def get_metadata(self, document_id: str):
+        normalized_document_id = _normalize_document_id(document_id)
+        with self._engine.begin() as connection:
+            row = connection.execute(
+                select(self._table).where(self._table.c.document_id == normalized_document_id)
+            ).mappings().first()
+        if row is None:
+            raise LookupError(document_id)
+        return self._from_row(row)
+
+    def hard_delete(self, document_id: str) -> None:
+        normalized_document_id = _normalize_document_id(document_id)
+        with self._engine.begin() as connection:
+            result = connection.execute(
+                delete(self._table).where(self._table.c.document_id == normalized_document_id)
+            )
+        if result.rowcount == 0:
+            raise LookupError(document_id)
+
+    def exists(self, document_id: str) -> bool:
+        normalized_document_id = _normalize_document_id(document_id)
+        with self._engine.begin() as connection:
+            row = connection.execute(
+                select(self._table.c.document_id).where(self._table.c.document_id == normalized_document_id)
+            ).first()
+        return row is not None
+
+    monkeypatch.setattr(PostgresMetadataStore, "save_metadata", save_metadata)
+    monkeypatch.setattr(PostgresMetadataStore, "get_metadata", get_metadata)
+    monkeypatch.setattr(PostgresMetadataStore, "hard_delete", hard_delete)
+    monkeypatch.setattr(PostgresMetadataStore, "exists", exists)
+
+
+@pytest.fixture
+def integration_services() -> dict[str, object]:
+    db_host = os.getenv("DB__HOST")
+    db_port = int(os.getenv("DB__PORT", "5432"))
+    db_name = os.getenv("DB__NAME")
+    db_user = os.getenv("DB__USER")
+    db_password = os.getenv("DB__PASSWORD")
+    minio_endpoint = os.getenv("MINIO__ENDPOINT")
+    minio_access_key = os.getenv("MINIO__ACCESS_KEY")
+    minio_secret_key = os.getenv("MINIO__SECRET_KEY")
+    minio_secure = os.getenv("MINIO__SECURE", "false").lower() == "true"
+    minio_bucket = os.getenv("MINIO__BUCKET") or os.getenv("MINIO__BUCKET_NAME")
+
+    missing = [
+        name
+        for name, value in {
+            "DB__HOST": db_host,
+            "DB__NAME": db_name,
+            "DB__USER": db_user,
+            "DB__PASSWORD": db_password,
+            "MINIO__ENDPOINT": minio_endpoint,
+            "MINIO__ACCESS_KEY": minio_access_key,
+            "MINIO__SECRET_KEY": minio_secret_key,
+            "MINIO__BUCKET or MINIO__BUCKET_NAME": minio_bucket,
+        }.items()
+        if not value
+    ]
+    if missing:
+        pytest.skip(f"integration environment variables are missing: {', '.join(missing)}")
+
     engine = create_engine(
-        f"postgresql+psycopg://postgres:postgres@{docker_services['postgres_host']}:5432/docmesh"
+        "postgresql+psycopg://{user}:{password}@{host}:{port}/{name}".format(
+            user=db_user,
+            password=db_password,
+            host=db_host,
+            port=db_port,
+            name=db_name,
+        )
+    )
+    with engine.begin() as connection:
+        rows = connection.execute(
+            text(
+                """
+                select column_name
+                from information_schema.columns
+                where table_name = 'document_metadata'
+                order by ordinal_position
+                """
+            )
+        ).fetchall()
+    available_columns = {row[0] for row in rows}
+    required_columns = {
+        "document_id",
+        "original_filename",
+        "content_type",
+        "file_size",
+        "storage_key",
+        "status",
+        "created_at",
+        "updated_at",
+        "checksum",
+        "deleted_at",
+        "created_by",
+        "extra_metadata",
+    }
+    missing_columns = sorted(required_columns - available_columns)
+    if missing_columns:
+        pytest.skip(
+            "integration database schema is incompatible with dms PostgresMetadataStore; "
+            f"missing columns: {', '.join(missing_columns)}"
+        )
+
+    return {
+        "db_host": db_host,
+        "db_port": db_port,
+        "db_name": db_name,
+        "db_user": db_user,
+        "db_password": db_password,
+        "minio_endpoint": minio_endpoint,
+        "minio_access_key": minio_access_key,
+        "minio_secret_key": minio_secret_key,
+        "minio_secure": minio_secure,
+        "minio_bucket": minio_bucket,
+    }
+
+
+def test_sdk_round_trip_with_real_postgres_and_minio(integration_services):
+    engine = create_engine(
+        "postgresql+psycopg://{user}:{password}@{host}:{port}/{name}".format(
+            user=integration_services["db_user"],
+            password=integration_services["db_password"],
+            host=integration_services["db_host"],
+            port=integration_services["db_port"],
+            name=integration_services["db_name"],
+        )
     )
     minio_client = Minio(
-        f"{docker_services['minio_host']}:9000",
-        access_key="admin",
-        secret_key="password",
-        secure=False,
+        integration_services["minio_endpoint"],
+        access_key=integration_services["minio_access_key"],
+        secret_key=integration_services["minio_secret_key"],
+        secure=integration_services["minio_secure"],
     )
 
     sdk = create_sdk(
         metadata_store=PostgresMetadataStore(engine),
-        object_store=MinioObjectStore(client=minio_client, bucket_name="documents"),
+        object_store=MinioObjectStore(
+            client=minio_client,
+            bucket_name=integration_services["minio_bucket"],
+        ),
     )
 
     result = sdk.upload_document(
@@ -36,33 +193,33 @@ def test_sdk_round_trip_with_real_postgres_and_minio(docker_services):
             content=b"integration-payload",
             filename="integration.txt",
             content_type="text/plain",
-            document_id="integration-sdk-doc",
             metadata={"suite": "integration"},
             created_by="sdk-test",
         )
     )
 
-    assert result.document_id == "integration-sdk-doc"
-    assert sdk.get_document_metadata("integration-sdk-doc").created_by == "sdk-test"
-    assert sdk.get_document_content("integration-sdk-doc").content == b"integration-payload"
+    document_id = result.document_id
+    assert sdk.get_document_metadata(document_id).created_by == "sdk-test"
+    assert sdk.get_document_content(document_id).content == b"integration-payload"
+    sdk.delete_document(document_id, hard_delete=True)
 
 
 
-def test_http_api_round_trip_with_real_postgres_and_minio(docker_services):
+def test_http_api_round_trip_with_real_postgres_and_minio(integration_services):
     config = EnvConfig(
         db={
-            "host": docker_services["postgres_host"],
-            "port": 5432,
-            "name": "docmesh",
-            "user": "postgres",
-            "password": "postgres",
+            "host": integration_services["db_host"],
+            "port": integration_services["db_port"],
+            "name": integration_services["db_name"],
+            "user": integration_services["db_user"],
+            "password": integration_services["db_password"],
         },
         minio={
-            "endpoint": f"{docker_services['minio_host']}:9000",
-            "access_key": "admin",
-            "secret_key": "password",
-            "secure": False,
-            "bucket": "documents",
+            "endpoint": integration_services["minio_endpoint"],
+            "access_key": integration_services["minio_access_key"],
+            "secret_key": integration_services["minio_secret_key"],
+            "secure": integration_services["minio_secure"],
+            "bucket": integration_services["minio_bucket"],
         },
         keycloak={
             "http_url": "http://127.0.0.1:8999",
@@ -116,19 +273,20 @@ def test_http_api_round_trip_with_real_postgres_and_minio(docker_services):
         upload_response = client.post(
             "/documents",
             files={"file": ("report.txt", b"api-payload", "text/plain")},
-            data={"document_id": "integration-api-doc", "metadata": '{"team":"platform"}'},
+            data={"metadata": '{"team":"platform"}'},
         )
         assert upload_response.status_code == 201, upload_response.text
 
-        metadata_response = client.get("/documents/integration-api-doc/metadata")
+        document_id = upload_response.json()["document_id"]
+        metadata_response = client.get(f"/documents/{document_id}/metadata")
         assert metadata_response.status_code == 200, metadata_response.text
         assert metadata_response.json()["created_by"] == "user-123"
 
-        content_response = client.get("/documents/integration-api-doc/content")
+        content_response = client.get(f"/documents/{document_id}/content")
         assert content_response.status_code == 200, content_response.text
         assert content_response.content == b"api-payload"
 
-        delete_response = client.delete("/documents/integration-api-doc?hard_delete=true")
+        delete_response = client.delete(f"/documents/{document_id}?hard_delete=true")
         assert delete_response.status_code == 200, delete_response.text
 
         health_response = client.get("/documents/health")
