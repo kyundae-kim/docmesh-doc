@@ -44,3 +44,9 @@
 - Pages created: `concepts/fastapi-core-messaging-integration.md`, `concepts/domain-event-payload-conventions.md`
 - Pages updated: `concepts/nats-event-subjects.md`
 - Navigation updated: `index.md`
+
+## [2026-06-18] ingest | dms-core SDK public interface
+- Source added: `raw/articles/dms-core-sdk-interface-2026-06-18.md`
+- Pages created: `entities/document-management-sdk.md`, `entities/document-metadata.md`, `concepts/document-storage-key-policy.md`, `concepts/document-operation-consistency.md`
+- Pages updated: `concepts/sdk-consumption-pattern.md`, `concepts/sensitive-data-masking.md`
+- Navigation updated: `index.md`
