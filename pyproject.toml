@@ -34,3 +34,6 @@ testpaths = ["test_docmesh_doc"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
 anyio_mode = "auto"
+markers = [
+    "integration: tests that require real external services such as PostgreSQL and MinIO",
+]
