@@ -377,6 +377,14 @@ wheels = [
 ]
 
 [[package]]
+name = "dms"
+version = "0.1.0"
+source = { git = "https://github.com/kyundae-kim/dms-core.git?rev=v0.1.0#7a3e68ff8b32f559ea16089b9a437955438cc473" }
+dependencies = [
+    { name = "docmesh-py-core" },
+]
+
+[[package]]
 name = "dnspython"
 version = "2.8.0"
 source = { registry = "https://pypi.org/simple" }
@@ -391,6 +399,7 @@ version = "0.1.1"
 source = { virtual = "." }
 dependencies = [
     { name = "alembic" },
+    { name = "dms" },
     { name = "docmesh-py-core" },
     { name = "fastapi", extra = ["standard"] },
     { name = "fastapi-core" },
@@ -404,6 +413,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "alembic", specifier = ">=1.18.4" },
+    { name = "dms", git = "https://github.com/kyundae-kim/dms-core.git?rev=v0.1.0" },
     { name = "docmesh-py-core", git = "https://github.com/kyundae-kim/docmesh-py-core.git?rev=v0.1.1" },
     { name = "fastapi", extras = ["standard"], specifier = ">=0.135.3" },
     { name = "fastapi-core", git = "https://github.com/kyundae-kim/fastapi-core.git?rev=v0.1.5" },
