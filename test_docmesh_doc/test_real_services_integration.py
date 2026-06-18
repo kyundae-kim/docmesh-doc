@@ -1,14 +1,12 @@
 from __future__ import annotations
 
 import os
-from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
 from minio import Minio
-from sqlalchemy import create_engine, delete, insert, select, text, update
+from sqlalchemy import create_engine, text
 
-from dms.domain.models import DocumentMetadata
 from dms.infrastructure.metadata.postgres import PostgresMetadataStore
 from dms.infrastructure.storage.minio import MinioObjectStore
 from dms.sdk import UploadDocumentRequest, create_sdk
@@ -16,65 +14,6 @@ from docmesh_doc.main import create_app
 from fastapi_core import EnvConfig, ServiceSettings, UserInfo
 
 pytestmark = [pytest.mark.integration]
-
-
-def _normalize_document_id(document_id: str):
-    try:
-        return UUID(str(document_id))
-    except (TypeError, ValueError):
-        return document_id
-
-
-@pytest.fixture(autouse=True)
-def patch_postgres_metadata_store_uuid_support(monkeypatch):
-    def save_metadata(self, metadata: DocumentMetadata) -> DocumentMetadata:
-        payload = self._to_record(metadata)
-        document_id = _normalize_document_id(metadata.document_id)
-        with self._engine.begin() as connection:
-            exists = connection.execute(
-                select(self._table.c.document_id).where(self._table.c.document_id == document_id)
-            ).first()
-            if exists is None:
-                connection.execute(insert(self._table).values(**payload))
-            else:
-                connection.execute(
-                    update(self._table)
-                    .where(self._table.c.document_id == document_id)
-                    .values(**payload)
-                )
-        return metadata
-
-    def get_metadata(self, document_id: str):
-        normalized_document_id = _normalize_document_id(document_id)
-        with self._engine.begin() as connection:
-            row = connection.execute(
-                select(self._table).where(self._table.c.document_id == normalized_document_id)
-            ).mappings().first()
-        if row is None:
-            raise LookupError(document_id)
-        return self._from_row(row)
-
-    def hard_delete(self, document_id: str) -> None:
-        normalized_document_id = _normalize_document_id(document_id)
-        with self._engine.begin() as connection:
-            result = connection.execute(
-                delete(self._table).where(self._table.c.document_id == normalized_document_id)
-            )
-        if result.rowcount == 0:
-            raise LookupError(document_id)
-
-    def exists(self, document_id: str) -> bool:
-        normalized_document_id = _normalize_document_id(document_id)
-        with self._engine.begin() as connection:
-            row = connection.execute(
-                select(self._table.c.document_id).where(self._table.c.document_id == normalized_document_id)
-            ).first()
-        return row is not None
-
-    monkeypatch.setattr(PostgresMetadataStore, "save_metadata", save_metadata)
-    monkeypatch.setattr(PostgresMetadataStore, "get_metadata", get_metadata)
-    monkeypatch.setattr(PostgresMetadataStore, "hard_delete", hard_delete)
-    monkeypatch.setattr(PostgresMetadataStore, "exists", exists)
 
 
 @pytest.fixture
