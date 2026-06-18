@@ -1,9 +1,11 @@
 # Wiki Schema
 
 ## Domain
-FastAPI 기반의 RESTful API 서버에서 문서(document)와 문서 관련 메타데이터를 관리하는 시스템 지식 베이스.
+`fastapi-core` 기반의 API 레이어와 DMS SDK 기반의 서비스 레이어를 사용해 문서(document)와 문서 관련 메타데이터를 관리하는 시스템 지식 베이스.
 
 이 위키는 다음을 다룬다:
+- `fastapi-core`를 활용한 API 레이어 구성, dependency/lifespan 관리, 인증/인가, 운영 패턴
+- DMS SDK를 서비스 레이어로 활용하는 방식과 서비스 조립, health check, 종료 정리 계약
 - 문서 업로드/다운로드/조회/삭제 API
 - 문서 메타데이터 모델, 저장 방식, 검증 규칙
 - 인증/인가, 감사(audit), 검색, 버전 관리, 비동기 처리

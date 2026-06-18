@@ -50,3 +50,7 @@
 - Pages created: `entities/document-management-sdk.md`, `entities/document-metadata.md`, `concepts/document-storage-key-policy.md`, `concepts/document-operation-consistency.md`
 - Pages updated: `concepts/sdk-consumption-pattern.md`, `concepts/sensitive-data-masking.md`
 - Navigation updated: `index.md`
+
+## [2026-06-18] update | Wiki domain scope
+- Updated: `SCHEMA.md`
+- Change: clarified that the wiki covers a `fastapi-core`-based API layer and a DMS SDK-based service layer
