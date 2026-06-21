@@ -1,4 +1,3 @@
-import os
 from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config
@@ -11,30 +10,35 @@ from alembic import context
 config = context.config
 
 # Interpret the config file for Python logging.
+# This line sets up loggers basically.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Import Base and models for autogenerate support
-from docmesh_doc.models.base import Base
-from docmesh_doc.models import metadata  # noqa: F401
-from docmesh_doc.models import document  # noqa: F401
+# add your model's MetaData object here
+# for 'autogenerate' support
+# from myapp import mymodel
+# target_metadata = mymodel.Base.metadata
+target_metadata = None
 
-target_metadata = Base.metadata
-
-
-def _get_db_url() -> str:
-    """환경변수에서 DB URL을 구성한다."""
-    host = os.environ.get("DB__HOST", "localhost")
-    port = os.environ.get("DB__PORT", "5432")
-    name = os.environ.get("DB__NAME", "docmesh")
-    user = os.environ.get("DB__USER", "postgres")
-    password = os.environ.get("DB__PASSWORD", "postgres")
-    return f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{name}"
+# other values from the config, defined by the needs of env.py,
+# can be acquired:
+# my_important_option = config.get_main_option("my_important_option")
+# ... etc.
 
 
 def run_migrations_offline() -> None:
-    """Run migrations in 'offline' mode."""
-    url = config.get_main_option("sqlalchemy.url") or _get_db_url()
+    """Run migrations in 'offline' mode.
+
+    This configures the context with just a URL
+    and not an Engine, though an Engine is acceptable
+    here as well.  By skipping the Engine creation
+    we don't even need a DBAPI to be available.
+
+    Calls to context.execute() here emit the given string to the
+    script output.
+
+    """
+    url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -47,15 +51,14 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-    """Run migrations in 'online' mode."""
-    ini_section = config.get_section(config.config_ini_section, {})
+    """Run migrations in 'online' mode.
 
-    # 환경변수로 sqlalchemy.url 오버라이드
-    if not ini_section.get("sqlalchemy.url"):
-        ini_section["sqlalchemy.url"] = _get_db_url()
+    In this scenario we need to create an Engine
+    and associate a connection with the context.
 
+    """
     connectable = engine_from_config(
-        ini_section,
+        config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )

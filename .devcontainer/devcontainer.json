@@ -4,6 +4,9 @@
 	"name": "fastapi template",
 	"dockerComposeFile": "docker-compose.yml",
 	"service": "app",
+	"mounts": [
+		"source=${localWorkspaceFolder},target=/workspaces/${localWorkspaceFolderBasename},type=bind,consistency=cached"
+	],
 	"workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
 	"features": {
 		"ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},

@@ -1,141 +1,335 @@
-# 테스트 가이드 - DocMesh Document Service
+# Test Plan
 
 ## 1. 목적
 
-이 문서는 문서 서비스의 테스트를
-- Mock 테스트(단위/격리)
-- 연동 테스트(통합/E2E 성격)
-로 분리해 작성하는 기준을 정의한다.
+본 문서는 `docs/srs.md` 및 관련 설계 문서를 기준으로 DMS 서비스/SDK의 테스트 전략을 정의한다.
 
-## 2. 실행 방법
+목표:
 
-### 2.1 Mock 테스트
+- SDK 모드와 서비스 모드를 모두 검증한다.
+- `fastapi-core` 호스트 통합이 실제로 동작하는지 확인한다.
+- object storage / metadata store / auth adapter / HTTP API를 계층별로 검증한다.
 
-외부 의존성(MinIO, Postgres, Auth Provider)을 mock/stub 처리한 테스트.
+---
 
-```bash
-uv sync
-uv run python -m pytest -q -m "not integration"
+## 2. 테스트 계층
+
+## 2.1 단위 테스트
+
+대상:
+
+- DMS SDK 비즈니스 로직
+- validation 규칙
+- 상태 전이
+- rollback / consistency 처리
+- auth adapter의 인터페이스 정규화
+
+특징:
+
+- fake metadata store 사용 가능
+- fake object store 사용 가능
+- 네트워크/외부 서비스 의존 없음
+
+## 2.2 adapter 테스트
+
+대상:
+
+- PostgreSQL metadata adapter
+- SQLite metadata adapter
+- MinIO object adapter
+- `fastapi-core` resource → DMS assembly helper
+
+특징:
+
+- fake 또는 lightweight 실제 리소스 사용 가능
+- adapter 레벨 round-trip 검증
+
+## 2.3 서비스 통합 테스트
+
+대상:
+
+- `fastapi-core.create_app()` 기반 앱 조립
+- startup 시 DMS SDK 조립
+- `app.state.dms_sdk` 등록
+- dependency 주입
+- HTTP API 엔드포인트
+- readiness / health 연동
+
+## 2.4 외부 서비스 통합 테스트
+
+대상:
+
+- 실제 PostgreSQL
+- 실제 MinIO
+- 선택적 실제 Keycloak
+
+목적:
+
+- 환경 변수와 실서비스 연결 검증
+- 주요 happy path와 대표 실패 path 검증
+
+---
+
+## 3. 테스트 범위 매핑
+
+| 영역 | 단위 | adapter | 서비스 통합 | 외부 통합 |
+|---|---:|---:|---:|---:|
+| upload_document | Y | Y | Y | Y |
+| get_document_metadata | Y | Y | Y | Y |
+| get_document_content | Y | Y | Y | Y |
+| get_document_content_stream | Y | Y | Y | Y |
+| delete_document | Y | Y | Y | Y |
+| check_health | Y | N | Y | Y |
+| auth adapter | Y | Y | Y | Y |
+| app.state / dependency | N | N | Y | N |
+| readiness 연계 | N | N | Y | Y |
+
+---
+
+## 4. 필수 테스트 시나리오
+
+## 4.1 SDK 단위 테스트
+
+### 업로드
+
+- 빈 content 거부
+- 빈 filename 거부
+- 빈 content_type 거부
+- filename 정규화 후 `.` 또는 빈 문자열이면 거부
+- `document_id` 미지정 시 자동 생성
+- 중복 `document_id` 거부
+- checksum 미지정 시 자동 계산
+- metadata 저장 성공 시 `available` 상태 반환
+
+### 업로드 실패/롤백
+
+- object 저장 실패 → `StorageError`
+- metadata 저장 실패 → object rollback 시도
+- rollback 성공 → `ConsistencyError`
+- rollback 실패 → `ConsistencyError`
+
+### 조회
+
+- metadata 없는 문서 → `DocumentNotFoundError`
+- metadata backend 예외 → `MetadataStoreError`
+- content 조회 시 object missing → `ConsistencyError`
+
+### 스트리밍
+
+- `chunk_size <= 0` → `ValidationError`
+- stream object 누락 → `ConsistencyError`
+- stream close 동작 검증
+
+### 삭제
+
+- soft delete happy path
+- hard delete happy path
+- object 삭제 실패 → `StorageError`, status `failed` best-effort
+- object 삭제 후 metadata 처리 실패 → `ConsistencyError`
+
+### health
+
+- 모든 서비스 정상 → `ok=True`
+- 일부 서비스 실패 → `ok=False`, 서비스 상세 포함
+
+---
+
+## 4.2 Adapter 테스트
+
+### Metadata store
+
+- save/get round-trip
+- exists 확인
+- mark_deleted 동작
+- hard_delete 동작
+- index/primary key 기반 기본 제약 검증
+
+### Object store
+
+- put/get round-trip
+- stream round-trip
+- delete 동작
+- metadata/header 기반 filename/checksum 복원 검증
+
+### Assembly helper
+
+- SQLAlchemy engine으로 `PostgresMetadataStore` 조립 가능
+- MinIO client로 `MinioObjectStore` 조립 가능
+- auth provider 없이도 SDK 조립 가능
+- auth adapter 포함 조립 가능
+
+---
+
+## 4.3 서비스 통합 테스트
+
+### startup / shutdown
+
+- `fastapi-core.create_app()` 기반 앱 생성
+- startup 시 DMS SDK 조립
+- `app.state.dms_sdk` 존재 확인
+- shutdown 시 close 호출 또는 리소스 정리 확인
+
+### HTTP API
+
+- `POST /documents` 성공
+- `GET /documents/{id}/metadata` 성공
+- `GET /documents/{id}/content` 성공
+- `GET /documents/{id}/stream` 성공
+- `DELETE /documents/{id}` soft delete 성공
+- `DELETE /documents/{id}?hard_delete=true` hard delete 성공
+- `GET /documents/health` 응답 형식 검증
+
+### 오류 매핑
+
+- `ValidationError` → 400
+- `DocumentNotFoundError` → 404
+- `DuplicateDocumentError` → 409
+- 내부 저장/일관성 오류 → 500
+
+### readiness 연계
+
+- host readiness가 DB/MinIO/DMS SDK 조립 상태 반영
+- 필요 시 DMS health 연결 정책 검증
+
+---
+
+## 4.4 인증 테스트
+
+### 보호 엔드포인트
+
+- 토큰 없이 업로드 호출 → 401
+- 권한 없는 토큰으로 삭제 호출 → 403
+- 유효한 토큰으로 업로드 성공
+
+### created_by
+
+- 인증 사용자 정보가 `created_by`에 반영되는지 검증
+- 클라이언트 입력보다 서버 정책이 우선하는지 검증
+
+### SDK helper
+
+- auth adapter 미조립 상태에서 helper 호출 실패
+- auth adapter 조립 상태에서 `get_authenticated_user()` 성공
+- 잘못된 token 처리 검증
+
+---
+
+## 5. 테스트 환경 전략
+
+## 5.1 로컬 빠른 테스트
+
+사용 목적:
+
+- 단위 테스트
+- fake dependency 기반 서비스 테스트
+- SQLite 기반 경량 통합 테스트
+
+권장 도구:
+
+- `pytest`
+- `pytest-asyncio` 또는 FastAPI test client
+- SQLite
+- fake MinIO client / mock object store
+
+## 5.2 실제 인프라 테스트
+
+사용 목적:
+
+- PostgreSQL/MinIO 실연결 검증
+- 설정/네트워크/credential 검증
+
+필수 요소:
+
+- PostgreSQL DSN
+- MinIO endpoint/access_key/secret_key/bucket
+- 선택적 Keycloak test realm
+
+---
+
+## 6. 권장 테스트 파일 구조
+
+```text
+tests/
+  unit/
+    test_sdk_upload.py
+    test_sdk_download.py
+    test_sdk_delete.py
+    test_sdk_health.py
+    test_auth_adapter.py
+  adapters/
+    test_postgres_metadata_store.py
+    test_sqlite_metadata_store.py
+    test_minio_object_store.py
+    test_dms_assembly.py
+  integration/
+    test_app_startup.py
+    test_documents_api.py
+    test_documents_auth.py
+    test_readiness.py
+  fixtures/
+    fake_metadata_store.py
+    fake_object_store.py
+    fake_auth_provider.py
 ```
 
-### 2.2 연동 테스트
+실제 저장소 구조는 프로젝트 관례에 맞게 조정 가능하다.
 
-실제 MinIO/Postgres(테스트용 인스턴스)와 연동해 검증하는 테스트.
+---
 
-```bash
-uv sync
-uv run python -m pytest -q -m integration
-```
+## 7. 실행 명령 예시
 
-### 2.3 전체 테스트
+### 전체 단위 테스트
 
 ```bash
-uv sync
-uv run python -m pytest -q
+pytest -q
 ```
 
-## 3. 테스트 전략
-
-### 3.1 Mock 테스트 범위
-
-- 라우트 입력/출력 스키마 검증
-- 상태 코드 검증(200/201/204/400/404/409)
-- 권한 실패/성공 분기 검증
-- 서비스 레이어 호출 여부 및 인자 검증
-- 예외 처리 및 에러 포맷 검증
-
-### 3.2 연동 테스트 범위
-
-- 문서 업로드/다운로드/삭제의 실 저장소 동작 검증
-- metadata CRUD의 실 DB 반영 검증
-- `document_id` 기반 접근 경로 검증
-- 문서-metadata 1:1 제약(중복 생성 409) 검증
-- Soft Delete 이후 조회 차단 검증
-
-## 4. 테스트 구조
-
-- `test_docmesh_doc/routes/test_documents_mock.py`
-  - Mock: 문서 업로드/다운로드/삭제 (ID 기반), 입력 검증(422), 서비스 호출 인자 검증
-- `test_docmesh_doc/routes/test_document_metadata_mock.py`
-  - Mock: metadata CRUD 상태코드(201/200/204/404/409), payload 검증(422), 서비스 호출 인자 검증
-- `test_docmesh_doc/routes/test_documents.py`
-  - 연동: MinIO 실제 업로드/다운로드/Soft Delete
-- `test_docmesh_doc/routes/test_document_metadata.py`
-  - 연동: Postgres 반영, 1:1 제약(409)
-- `test_docmesh_doc/services/test_metadata.py`
-  - 연동: SQLAlchemy ORM 기반 metadata 서비스(create/get/update/delete, owner 격리, 충돌 처리)
-- `test_docmesh_doc/routes/test_health.py`
-  - Mock: `/health/live`, `/health/ready`
-- `test_docmesh_doc/dependencies/test_security.py`
-  - Mock: role/scope 권한 체크
-- `test_docmesh_doc/services/test_security.py`
-  - Mock: auth provider 생성 기본 검증
-
-## 5. 핵심 검증 시나리오
-
-1) 문서 API (ID 기반)
-- 업로드 201 + `document_id` 반환
-- 다운로드(`GET /documents/{document_id}`) 200
-- 삭제(`DELETE /documents/{document_id}`) 204
-- 삭제 후 재조회 404
-
-2) metadata API (문서별 1:1)
-- 생성(`POST /documents/{document_id}/metadata`) 201
-- 조회(`GET /documents/{document_id}/metadata`) 200
-- 수정(`PATCH /documents/{document_id}/metadata`) 200
-- 삭제(`DELETE /documents/{document_id}/metadata`) 204
-- 이미 metadata 존재 시 재생성 409
-
-3) 권한/에러
-- 인증 실패 401
-- 권한 부족 403 + `insufficient_scope`
-- 미존재 문서/metadata 404
-- 잘못된 payload 400
-
-## 6. 마커 및 실행 규칙
-
-- Mock 테스트: `@pytest.mark.unit` 또는 `@pytest.mark.mock`
-- 연동 테스트: `@pytest.mark.integration`
-- CI 권장:
-  1) PR 단계: mock 테스트 우선 실행
-  2) main 병합 전/야간: 연동 테스트 포함 전체 실행
-
-## 7. 환경 의존성
-
-- Mock 테스트: 외부 인프라 없이 실행 가능
-- 연동 테스트: MinIO/Postgres 테스트 인스턴스 필요
-- 연동 환경 미구성 시 integration 테스트는 skip 처리
-
-## 8. 테스트 데이터/격리 전략
-
-- 각 테스트는 고유 `document_id`/테스트 파일명/metadata payload 사용
-- 연동 테스트 종료 후 생성 데이터 정리
-- 가능하면 트랜잭션 롤백 또는 테스트 전용 스키마 사용
-
-## 9. 향후 보강 항목
-
-- `/token`, `/user` 엔드포인트 연동 테스트 강화
-- 장애 주입(스토리지/DB 일시 실패) 회복 시나리오
-- 대용량 파일 + 동시 요청 성능/안정성 검증
-
-## 10. Alembic 마이그레이션 테스트
-
-### 10.1 마이그레이션 적용 검증 (연동)
-
-실제 Postgres 인스턴스에서 Alembic 마이그레이션이 올바르게 적용/롤백되는지 검증한다.
+### 서비스 통합 테스트만
 
 ```bash
-# 마이그레이션 적용 후 상태 확인
-uv run alembic upgrade head
-uv run alembic current
-
-# 롤백 후 재적용
-uv run alembic downgrade -1
-uv run alembic upgrade head
+pytest -q -m integration
 ```
 
-### 10.2 주의 사항
+### 인증 테스트만
 
-- 연동 테스트 시 `MetadataService` 초기화가 `create_all()`을 호출하지 않는지 확인한다.
-- 테이블이 존재하지 않는 상태에서 마이그레이션 없이 서비스를 시작하면 오류가 발생해야 한다 (프로덕션 시나리오 검증).
-- `autogenerate`로 생성된 마이그레이션 파일은 반드시 수동 검토 후 커밋한다.
+```bash
+pytest -q -k auth
+```
+
+프로젝트 도구가 `uv` 중심이면 다음도 가능하다.
+
+```bash
+uv run pytest -q
+```
+
+---
+
+## 8. 품질 게이트
+
+최소 품질 기준:
+
+- 핵심 SDK 기능 happy path 전부 테스트됨
+- rollback/consistency 실패 경로 테스트됨
+- HTTP API 엔드포인트 기본 성공/실패 경로 테스트됨
+- auth adapter 테스트됨
+- startup/shutdown 통합 테스트됨
+- readiness/health 동작 테스트됨
+
+권장 기준:
+
+- 주요 도메인 로직은 높은 단위 테스트 커버리지 유지
+- 외부 서비스 통합 테스트는 CI 또는 별도 환경에서 주기 실행
+
+---
+
+## 9. 테스트 제외 항목
+
+현재 문서 범위 밖이므로 기본 테스트 범위에서도 제외한다.
+
+- presigned URL
+- 문서 검색/필터링
+- 버전 관리
+- NATS 이벤트 발행/구독
+- Langfuse 연계
+- 멀티파트 업로드
+- background worker 후처리

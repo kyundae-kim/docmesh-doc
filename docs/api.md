@@ -1,390 +1,334 @@
-# API 명세 - DocMesh Document Service
+# API Specification
 
-## 1. 개요
+## 1. 목적
 
-본 서비스는 `fastapi-core` 기본 라우트와 `docmesh_doc` 로컬 라우트를 함께 제공한다.
+본 문서는 `docs/srs.md` 기준의 **DMS 서비스 모드 HTTP API**를 정의한다.
 
-- fastapi-core 라우트: `/token`, `/user`
-- docmesh_doc 라우트: `/documents*`, `/documents/{document_id}/metadata*`, `/health/live`, `/health/ready`
-
----
-
-## 2. 인증
-
-- 방식: OAuth2 Bearer Token
-- 문서 API(`/documents*`)와 metadata API(`/documents/{document_id}/metadata*`)는 인증 필요
-
-### 2.1 POST /token (fastapi-core)
-
-요청: `application/x-www-form-urlencoded`
-- `username`
-- `password`
-
-응답 200:
-```json
-{
-  "access_token": "...",
-  "refresh_token": "...",
-  "token_type": "bearer"
-}
-```
-
-### 2.2 GET /user (fastapi-core)
-
-요청 헤더:
-- Authorization: Bearer {access_token}
-
-응답 200:
-```json
-{
-  "sub": "...",
-  "username": "...",
-  "email": "...",
-  "name": "...",
-  "roles": ["..."],
-  "scopes": ["..."]
-}
-```
+이 API는 `fastapi-core`가 생성한 FastAPI 앱 안에서 동작하는 것을 전제로 하며, 내부적으로 DMS SDK를 호출한다.
 
 ---
 
-## 3. 문서 API (ID 기반)
+## 2. 공통 원칙
 
-문서는 `file_path`가 아니라 `document_id(UUID)`로 접근한다.
-
-### 3.1 POST /documents
-
-설명: 문서 업로드 및 문서 ID 발급
-
-인증: 필요
-
-요청: `multipart/form-data`
-- `file` (binary, 필수)
-- `filename` (string, 선택)  // 원본 파일명 보관 용도
-
-응답 201:
-```json
-{
-  "document_id": "f8be42e8-c34d-4f39-9f2d-d4067c9f19e2",
-  "filename": "example.txt"
-}
-```
-
-오류:
-- 400 요청 검증 실패
-- 401 인증 실패
-
-### 3.2 GET /documents/{document_id}
-
-설명: 문서 다운로드
-
-인증: 필요
-
-Path Parameter:
-- `document_id` (UUID)
-
-응답 200:
-- Body: 파일 바이너리
-- Headers:
-  - `Content-Type: <원본 타입>`
-  - `Content-Disposition: attachment; filename="..."`
-
-오류:
-- 404 문서 없음 또는 Soft Delete 상태
-
-### 3.3 DELETE /documents/{document_id}
-
-설명: 문서 Soft Delete
-
-인증: 필요
-
-Path Parameter:
-- `document_id` (UUID)
-
-응답 204: No Content
-
-오류:
-- 404 문서 없음
+- Base path는 서비스별 정책에 따라 결정하되, 예시에서는 `/documents`를 사용한다.
+- JSON 응답은 snake_case를 기본으로 한다.
+- 다운로드 API는 JSON 대신 바이너리/stream 응답을 반환할 수 있다.
+- 인증이 필요한 엔드포인트는 `fastapi-core` dependency와 정렬한다.
+- 예외는 SDK 오류를 HTTP 오류로 매핑한다.
 
 ---
 
-## 4. Metadata API (Postgres, 문서 1:1)
+## 3. 엔드포인트 목록
 
-metadata는 Postgres에 저장/관리되며, 문서와 1:1 관계를 가진다.
+| Method | Path | 설명 |
+|---|---|---|
+| `POST` | `/documents` | 문서 업로드 |
+| `GET` | `/documents/{document_id}/metadata` | 문서 metadata 조회 |
+| `GET` | `/documents/{document_id}/content` | 문서 content 다운로드 |
+| `GET` | `/documents/{document_id}/stream` | 문서 stream 다운로드 |
+| `DELETE` | `/documents/{document_id}` | soft delete |
+| `DELETE` | `/documents/{document_id}?hard_delete=true` | hard delete |
+| `GET` | `/documents/health` | DMS 레벨 health |
 
-### 4.1 POST /documents/{document_id}/metadata
+---
 
-설명: 특정 문서의 metadata 생성
+## 4. 데이터 모델
 
-인증: 필요
+## 4.1 DocumentMetadataResponse
 
-Path Parameter:
-- `document_id` (UUID)
-
-요청 Body:
 ```json
 {
-  "metadata_value": {
-    "category": "architecture",
-    "priority": 1
+  "document_id": "doc-123",
+  "original_filename": "report.pdf",
+  "content_type": "application/pdf",
+  "file_size": 1048576,
+  "storage_key": "documents/doc-123/report.pdf",
+  "status": "available",
+  "created_at": "2026-06-18T10:00:00Z",
+  "updated_at": "2026-06-18T10:00:00Z",
+  "checksum": "...",
+  "deleted_at": null,
+  "created_by": "alice",
+  "extra_metadata": {
+    "team": "platform"
   }
 }
 ```
 
-응답 201:
+## 4.2 UploadDocumentResponse
+
 ```json
 {
-  "document_id": "f8be42e8-c34d-4f39-9f2d-d4067c9f19e2",
-  "metadata_value": {
-    "category": "architecture",
-    "priority": 1
-  },
-  "created_at": "2026-05-26T05:01:00Z",
-  "updated_at": "2026-05-26T05:01:00Z"
-}
-```
-
-오류:
-- 400 요청 검증 실패
-- 404 문서 없음
-- 409 이미 metadata가 존재함(1:1 제약)
-
-### 4.2 GET /documents/{document_id}/metadata
-
-설명: 특정 문서의 metadata 조회
-
-인증: 필요
-
-Path Parameter:
-- `document_id` (UUID)
-
-응답 200:
-```json
-{
-  "document_id": "f8be42e8-c34d-4f39-9f2d-d4067c9f19e2",
-  "metadata_value": {
-    "category": "architecture",
-    "priority": 1
-  },
-  "created_at": "2026-05-26T05:01:00Z",
-  "updated_at": "2026-05-26T05:01:00Z"
-}
-```
-
-오류:
-- 404 문서 또는 metadata 없음
-
-### 4.3 PATCH /documents/{document_id}/metadata
-
-설명: 특정 문서의 metadata 수정(부분 업데이트)
-
-인증: 필요
-
-Path Parameter:
-- `document_id` (UUID)
-
-요청 Body (예시):
-```json
-{
-  "metadata_value": {
-    "category": "architecture",
-    "priority": 2
+  "document_id": "doc-123",
+  "storage_key": "documents/doc-123/report.pdf",
+  "created": true,
+  "metadata": {
+    "document_id": "doc-123",
+    "original_filename": "report.pdf",
+    "content_type": "application/pdf",
+    "file_size": 1048576,
+    "storage_key": "documents/doc-123/report.pdf",
+    "status": "available",
+    "created_at": "2026-06-18T10:00:00Z",
+    "updated_at": "2026-06-18T10:00:00Z",
+    "checksum": "...",
+    "deleted_at": null,
+    "created_by": "alice",
+    "extra_metadata": {
+      "team": "platform"
+    }
   }
 }
 ```
 
-응답 200:
+## 4.3 DeleteDocumentResponse
+
 ```json
 {
-  "document_id": "f8be42e8-c34d-4f39-9f2d-d4067c9f19e2",
-  "metadata_value": {
-    "category": "architecture",
-    "priority": 2
-  },
-  "created_at": "2026-05-26T05:01:00Z",
-  "updated_at": "2026-05-26T05:10:00Z"
+  "document_id": "doc-123",
+  "deleted": true,
+  "hard_deleted": false,
+  "status": "deleted"
 }
 ```
 
-오류:
-- 400 요청 검증 실패
-- 404 문서 또는 metadata 없음
+## 4.4 HealthResponse
 
-### 4.4 DELETE /documents/{document_id}/metadata
-
-설명: 특정 문서의 metadata 삭제
-
-인증: 필요
-
-Path Parameter:
-- `document_id` (UUID)
-
-응답 204: No Content
-
-오류:
-- 404 문서 또는 metadata 없음
-
----
-
-## 5. 헬스체크
-
-### 5.1 GET /health/live
-
-응답 200:
-```json
-{ "status": "ok" }
-```
-
-### 5.2 GET /health/ready
-
-응답 200:
-```json
-{ "status": "ok" }
-```
-
----
-
-## 6. 권한 체크 에러 포맷
-
-커스텀 권한 체크 실패(`require_roles`, `require_scopes`) 시:
-
-응답 403:
 ```json
 {
-  "error": "insufficient_scope",
-  "error_description": "Missing required roles: ..., scopes: ..."
+  "ok": true,
+  "checked_at": "2026-06-18T10:00:00Z",
+  "services": [
+    {
+      "service": "postgres",
+      "ok": true,
+      "latency_ms": 2.1,
+      "error": null
+    },
+    {
+      "service": "minio",
+      "ok": true,
+      "latency_ms": 8.3,
+      "error": null
+    }
+  ]
 }
 ```
 
 ---
 
-## 7. 설정
+## 5. POST /documents
 
-앱은 다음 설정 체계를 사용한다.
+## 목적
 
-- Env: `fastapi_core.core.config.EnvConfig`
-- YAML: `fastapi_core.core.config.ServiceSettings`
+문서를 업로드하고 metadata를 저장한다.
 
-대표 환경변수 예시:
-- `CONFIG_PATH`
-- `KEYCLOAK__HTTP_URL`
-- `KEYCLOAK__REALM`
-- `KEYCLOAK__CLIENT_ID`
-- `KEYCLOAK__CLIENT_SECRET`
-- `MINIO__ENDPOINT`
-- `MINIO__ACCESS_KEY`
-- `MINIO__SECRET_KEY`
-- `MINIO__BUCKET`
-- `MINIO__PRESIGNED_EXPIRES_SEC` (기본값: 900)
-- `DB__HOST`
-- `DB__PORT`
-- `DB__NAME`
-- `DB__USER`
-- `DB__PASSWORD`
-- `DB__URL` (직접 DSN 지정 시 위 개별 항목 무시)
-- `DB__SSLMODE` (기본값: prefer)
-- `DB__POOL_SIZE` (기본값: 5)
-- `LOGGING__LEVEL` (WARNING / INFO / DEBUG, 기본값: DEBUG)
-- `NATS__SERVERS` (기본값: nats://nats:4222, 쉼표 구분 멀티 서버 가능)
-- `NATS__NAME` (기본값: fastapi-core)
-- `NATS__CONNECT_TIMEOUT` (기본값: 2)
-- `NATS__MAX_RECONNECT_ATTEMPTS` (기본값: 60)
-- `NATS__RECONNECT_TIME_WAIT_MS` (기본값: 2000)
-- `NATS__QUEUE_GROUP` (기본값: default-workers)
+## Request
 
-### 7.1 YAML 서비스 설정 (ServiceSettings)
+### Content-Type
 
-`CONFIG_PATH`(기본: `.devcontainer/config.yaml`)에서 로드되는 설정 항목:
+`multipart/form-data`
 
-```yaml
-cors:
-  origins: ["*"]
-  credentials: false
+### Form fields
 
-auth:
-  verify_jwt: true              # JWT 서명 검증 여부
-  allow_insecure_jwt_decode: false  # 서명 없이 디코드 허용 여부(개발용)
-  use_introspection: false      # 토큰 인트로스펙션 사용 여부
+| 필드 | 타입 | 필수 | 설명 |
+|---|---|---:|---|
+| `file` | binary | Y | 업로드할 파일 |
+| `document_id` | string | N | 직접 지정할 문서 식별자 |
+| `content_type` | string | N | 미지정 시 파일/헤더 기반 추론 가능 |
+| `created_by` | string | N | 생성자 식별자 |
+| `metadata` | JSON string | N | 추가 메타데이터 |
 
-health:
-  check_keycloak: true          # readiness 시 Keycloak 헬스 확인
-  check_database: true          # readiness 시 DB 연결 확인
-  check_minio: true             # readiness 시 MinIO 연결 확인
-```
-
-### 7.2 create_app 파라미터
-
-```python
-from fastapi_core import create_app
-
-app = create_app(
-    config=None,             # EnvConfig 인스턴스 (None이면 자동 생성)
-    settings=None,           # ServiceSettings 인스턴스 (None이면 YAML에서 로드)
-    lifespan=None,           # FastAPI lifespan 콜백
-    include_auth_router=True # False로 설정 시 /token, /user 라우트 미포함
-)
-```
-
----
-
-## 8. 데이터 저장소 정책
-
-- 문서 원문: MinIO
-- 문서 식별자/인덱스 및 metadata: Postgres
-- 문서 삭제(Soft Delete) 시 MinIO 객체는 `deleted=true`로 마킹
-- metadata는 문서별 1건만 허용(1:1)
-
----
-
-## 10. DB 스키마 마이그레이션
-
-Postgres 스키마 변경은 Alembic으로 관리한다. 서비스 초기화 시 `Base.metadata.create_all()` 호출은 개발 환경에서만 허용한다.
-
-### 프로젝트 구조 (마이그레이션 관련)
-
-```
-docmesh_doc/
-  models/
-    base.py          # 공통 Base 클래스 (DeclarativeBase)
-    metadata.py      # DocumentMetadataModel (공통 Base 상속)
-alembic/
-  env.py
-  versions/
-    <revision>_initial_schema.py
-alembic.ini
-```
-
-### 로컬 개발 (마이그레이션 적용)
+### 예시
 
 ```bash
-# 최초 설정
-uv run alembic init alembic
-
-# 마이그레이션 파일 자동 생성
-uv run alembic revision --autogenerate -m "initial schema"
-
-# 마이그레이션 적용
-uv run alembic upgrade head
-
-# 이전 버전으로 롤백
-uv run alembic downgrade -1
+curl -X POST http://localhost:8000/documents \
+  -F "file=@./report.pdf" \
+  -F 'metadata={"team":"platform"}' \
+  -F "created_by=alice"
 ```
 
-### alembic/env.py 핵심 설정
+## Response
 
-```python
-from docmesh_doc.models.base import Base
-from docmesh_doc.models import metadata  # noqa: F401 (모델 임포트로 Base에 등록)
+- `201 Created`
+- Body: `UploadDocumentResponse`
 
-target_metadata = Base.metadata
+## 오류
+
+| 상태 코드 | 조건 |
+|---|---|
+| `400` | 잘못된 입력, 빈 파일, 잘못된 metadata 형식 |
+| `401` | 인증 필요 / 인증 실패 |
+| `409` | 중복 `document_id` |
+| `500` | storage / metadata / consistency 오류 |
+
+---
+
+## 6. GET /documents/{document_id}/metadata
+
+## 목적
+
+문서 metadata를 조회한다.
+
+## Response
+
+- `200 OK`
+- Body: `DocumentMetadataResponse`
+
+## 오류
+
+| 상태 코드 | 조건 |
+|---|---|
+| `404` | 문서 없음 |
+| `500` | metadata backend 오류 |
+
+### 예시
+
+```bash
+curl http://localhost:8000/documents/doc-123/metadata
 ```
 
-### 환경변수
+---
 
-마이그레이션 실행 시 DB 연결 정보는 동일한 환경변수를 사용한다.
+## 7. GET /documents/{document_id}/content
 
-- `DB__HOST`
-- `DB__PORT`
-- `DB__NAME`
-- `DB__USER`
-- `DB__PASSWORD`
+## 목적
+
+문서 content 전체를 한 번에 반환한다.
+
+## Response
+
+- `200 OK`
+- Body: 바이너리
+- Headers 예시:
+  - `Content-Type: application/pdf`
+  - `Content-Disposition: attachment; filename="report.pdf"`
+  - `ETag` 또는 checksum 기반 헤더는 선택 사항
+
+## 오류
+
+| 상태 코드 | 조건 |
+|---|---|
+| `404` | 문서 없음 |
+| `500` | object missing, consistency 오류, storage 오류 |
+
+---
+
+## 8. GET /documents/{document_id}/stream
+
+## 목적
+
+대용량 파일을 stream 방식으로 반환한다.
+
+## Query Parameters
+
+| 파라미터 | 타입 | 필수 | 기본값 | 설명 |
+|---|---|---:|---:|---|
+| `chunk_size` | integer | N | `65536` | stream chunk size |
+
+## Response
+
+- `200 OK`
+- streaming response
+- `Content-Type`과 `Content-Disposition`은 content API와 동일한 원칙을 따른다.
+
+## 오류
+
+| 상태 코드 | 조건 |
+|---|---|
+| `400` | `chunk_size <= 0` |
+| `404` | 문서 없음 |
+| `500` | stream object 없음, consistency 오류 |
+
+---
+
+## 9. DELETE /documents/{document_id}
+
+## 목적
+
+문서를 삭제한다.
+
+기본 동작은 soft delete다.
+
+## Query Parameters
+
+| 파라미터 | 타입 | 필수 | 기본값 | 설명 |
+|---|---|---:|---:|---|
+| `hard_delete` | boolean | N | `false` | true면 metadata row도 제거 |
+
+## Response
+
+- `200 OK`
+- Body: `DeleteDocumentResponse`
+
+## 오류
+
+| 상태 코드 | 조건 |
+|---|---|
+| `404` | 문서 없음 |
+| `500` | storage 오류 / consistency 오류 |
+
+### 예시
+
+```bash
+curl -X DELETE "http://localhost:8000/documents/doc-123"
+curl -X DELETE "http://localhost:8000/documents/doc-123?hard_delete=true"
+```
+
+---
+
+## 10. GET /documents/health
+
+## 목적
+
+DMS 레벨의 런타임 health check 결과를 반환한다.
+
+## Response
+
+- `200 OK`
+- Body: `HealthResponse`
+
+주의:
+- 이 API는 host-level readiness와 별도다.
+- readiness는 `fastapi-core`가 책임지고, 이 엔드포인트는 DMS 상세 진단을 위한 용도로 쓴다.
+
+---
+
+## 11. 오류 응답 규약
+
+권장 오류 응답 형식:
+
+```json
+{
+  "error": {
+    "type": "DocumentNotFoundError",
+    "message": "Document not found: doc-123"
+  }
+}
+```
+
+## 예외 매핑
+
+| SDK 예외 | HTTP 상태 |
+|---|---:|
+| `ValidationError` | `400` |
+| `AuthenticationError` | `401` |
+| `DocumentNotFoundError` | `404` |
+| `DuplicateDocumentError` | `409` |
+| `ConfigurationError` | `500` |
+| `StorageError` | `500` |
+| `MetadataStoreError` | `500` |
+| `ConsistencyError` | `500` |
+| `HealthCheckFailedError` | `503` 또는 내부 운영 정책에 따름 |
+
+---
+
+## 12. 구현 메모
+
+권장 구현 흐름:
+
+- router는 HTTP parsing/response formatting만 담당
+- 실제 비즈니스 호출은 `dms_sdk` 또는 `dms_service`로 위임
+- 인증 사용 시 `fastapi-core` dependency를 사용
+- `created_by`는 명시 입력 또는 인증 사용자 정보에서 보완 가능
+- stream 응답은 `StreamingResponse` 기반 구현을 권장
