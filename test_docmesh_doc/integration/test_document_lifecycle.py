@@ -1,0 +1,104 @@
+from __future__ import annotations
+
+from hashlib import sha256
+
+import dms
+from fastapi.testclient import TestClient
+
+
+PAYLOAD = b"DocMesh integration test payload"
+
+
+def upload(client: TestClient, document_id: str):
+    return client.post(
+        "/documents",
+        files={"file": ("integration.txt", PAYLOAD, "text/plain")},
+        data={
+            "document_id": document_id,
+            "metadata": '{"suite":"integration"}',
+            "checksum": sha256(PAYLOAD).hexdigest(),
+        },
+        headers={"X-Correlation-ID": f"correlation-{document_id}"},
+    )
+
+
+def test_upload_persists_metadata_and_content_in_postgres_and_minio(
+    integration_client: tuple[TestClient, dms.DefaultDocumentManagementSDK],
+    document_id: str,
+):
+    client, sdk = integration_client
+
+    response = upload(client, document_id)
+
+    assert response.status_code == 201
+    assert response.headers["Location"] == f"/documents/{document_id}"
+    assert response.headers["X-Correlation-ID"] == f"correlation-{document_id}"
+    assert response.json()["document_id"] == document_id
+    assert response.json()["created_by"] == "integration-user"
+    assert response.json()["metadata"] == {"suite": "integration"}
+    assert "storage_key" not in response.json()
+
+    metadata = sdk.get_document_metadata(document_id)
+    content = sdk.get_document_content(document_id)
+    assert metadata.status is dms.DocumentStatus.AVAILABLE
+    assert metadata.original_filename == "integration.txt"
+    assert metadata.extra_metadata == {"suite": "integration"}
+    assert content.content == PAYLOAD
+    assert content.content_type == "text/plain"
+
+    sdk.delete_document(document_id, hard_delete=True)
+
+
+def test_metadata_lookup_and_streaming_download_use_real_stores(
+    integration_client: tuple[TestClient, dms.DefaultDocumentManagementSDK],
+    document_id: str,
+):
+    client, sdk = integration_client
+    assert upload(client, document_id).status_code == 201
+
+    metadata_response = client.get(f"/documents/{document_id}")
+    download_response = client.get(
+        f"/documents/{document_id}/download", params={"chunk_size": 7}
+    )
+
+    assert metadata_response.status_code == 200
+    assert metadata_response.json()["status"] == "available"
+    assert download_response.status_code == 200
+    assert download_response.content == PAYLOAD
+    assert download_response.headers["Content-Type"].startswith("text/plain")
+    assert download_response.headers["Content-Disposition"].startswith("attachment;")
+
+    sdk.delete_document(document_id, hard_delete=True)
+
+
+def test_hard_delete_removes_postgres_metadata_and_minio_object(
+    integration_client: tuple[TestClient, dms.DefaultDocumentManagementSDK],
+    document_id: str,
+):
+    client, sdk = integration_client
+    assert upload(client, document_id).status_code == 201
+    storage_key = sdk.get_document_metadata(document_id).storage_key
+
+    response = client.delete(f"/documents/{document_id}", params={"hard": "true"})
+
+    assert response.status_code == 200
+    assert response.json()["hard_deleted"] is True
+    try:
+        sdk.get_document_metadata(document_id)
+    except dms.DocumentNotFoundError:
+        pass
+    else:
+        raise AssertionError("hard-deleted PostgreSQL metadata still exists")
+    assert sdk._object_store.object_exists(document_id, storage_key) is False
+
+
+def test_sdk_health_checks_real_postgres_and_minio(
+    integration_client: tuple[TestClient, dms.DefaultDocumentManagementSDK],
+):
+    _, sdk = integration_client
+
+    health = sdk.check_health()
+
+    assert health.ok is True
+    assert {service.service for service in health.services} == {"postgres", "minio"}
+    assert all(service.ok for service in health.services)

@@ -12,3 +12,4 @@
 - lazy import
 - optional dependency
 - sqlalchemy core style
+- update uv.lock
