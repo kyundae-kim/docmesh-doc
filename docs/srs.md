@@ -294,7 +294,7 @@ DMS route 오류는 다음 최소 구조를 사용해야 한다. 최종 Pydantic
 | PRD 기능 영역 | 이 SRS의 주요 요구사항 |
 | --- | --- |
 | 앱 조립 및 lifecycle | SRS-ARC-001 ~ SRS-ARC-007 |
-| PostgreSQL·MinIO 운영 구성 | SRS-STO-001 ~ SRS-STO-007, SRS-CFG-001 ~ SRS-CFG-005 |
+| PostgreSQL·MinIO 운영 구성 | SRS-STO-001 ~ SRS-STO-007, SRS-CFG-001 ~ SRS-CFG-004 |
 | 인증 및 권한 | SRS-SEC-001 ~ SRS-SEC-006 |
 | 문서 lifecycle | SRS-DOM-001 ~ SRS-DOM-005, SRS-API-001 ~ SRS-API-012 |
 | 오류 및 정합성 | SRS-ERR-001 ~ SRS-ERR-006 |
