@@ -42,7 +42,6 @@
 | `MINIO_ACCESS_KEY` | 예 | `<access-key>` | MinIO access key |
 | `MINIO_SECRET_KEY` | 예 | `<secret-key>` | MinIO secret key |
 | `MINIO_BUCKET` | 예 | `documents` | 문서 본문을 보관할 bucket 이름 |
-| `DOCMESH_HEALTHCHECK_ENABLED` | 예 | `true` | SDK startup health check 활성화. MVP 배포에서는 항상 `true` |
 
 ### 3.1 PostgreSQL
 
@@ -116,14 +115,14 @@ CORS_CREDENTIALS=true
 
 ### 4.3 인증 설정
 
-API의 `/token`, `/user`, 보호된 document route를 사용하려면 Keycloak 설정이 필요하다.
+MVP의 `/token`, `/user`, 보호된 document route는 Keycloak 인증을 사용하므로 다음 설정이 필수다. 값이 없거나 빈 문자열이면 서비스는 startup을 실패해야 한다.
 
 | 변수 | 필수 조건 | 설명 |
 | --- | --- | --- |
-| `KEYCLOAK_URL` | 인증 API 활성화 시 필수 | Keycloak base URL |
-| `KEYCLOAK_REALM` | 인증 API 활성화 시 필수 | 인증 realm |
-| `KEYCLOAK_CLIENT_ID` | 인증 API 활성화 시 필수 | OAuth2 client ID |
-| `KEYCLOAK_CLIENT_SECRET` | 인증 API 활성화 시 필수 | OAuth2 client secret |
+| `KEYCLOAK_URL` | 예 | Keycloak base URL |
+| `KEYCLOAK_REALM` | 예 | 인증 realm |
+| `KEYCLOAK_CLIENT_ID` | 예 | OAuth2 client ID |
+| `KEYCLOAK_CLIENT_SECRET` | 예 | OAuth2 client secret |
 
 `KEYCLOAK_CLIENT_SECRET`은 반드시 secret store 또는 권한이 제한된 environment로 주입한다. hard delete role `document:delete:hard`는 Keycloak role mapping에서 부여한다.
 

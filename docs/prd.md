@@ -124,7 +124,7 @@ DocMesh Document Service는 다음의 역할 분리를 제품화한다.
 | FR-APP-002 | DMS SDK는 custom lifespan에서 한 번 생성하고 종료 시 close해야 한다. | Must | 정상 종료 및 기동 실패 경로에서 SDK close가 테스트로 검증된다. |
 | FR-APP-003 | DMS route는 SDK 구현체를 직접 생성하지 않고 전용 FastAPI dependency를 통해 SDK를 획득해야 한다. | Must | route 단위 테스트에서 dependency override가 가능하다. |
 | FR-APP-004 | 서비스는 `GET /health/liveness`와 `GET /health/readiness`를 제공해야 한다. | Must | liveness는 프로세스 생존, readiness는 필수 의존성 상태를 반환한다. |
-| FR-APP-005 | 인증이 필요한 배포에서는 보호 route에 인증 및 권한 dependency를 적용해야 한다. | Must | 인증되지 않거나 권한 없는 요청은 문서 작업을 수행할 수 없다. |
+| FR-APP-005 | 모든 문서 작업 route에 인증 dependency를 적용하고 hard delete에는 강화된 권한 dependency를 적용해야 한다. | Must | 인증되지 않거나 권한 없는 요청은 문서 작업을 수행할 수 없다. |
 
 ### 6.2 문서 API
 
@@ -166,7 +166,7 @@ DocMesh Document Service는 다음의 역할 분리를 제품화한다.
 
 | 영역 | 요구사항 |
 | --- | --- |
-| 보안 | 모든 문서 작업은 배포 정책에 따른 인증·권한 검사를 거쳐야 한다. 운영 CORS는 허용 origin을 명시하며 wildcard origin과 credential 조합을 사용하지 않는다. |
+| 보안 | 모든 문서 작업은 인증 검사를 거쳐야 하며 hard delete에는 강화된 권한 검사를 적용한다. 운영 CORS는 허용 origin을 명시하며 wildcard origin과 credential 조합을 사용하지 않는다. |
 | 데이터 정합성 | 업로드는 본문 저장 후 metadata 저장 순서를 따르며, 실패 보상과 consistency 오류 추적을 제공한다. |
 | 성능/자원 | 대용량 다운로드는 streaming으로 제공하고, stream과 SDK는 예외·종료 경로를 포함해 반드시 close한다. |
 | 가용성 | liveness와 readiness를 분리한다. readiness는 DMS 필수 의존성 상태를 반영한다. |

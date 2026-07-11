@@ -337,7 +337,7 @@ curl --fail --location \
 
 ### 4.5 `DELETE /documents/{document_id}` — soft delete
 
-문서 본문을 삭제하고 PostgreSQL metadata를 `deleted` 상태로 남긴다.
+MinIO object는 유지하고 PostgreSQL metadata의 상태를 `deleted`로, `deleted_at`을 삭제 시각으로 갱신한다.
 
 #### Query parameter
 

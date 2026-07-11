@@ -214,7 +214,7 @@ curl --fail --silent --show-error --location \
 
 ### 6.1 Soft delete
 
-기본 삭제는 MinIO object를 삭제하고 PostgreSQL metadata를 `deleted` 상태로 남긴다. soft-deleted 문서는 일반 조회 및 download에서 `404 DOCUMENT_NOT_FOUND`로 처리된다.
+기본 삭제는 MinIO object를 유지하고 PostgreSQL metadata의 상태를 `deleted`로, `deleted_at`을 삭제 시각으로 갱신한다. soft-deleted 문서는 일반 조회 및 download에서 `404 DOCUMENT_NOT_FOUND`로 처리된다.
 
 ```bash
 curl --fail --silent --show-error \

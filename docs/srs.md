@@ -136,7 +136,7 @@ FastAPI application
 | 현재 상태 | 작업 | 다음 상태/결과 |
 | --- | --- | --- |
 | 신규 | 업로드 성공 | `available` |
-| `available` | soft delete | `deleting`을 거쳐 `deleted` |
+| `available` | soft delete | metadata의 상태와 `deleted_at`만 갱신하여 `deleted` |
 | `available` | hard delete | `deleting`을 거쳐 metadata 제거 |
 | `deleting` | object 삭제 실패 | best-effort로 `failed` 전환 후 오류 반환 |
 | `deleted` | 일반 metadata/content 조회 | not-found 정책에 따라 차단 |
@@ -145,7 +145,7 @@ FastAPI application
 | ID | 요구사항 |
 | --- | --- |
 | SRS-DOM-001 | 업로드 성공 문서는 `available` 상태의 metadata와 접근 가능한 object를 가져야 한다. |
-| SRS-DOM-002 | soft delete는 metadata를 삭제하지 않고 `deleted` 상태 및 `deleted_at`을 남겨야 한다. |
+| SRS-DOM-002 | soft delete는 MinIO object를 삭제하거나 변경하지 않고 PostgreSQL metadata의 상태를 `deleted`로, `deleted_at`을 삭제 시각으로 갱신해야 한다. |
 | SRS-DOM-003 | hard delete는 object 삭제 후 metadata 행을 제거해야 한다. |
 | SRS-DOM-004 | soft-deleted 문서의 일반 metadata 조회와 콘텐츠 조회는 외부에서 존재 여부를 추론하기 어렵도록 동일한 not-found 정책을 사용해야 한다. |
 | SRS-DOM-005 | 문서 목록, 복구, 버전 관리는 MVP에서 제공하지 않아야 한다. |
@@ -267,10 +267,14 @@ DMS route 오류는 다음 최소 구조를 사용해야 한다. 최종 Pydantic
 | `READINESS_PARALLEL` | 선택 | readiness 병렬 실행 여부 |
 | `DOCMESH_SERVICES` | 선택 | `fastapi-core` service client 대상 |
 | `READINESS_REQUIRED_SERVICES` | 선택 | `fastapi-core` 필수 서비스 대상 |
+| `KEYCLOAK_URL` | 필수 | Keycloak base URL |
+| `KEYCLOAK_REALM` | 필수 | 인증 realm |
+| `KEYCLOAK_CLIENT_ID` | 필수 | OAuth2 client ID |
+| `KEYCLOAK_CLIENT_SECRET` | 필수 | OAuth2 client secret |
 
 | ID | 요구사항 |
 | --- | --- |
-| SRS-CFG-001 | 서비스는 startup 전에 필수 설정의 누락·공백 여부를 검증해야 한다. |
+| SRS-CFG-001 | 서비스는 startup 전에 PostgreSQL·MinIO·Keycloak을 포함한 필수 설정의 누락·공백 여부를 검증해야 한다. |
 | SRS-CFG-002 | `POSTGRES_DSN` 및 MinIO credential은 secret provider 또는 환경변수에서 읽어야 하며 source code, 기본값, API response에 하드코딩해서는 안 된다. |
 | SRS-CFG-003 | `DOCMESH_SERVICES` 및 `READINESS_REQUIRED_SERVICES`는 DMS SDK의 PostgreSQL·MinIO health 정책을 대체해서는 안 된다. |
 | SRS-CFG-004 | 운영 배포에서 `fastapi-core` 개발 fallback 설정을 실제 credential·endpoint·CORS 정책 대신 사용해서는 안 된다. |
