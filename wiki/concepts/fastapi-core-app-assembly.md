@@ -26,6 +26,8 @@ Readiness는 활성/필수 서비스와 check callable을 기준으로 실행된
 
 NATS를 포함한 메시징은 app assembly에서 선택 가능한 service client이며, 연결 객체/route를 직접 제공하는 표면은 아니다. 메시징의 readiness와 custom-lifespan 확장 경계는 [[fastapi-core-messaging-integration]]에서 다룬다. ^[raw/articles/fastapi-core-messaging-v0.1.6.md]
 
+DMS SDK를 HTTP 서비스에 붙일 때는 [[dms-core]]의 생성·health·close 흐름을 custom lifespan/state 경계에 배치하는 방안을 검토한다. 그 lifecycle과 정합성 규칙은 [[dms-core-document-lifecycle]]에 정리한다.
+
 ## Open questions
 
 - DMS에서 활성화해야 할 서비스와 필수 서비스의 정확한 목록은 무엇인가?

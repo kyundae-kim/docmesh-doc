@@ -4,7 +4,7 @@ created: 2026-07-11
 updated: 2026-07-11
 type: concept
 tags: [fastapi, fastapi-core, configuration, deployment, security, observability]
-sources: [raw/articles/fastapi-core-api-v0.1.6.md, raw/articles/fastapi-core-config-v0.1.6.md, raw/articles/fastapi-core-examples-v0.1.6.md]
+sources: [raw/articles/fastapi-core-api-v0.1.6.md, raw/articles/fastapi-core-config-v0.1.6.md, raw/articles/fastapi-core-examples-v0.1.6.md, raw/articles/dms-core-config-v0.2.0.md]
 confidence: medium
 ---
 
@@ -22,6 +22,8 @@ DMS FastAPI 배포는 `ROOT_PATH`, `TOKEN_URL`, CORS 설정, `DOCMESH_SERVICES`,
 
 `AppConfig` 직접 주입, 환경변수 설정, SQLite만 선택 로딩하는 실행 예제는 [[fastapi-core-usage-patterns]]를 참고한다. 이 예제들은 [[fastapi-core-app-assembly]]의 readiness 상태와 service selection이 함께 바뀐다는 점을 보여 준다. ^[raw/articles/fastapi-core-examples-v0.1.6.md]
 
+`SQLITE_PATH`와 MinIO 같은 이름이 두 계층에 걸쳐 보이지만, DMS SDK의 storage 선택·startup health 정책은 [[dms-core-configuration]]의 책임이고, `fastapi-core`는 application assembly와 service readiness 정책을 담당한다. 같은 환경을 배포하더라도 설정 소유 경계를 명시해야 한다. ^[raw/articles/dms-core-config-v0.2.0.md]
+
 ## Open questions
 
 - DMS 프로덕션에서 `DOCMESH_SERVICES`와 `READINESS_REQUIRED_SERVICES`에 포함할 서비스는 무엇인가?
@@ -33,3 +35,4 @@ DMS FastAPI 배포는 `ROOT_PATH`, `TOKEN_URL`, CORS 설정, `DOCMESH_SERVICES`,
 - `raw/articles/fastapi-core-api-v0.1.6.md`
 - `raw/articles/fastapi-core-config-v0.1.6.md`
 - `raw/articles/fastapi-core-examples-v0.1.6.md`
+- `raw/articles/dms-core-config-v0.2.0.md`

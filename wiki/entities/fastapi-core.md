@@ -23,6 +23,10 @@ confidence: medium
 
 DMS 애플리케이션은 [[fastapi-core-app-assembly]]를 통해 lifecycle·CORS·logging·readiness를 일관되게 설정할 수 있다. 서비스별 실제 연결과 설정 계약은 [[docmesh-py-core]]에 위임되며, 필요한 구체 타입은 전용 dependency로 가져오고 일반 lookup에는 `get_service_client(...)`를 사용한다.
 
+## DMS core boundary
+
+이 위키의 목표 아키텍처에서는 [[dms-core]]가 문서 도메인 SDK를, `fastapi-core`가 FastAPI application layer를 맡는다. 문서 SDK의 lifecycle·health·오류를 HTTP 경계에 연결하는 구체 adapter 계약은 [[dms-core-document-lifecycle]] 및 이후 통합 source에서 확정해야 한다.
+
 ## Configuration boundary
 
 설정은 [[fastapi-core-configuration]]에서 정리한 `AppConfig`와 `ServiceConfigs`로 나뉜다. 운영 배포에서는 앱 공개 경로·CORS·readiness 정책과 외부 서비스 secret을 개발 fallback에 의존하지 않고 명시적으로 주입해야 한다. ^[raw/articles/fastapi-core-config-v0.1.6.md]

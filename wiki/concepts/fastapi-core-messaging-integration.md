@@ -4,7 +4,7 @@ created: 2026-07-11
 updated: 2026-07-11
 type: concept
 tags: [fastapi, fastapi-core, messaging, integration, deployment, observability]
-sources: [raw/articles/fastapi-core-api-v0.1.6.md, raw/articles/fastapi-core-config-v0.1.6.md, raw/articles/fastapi-core-messaging-v0.1.6.md]
+sources: [raw/articles/fastapi-core-api-v0.1.6.md, raw/articles/fastapi-core-config-v0.1.6.md, raw/articles/fastapi-core-messaging-v0.1.6.md, raw/articles/dms-core-messaging-v0.2.0.md]
 confidence: medium
 ---
 
@@ -14,7 +14,9 @@ confidence: medium
 
 ## Service selection and health policy
 
-DMS는 `enabled_services`에 `nats`를 넣어 readiness 대상에 포함하고, `required_services`로 실패의 영향도를 정한다. 예를 들어 Keycloak만 필수이고 NATS가 선택이면 NATS 장애는 `200/degraded`가 될 수 있지만, NATS를 필수로 지정하면 503/error 대상이 된다. 이 앱 조립·상태 계약은 [[fastapi-core-app-assembly]]에, 환경변수와 secret 관리 정책은 [[fastapi-core-configuration]]에 연결된다. ^[raw/articles/fastapi-core-messaging-v0.1.6.md]
+`fastapi-core`로 호스팅되는 DMS application은 `enabled_services`에 `nats`를 넣어 readiness 대상에 포함하고, `required_services`로 실패의 영향도를 정할 수 있다. 예를 들어 Keycloak만 필수이고 NATS가 선택이면 NATS 장애는 `200/degraded`가 될 수 있지만, NATS를 필수로 지정하면 503/error 대상이 된다. 이 앱 조립·상태 계약은 [[fastapi-core-app-assembly]]에, 환경변수와 secret 관리 정책은 [[fastapi-core-configuration]]에 연결된다. ^[raw/articles/fastapi-core-messaging-v0.1.6.md]
+
+중요하게도 이 application-layer 확장성은 `dms-core` SDK가 직접 메시지를 발행·구독한다는 뜻이 아니다. SDK의 현재 비메시징 범위와 미래 확장 조건은 [[dms-core-messaging-boundary]]에 정리한다. ^[raw/articles/dms-core-messaging-v0.2.0.md]
 
 ## Extension boundary
 
@@ -35,3 +37,4 @@ NATS credential 및 연결 세부 설정은 `ServiceConfigs` 영역에서 해석
 - `raw/articles/fastapi-core-api-v0.1.6.md`
 - `raw/articles/fastapi-core-config-v0.1.6.md`
 - `raw/articles/fastapi-core-messaging-v0.1.6.md`
+- `raw/articles/dms-core-messaging-v0.2.0.md`
