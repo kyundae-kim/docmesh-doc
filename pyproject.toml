@@ -4,7 +4,11 @@ version = "0.1.1"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "dms",
+    "docmesh-py-core",
+    "fastapi-core",
+]
 
 [tool.fastapi]
 entrypoint = "docmesh_doc.main:app"
@@ -21,6 +25,11 @@ anyio_mode = "auto"
 markers = [
     "integration: tests that require real external services such as PostgreSQL and MinIO",
 ]
+
+[tool.uv.sources]
+docmesh-py-core = { git = "https://github.com/kyundae-kim/docmesh-py-core.git", rev = "v0.1.4" }
+fastapi-core = { git = "https://github.com/kyundae-kim/fastapi-core.git", rev = "v0.1.6" }
+dms = { git = "https://github.com/kyundae-kim/dms-core.git", rev = "v0.2.0" }
 
 [dependency-groups]
 dev = [
