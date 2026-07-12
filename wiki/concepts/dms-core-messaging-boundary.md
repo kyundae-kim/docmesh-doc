@@ -1,10 +1,10 @@
 ---
 title: dms-core messaging boundary
 created: 2026-07-11
-updated: 2026-07-11
+updated: 2026-07-12
 type: concept
 tags: [dms-core, dms, messaging, integration, architecture]
-sources: [raw/articles/dms-core-messaging-v0.2.0.md, raw/articles/fastapi-core-messaging-v0.1.6.md]
+sources: [raw/articles/dms-core-messaging-v0.2.0.md, raw/articles/fastapi-core-messaging-v0.1.6.md, raw/articles/fastapi-core-messaging-v0.2.0.md]
 confidence: medium
 ---
 
@@ -14,7 +14,7 @@ confidence: medium
 
 ## Hosting application versus SDK
 
-[[fastapi-core-messaging-integration]]은 FastAPI application layer가 NATS를 선택 서비스, readiness, lifecycle 확장 지점으로 다룰 수 있음을 설명한다. 이는 [[dms-core]] SDK 자체에 메시징 계약이 존재한다는 뜻이 아니다. DMS SDK storage/health 설정과 upstream loader의 경계는 [[dms-core-configuration]]에서 확인한다.
+[[fastapi-core-messaging-integration]]은 FastAPI application layer가 NATS를 선택 서비스, readiness, lifecycle 확장 지점으로 다룰 수 있음을 설명한다. `enabled_services` metadata만으로 NATS check가 보장되는 것은 아니며 settings와 client 생성이 추가 조건이다. 이는 [[dms-core]] SDK 자체에 메시징 계약이 존재한다는 뜻이 아니다. DMS SDK storage/health 설정과 upstream loader의 경계는 [[dms-core-configuration]]에서 확인한다. ^[raw/articles/fastapi-core-messaging-v0.2.0.md]
 
 ## Extension trigger
 
@@ -24,3 +24,4 @@ DMS SDK에 event publisher/consumer, message model, retry/idempotency/ordering p
 
 - `raw/articles/dms-core-messaging-v0.2.0.md`
 - `raw/articles/fastapi-core-messaging-v0.1.6.md`
+- `raw/articles/fastapi-core-messaging-v0.2.0.md`

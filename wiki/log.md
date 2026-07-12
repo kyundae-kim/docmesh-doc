@@ -64,3 +64,31 @@
 - Body SHA-256: `04a6873c89c9327bc407cb33c8b50f5064cf4c3483f96b49eba9cb5e4976945b`.
 - Created: `concepts/dms-core-messaging-boundary.md`.
 - Updated: `entities/dms-core.md`, `concepts/fastapi-core-messaging-integration.md`, `index.md`.
+
+## [2026-07-12] ingest | fastapi-core API Reference (main)
+- Captured immutable source: `raw/articles/fastapi-core-api-main.md`.
+- Source URL: `https://raw.githubusercontent.com/kyundae-kim/fastapi-core/main/docs/api.md`.
+- Body SHA-256: `2aad648ef4fd5b1cc0b8f520c150b23f5c5114d7e2bcdaef09f9adda197236ae`.
+- The body is identical to the previously captured `v0.1.6` API snapshot at this collection time; no API-surface changes were introduced into the concept pages.
+- Updated: `entities/fastapi-core.md`, `index.md`.
+
+## [2026-07-12] ingest | fastapi-core configuration reference (Git tag v0.2.0)
+- Captured immutable source: `raw/articles/fastapi-core-config-v0.2.0.md`.
+- Source URL: `https://raw.githubusercontent.com/kyundae-kim/fastapi-core/v0.2.0/docs/config.md`.
+- Body SHA-256: `332496eca69c8e20e5742a93877612b14593e2063dc1b5ad929104913ecfbe54`.
+- The source differs from the previously captured `v0.1.6` config snapshot. It explicitly documents PostgreSQL in the service configuration/client scope, specifies that blank CSV config variables cause validation errors, and records module-global `token_url` behavior.
+- Updated: `entities/fastapi-core.md`, `concepts/fastapi-core-configuration.md`, `concepts/fastapi-core-app-assembly.md`.
+
+## [2026-07-12] ingest | fastapi-core usage examples (Git tag v0.2.0)
+- Captured immutable source: `raw/articles/fastapi-core-examples-v0.2.0.md`.
+- Source URL: `https://raw.githubusercontent.com/kyundae-kim/fastapi-core/v0.2.0/docs/examples.md`.
+- Body SHA-256: `408bb9a316e7e73103f6c290e17f1bac418e0b0ffc8456c10a1fc559430ee76b`.
+- The source differs from the `v0.1.6` examples by completing protected-route assembly, stating token request prerequisites, and adding PostgreSQL DSN/component configuration guidance.
+- Updated: `entities/fastapi-core.md`, `concepts/fastapi-core-usage-patterns.md`, `concepts/fastapi-core-app-assembly.md`.
+
+## [2026-07-12] ingest | fastapi-core messaging reference (Git tag v0.2.0)
+- Captured immutable source: `raw/articles/fastapi-core-messaging-v0.2.0.md`.
+- Source URL: `https://raw.githubusercontent.com/kyundae-kim/fastapi-core/v0.2.0/docs/messaging.md`.
+- Body SHA-256: `b3f57c0b008a695c780172cf42b93ba4a967ddac3624c93b97365d89700f086b`.
+- The source distinguishes enabled-service metadata from actual NATS readiness-check creation, qualifies cleanup to normal custom-lifespan completion, and documents NATS builder dependency failures.
+- Updated: `concepts/fastapi-core-messaging-integration.md`, `concepts/fastapi-core-app-assembly.md`, `concepts/dms-core-messaging-boundary.md`.

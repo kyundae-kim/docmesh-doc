@@ -1,10 +1,10 @@
 ---
 title: fastapi-core application assembly
 created: 2026-07-11
-updated: 2026-07-11
+updated: 2026-07-12
 type: concept
 tags: [fastapi, fastapi-core, architecture, deployment, configuration, observability]
-sources: [raw/articles/fastapi-core-api-v0.1.6.md, raw/articles/fastapi-core-config-v0.1.6.md, raw/articles/fastapi-core-examples-v0.1.6.md, raw/articles/fastapi-core-messaging-v0.1.6.md]
+sources: [raw/articles/fastapi-core-api-v0.1.6.md, raw/articles/fastapi-core-config-v0.1.6.md, raw/articles/fastapi-core-config-v0.2.0.md, raw/articles/fastapi-core-examples-v0.1.6.md, raw/articles/fastapi-core-examples-v0.2.0.md, raw/articles/fastapi-core-messaging-v0.1.6.md, raw/articles/fastapi-core-messaging-v0.2.0.md]
 confidence: medium
 ---
 
@@ -16,7 +16,9 @@ confidence: medium
 
 조립 단계에서 구성된 config, settings, service clients, readiness metadata는 `app.state`에 보관된다. custom lifespan은 내부 wrapper가 감싸며, 종료 때 service client 정리를 보장한다. 이 구조는 [[fastapi-core]]를 서비스 HTTP 계층으로 두고 [[docmesh-py-core]]의 외부 의존성 설정/클라이언트를 재사용하는 경계를 만든다. ^[raw/articles/fastapi-core-api-v0.1.6.md]
 
-외부 자원은 custom lifespan으로 초기화·종료하고, 인증 endpoint가 불필요한 내부 서비스는 auth router를 제외하는 실제 패턴이 [[fastapi-core-usage-patterns]]에 있다. ^[raw/articles/fastapi-core-examples-v0.1.6.md]
+`v0.2.0` 설정 문서는 `create_app()`이 `load_app_config()` 뒤에 application logging을 초기화하고, 이어서 선택된 서비스의 settings/client map을 구성한다고 설명한다. `token_url`은 module-global OAuth2 scheme을 바꾸므로, 한 프로세스에서 서로 다른 값으로 여러 앱을 조립하면 마지막 호출의 OpenAPI password-flow URL이 반영된다는 제약도 함께 기록한다. ^[raw/articles/fastapi-core-config-v0.2.0.md]
+
+외부 자원은 custom lifespan으로 초기화·종료하고, 인증 endpoint가 불필요한 내부 서비스는 auth router를 제외하는 실제 패턴이 [[fastapi-core-usage-patterns]]에 있다. `v0.2.0` 예제는 보호 router를 `create_app()` 결과에 명시적으로 포함하는 조립 단계를 추가로 보여 준다. ^[raw/articles/fastapi-core-examples-v0.2.0.md]
 
 ## Readiness policy
 
@@ -24,7 +26,7 @@ Readiness는 활성/필수 서비스와 check callable을 기준으로 실행된
 
 이 정책의 환경변수와 두 설정 계층은 [[fastapi-core-configuration]]에 정리한다. [[fastapi-core]]가 `AppConfig`를 소비해 state와 middleware를 구성한 뒤 readiness metadata를 생성하므로, service selection과 required service selection은 함께 검토해야 한다. ^[raw/articles/fastapi-core-config-v0.1.6.md]
 
-NATS를 포함한 메시징은 app assembly에서 선택 가능한 service client이며, 연결 객체/route를 직접 제공하는 표면은 아니다. 메시징의 readiness와 custom-lifespan 확장 경계는 [[fastapi-core-messaging-integration]]에서 다룬다. ^[raw/articles/fastapi-core-messaging-v0.1.6.md]
+NATS를 포함한 메시징은 app assembly에서 선택 가능한 service client이며, 연결 객체/route를 직접 제공하는 표면은 아니다. `enabled_services` metadata가 있어도 NATS 설정과 client 생성이 없으면 readiness check는 등록되지 않을 수 있다. 메시징의 readiness와 custom-lifespan 확장 경계는 [[fastapi-core-messaging-integration]]에서 다룬다. ^[raw/articles/fastapi-core-messaging-v0.2.0.md]
 
 DMS SDK를 HTTP 서비스에 붙일 때는 [[dms-core]]의 생성·health·close 흐름을 custom lifespan/state 경계에 배치하는 방안을 검토한다. 그 lifecycle과 정합성 규칙은 [[dms-core-document-lifecycle]]에 정리한다.
 
@@ -38,5 +40,8 @@ DMS SDK를 HTTP 서비스에 붙일 때는 [[dms-core]]의 생성·health·close
 
 - `raw/articles/fastapi-core-api-v0.1.6.md`
 - `raw/articles/fastapi-core-config-v0.1.6.md`
+- `raw/articles/fastapi-core-config-v0.2.0.md`
 - `raw/articles/fastapi-core-examples-v0.1.6.md`
+- `raw/articles/fastapi-core-examples-v0.2.0.md`
 - `raw/articles/fastapi-core-messaging-v0.1.6.md`
+- `raw/articles/fastapi-core-messaging-v0.2.0.md`

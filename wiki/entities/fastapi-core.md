@@ -1,10 +1,10 @@
 ---
 title: fastapi-core
 created: 2026-07-11
-updated: 2026-07-11
+updated: 2026-07-12
 type: entity
 tags: [fastapi-core, fastapi, api, integration, architecture]
-sources: [raw/articles/fastapi-core-api-v0.1.6.md, raw/articles/fastapi-core-config-v0.1.6.md, raw/articles/fastapi-core-examples-v0.1.6.md]
+sources: [raw/articles/fastapi-core-api-v0.1.6.md, raw/articles/fastapi-core-api-main.md, raw/articles/fastapi-core-config-v0.1.6.md, raw/articles/fastapi-core-config-v0.2.0.md, raw/articles/fastapi-core-examples-v0.1.6.md, raw/articles/fastapi-core-examples-v0.2.0.md]
 confidence: medium
 ---
 
@@ -29,18 +29,21 @@ DMS 애플리케이션은 [[fastapi-core-app-assembly]]를 통해 lifecycle·COR
 
 ## Configuration boundary
 
-설정은 [[fastapi-core-configuration]]에서 정리한 `AppConfig`와 `ServiceConfigs`로 나뉜다. 운영 배포에서는 앱 공개 경로·CORS·readiness 정책과 외부 서비스 secret을 개발 fallback에 의존하지 않고 명시적으로 주입해야 한다. ^[raw/articles/fastapi-core-config-v0.1.6.md]
+설정은 [[fastapi-core-configuration]]에서 정리한 `AppConfig`와 `ServiceConfigs`로 나뉜다. `v0.2.0` 설정 문서는 PostgreSQL을 서비스 설정·개발 fallback·전용 dependency 범위에 명시적으로 포함한다. 운영 배포에서는 앱 공개 경로·CORS·readiness 정책과 외부 서비스 secret을 개발 fallback에 의존하지 않고 명시적으로 주입해야 한다. ^[raw/articles/fastapi-core-config-v0.2.0.md]
 
 ## Usage patterns
 
-실제 시작·인증·readiness override·custom lifespan·선택 서비스 로딩의 사용 패턴은 [[fastapi-core-usage-patterns]]에 정리한다. 예제 문서는 API/config 문서와 같은 Git source tag를 가리키지만 문서 내부 버전 표기가 다르므로, 배포 대상 패키지에서 검증해야 한다. ^[raw/articles/fastapi-core-examples-v0.1.6.md]
+실제 시작·인증·readiness override·custom lifespan·선택 서비스 로딩의 사용 패턴은 [[fastapi-core-usage-patterns]]에 정리한다. `v0.2.0` 예제는 보호 route를 app에 실제 포함하는 형태와 PostgreSQL DSN/개별 접속 설정의 선택을 명시한다. 문서 내부 버전 표기와 Git tag의 관계는 배포 대상 패키지에서 검증해야 한다. ^[raw/articles/fastapi-core-examples-v0.2.0.md]
 
 ## Version note
 
-수집 URL은 Git tag `v0.1.6`를 가리키지만, 문서 본문은 스스로를 2026-07-03의 구현 반영본 `v0.5`로 표기한다. 이 위키에서는 URL이 고정한 소스 스냅샷을 기준으로 삼고, 배포 전 설치 패키지의 실제 버전과 API를 별도 검증해야 한다.
+Git tag `v0.1.6`와 `main`의 API 문서를 각각 수집했으며, 2026-07-12 수집 시 두 raw 본문의 SHA-256은 동일했다. 두 URL은 동일한 API 스냅샷을 제공하지만, `main`은 변할 수 있으므로 이 동등성은 수집 시점의 사실이다. 문서 본문은 스스로를 2026-07-03의 구현 반영본 `v0.5`로 표기한다. 배포 전에는 설치 패키지의 실제 버전과 API를 별도 검증해야 한다. ^[raw/articles/fastapi-core-api-main.md]
 
 ## Source
 
 - `raw/articles/fastapi-core-api-v0.1.6.md`
+- `raw/articles/fastapi-core-api-main.md`
 - `raw/articles/fastapi-core-config-v0.1.6.md`
+- `raw/articles/fastapi-core-config-v0.2.0.md`
 - `raw/articles/fastapi-core-examples-v0.1.6.md`
+- `raw/articles/fastapi-core-examples-v0.2.0.md`
