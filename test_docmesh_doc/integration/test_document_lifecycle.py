@@ -3,7 +3,9 @@ from __future__ import annotations
 from hashlib import sha256
 
 import dms
+import pytest
 from fastapi.testclient import TestClient
+from fastapi_core.schemas import UserInfo
 
 
 PAYLOAD = b"DocMesh integration test payload"
@@ -23,10 +25,12 @@ def upload(client: TestClient, document_id: str):
 
 
 def test_upload_persists_metadata_and_content_in_postgres_and_minio(
-    integration_client: tuple[TestClient, dms.DefaultDocumentManagementSDK],
+    integration_client: tuple[
+        TestClient, dms.DefaultDocumentManagementSDK, UserInfo
+    ],
     document_id: str,
 ):
-    client, sdk = integration_client
+    client, sdk, user = integration_client
 
     response = upload(client, document_id)
 
@@ -34,7 +38,7 @@ def test_upload_persists_metadata_and_content_in_postgres_and_minio(
     assert response.headers["Location"] == f"/documents/{document_id}"
     assert response.headers["X-Correlation-ID"] == f"correlation-{document_id}"
     assert response.json()["document_id"] == document_id
-    assert response.json()["created_by"] == "integration-user"
+    assert response.json()["created_by"] == user.sub
     assert response.json()["metadata"] == {"suite": "integration"}
     assert "storage_key" not in response.json()
 
@@ -50,10 +54,12 @@ def test_upload_persists_metadata_and_content_in_postgres_and_minio(
 
 
 def test_metadata_lookup_and_streaming_download_use_real_stores(
-    integration_client: tuple[TestClient, dms.DefaultDocumentManagementSDK],
+    integration_client: tuple[
+        TestClient, dms.DefaultDocumentManagementSDK, UserInfo
+    ],
     document_id: str,
 ):
-    client, sdk = integration_client
+    client, sdk, _ = integration_client
     assert upload(client, document_id).status_code == 201
 
     metadata_response = client.get(f"/documents/{document_id}")
@@ -72,10 +78,16 @@ def test_metadata_lookup_and_streaming_download_use_real_stores(
 
 
 def test_hard_delete_removes_postgres_metadata_and_minio_object(
-    integration_client: tuple[TestClient, dms.DefaultDocumentManagementSDK],
+    integration_client: tuple[
+        TestClient, dms.DefaultDocumentManagementSDK, UserInfo
+    ],
     document_id: str,
 ):
-    client, sdk = integration_client
+    client, sdk, user = integration_client
+    if "document:delete:hard" not in user.roles:
+        pytest.skip(
+            "integration Keycloak user does not have document:delete:hard role"
+        )
     assert upload(client, document_id).status_code == 201
     storage_key = sdk.get_document_metadata(document_id).storage_key
 
@@ -93,9 +105,11 @@ def test_hard_delete_removes_postgres_metadata_and_minio_object(
 
 
 def test_sdk_health_checks_real_postgres_and_minio(
-    integration_client: tuple[TestClient, dms.DefaultDocumentManagementSDK],
+    integration_client: tuple[
+        TestClient, dms.DefaultDocumentManagementSDK, UserInfo
+    ],
 ):
-    _, sdk = integration_client
+    _, sdk, _ = integration_client
 
     health = sdk.check_health()
 
