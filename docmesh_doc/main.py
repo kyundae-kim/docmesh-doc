@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-from collections.abc import Callable
 from contextlib import asynccontextmanager
 from uuid import uuid4
 
@@ -21,30 +20,29 @@ from docmesh_doc.errors import (
 )
 from docmesh_doc.router import router
 
-SdkFactory = Callable[[], dms.DefaultDocumentManagementSDK]
-
-
 def _check_dms_readiness(sdk: dms.DefaultDocumentManagementSDK) -> None:
     if not sdk.check_health().ok:
         raise RuntimeError("DMS dependency unavailable")
 
 
 def sdk_from_environment() -> dms.DefaultDocumentManagementSDK:
-    return dms.create_sdk_from_environment(os.environ)
+    return dms.create_sdk_from_environment(dict(os.environ))
 
 
 def create_application(
+    sdk: dms.DefaultDocumentManagementSDK | None = None,
     *,
-    sdk_factory: SdkFactory = sdk_from_environment,
     config: AppConfig | None = None,
     settings: ServiceConfigs | None = None,
     include_auth_router: bool = True,
 ) -> FastAPI:
     @asynccontextmanager
     async def lifespan(application: FastAPI):
-        sdk = sdk_factory()
-        application.state.dms_sdk = sdk
-        application.state.readiness_checks["dms"] = lambda: _check_dms_readiness(sdk)
+        application_sdk = sdk if sdk is not None else sdk_from_environment()
+        application.state.dms_sdk = application_sdk
+        application.state.readiness_checks["dms"] = lambda: _check_dms_readiness(
+            application_sdk
+        )
         application.state.readiness_services["dms"] = {
             "enabled": True,
             "required": True,
@@ -53,9 +51,9 @@ def create_application(
         try:
             yield
         finally:
-            sdk.close()
+            application_sdk.close()
 
-    if settings is None and sdk_factory is not sdk_from_environment:
+    if settings is None and sdk is not None:
         settings = ServiceConfigs(common=CommonConfig())
 
     application = create_app(

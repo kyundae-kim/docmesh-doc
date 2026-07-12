@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from datetime import UTC, datetime
 from io import BytesIO
 
@@ -10,7 +11,7 @@ from fastapi_core.config import AppConfig
 from fastapi_core.dependencies import get_current_user
 from fastapi_core.schemas import UserInfo
 
-from docmesh_doc.main import create_application
+from docmesh_doc.main import create_application, sdk_from_environment
 
 
 NOW = datetime(2026, 7, 11, tzinfo=UTC)
@@ -88,9 +89,25 @@ class FakeSDK:
         self.closed = True
 
 
+def test_sdk_from_environment_passes_an_environment_snapshot(monkeypatch):
+    captured_env = None
+    sdk = FakeSDK()
+
+    def create_sdk(env):
+        nonlocal captured_env
+        captured_env = env
+        return sdk
+
+    monkeypatch.setattr(dms, "create_sdk_from_environment", create_sdk)
+
+    assert sdk_from_environment() is sdk
+    assert captured_env == dict(os.environ)
+    assert captured_env is not os.environ
+
+
 def client_for(sdk: FakeSDK, *, roles: list[str] | None = None) -> TestClient:
     app = create_application(
-        sdk_factory=lambda: sdk,
+        sdk,
         config=AppConfig(enabled_services=[], required_services=[]),
         include_auth_router=False,
     )
@@ -211,12 +228,14 @@ def test_readiness_returns_503_when_dms_sdk_is_unhealthy():
     assert "connection failed" not in response.text
 
 
-def test_sdk_factory_failure_aborts_application_startup():
-    def failing_factory():
+def test_sdk_environment_failure_aborts_application_startup(monkeypatch):
+    def failing_sdk_from_environment():
         raise RuntimeError("SDK startup failed")
 
+    monkeypatch.setattr(
+        "docmesh_doc.main.sdk_from_environment", failing_sdk_from_environment
+    )
     app = create_application(
-        sdk_factory=failing_factory,
         config=AppConfig(enabled_services=[], required_services=[]),
         include_auth_router=False,
     )
