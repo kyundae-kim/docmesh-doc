@@ -24,6 +24,11 @@ from docmesh_doc.router import router
 SdkFactory = Callable[[], dms.DefaultDocumentManagementSDK]
 
 
+def _check_dms_readiness(sdk: dms.DefaultDocumentManagementSDK) -> None:
+    if not sdk.check_health().ok:
+        raise RuntimeError("DMS dependency unavailable")
+
+
 def sdk_from_environment() -> dms.DefaultDocumentManagementSDK:
     return dms.create_sdk_from_environment(os.environ)
 
@@ -39,6 +44,12 @@ def create_application(
     async def lifespan(application: FastAPI):
         sdk = sdk_factory()
         application.state.dms_sdk = sdk
+        application.state.readiness_checks["dms"] = lambda: _check_dms_readiness(sdk)
+        application.state.readiness_services["dms"] = {
+            "enabled": True,
+            "required": True,
+        }
+        application.state.required_services.add("dms")
         try:
             yield
         finally:

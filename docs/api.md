@@ -419,7 +419,7 @@ Health API는 인증 없이 호출 가능해야 하며 `fastapi-core` 공통 hea
 
 ### 5.2 `GET /health/readiness`
 
-PostgreSQL과 MinIO를 필수 의존성으로 검사한다. 선택 외부 서비스가 활성화되었을 경우 그 상태도 `details`에 포함할 수 있다.
+필수 `dms` check가 DMS SDK를 통해 PostgreSQL과 MinIO를 검사한다. `DOCMESH_SERVICES`에서 PostgreSQL·MinIO service client도 활성화한 환경에서는 개별 check가 추가될 수 있으며, 선택 외부 서비스 상태도 `details`에 포함할 수 있다.
 
 #### 200 response: 모든 필수 의존성 정상
 

@@ -308,7 +308,7 @@ DMS route 오류는 다음 최소 구조를 사용해야 한다. 최종 Pydantic
 ## 12. 구현 전 확인 항목
 
 1. `dms-core` version `v0.2.0`에서 PostgreSQL adapter가 `POSTGRES_DSN`으로 정상 조립되는지 통합 테스트로 확인한다.
-2. `fastapi-core` version `v0.1.6`의 custom lifespan이 DMS SDK의 종료 순서와 충돌하지 않는지 확인한다.
-3. `fastapi-core` 기본 readiness는 service-client map을 기준으로 하므로, PostgreSQL·MinIO SDK health를 `app.state.readiness_checks`에 연결하는 구체 구현을 설계·테스트한다.
+2. `fastapi-core` version `v0.2.0`의 custom lifespan과 내부 service-client 정리 뒤에도 DMS SDK 종료가 누락되지 않는지 startup·shutdown 예외 경로를 포함해 확인한다.
+3. `fastapi-core` 기본 service-client readiness에 더해 DMS SDK `check_health()`를 필수 `dms` check로 `app.state.readiness_checks`에 등록하고, 실패 시 readiness 503을 반환하는지 테스트한다.
 4. upload payload의 최종 형식(multipart/form-data 또는 binary body), hard delete 권한 role, deleted 문서의 HTTP 응답 세부사항은 [API Reference](api.md)에서 확정한다.
 5. `docmesh-py-core` 설정 loader가 DMS 이외의 fallback 설정을 요구할 수 있으므로, 운영 배포에서 필요한 최소 설정을 실제 startup 테스트로 확정한다.

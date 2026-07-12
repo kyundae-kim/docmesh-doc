@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from io import BytesIO
 
 import dms
+import pytest
 from fastapi.testclient import TestClient
 from fastapi_core.config import AppConfig
 from fastapi_core.dependencies import get_current_user
@@ -170,5 +171,71 @@ def test_lifespan_closes_sdk():
     sdk = FakeSDK()
     with client_for(sdk):
         assert sdk.closed is False
+
+    assert sdk.closed is True
+
+
+def test_readiness_includes_required_dms_sdk_check():
+    sdk = FakeSDK()
+
+    with client_for(sdk) as client:
+        response = client.get("/health/readiness")
+
+    assert response.status_code == 200
+    assert response.json()["details"]["dms"]["ok"] is True
+    assert response.json()["details"]["dms"]["required"] is True
+
+
+def test_readiness_returns_503_when_dms_sdk_is_unhealthy():
+    class UnhealthySDK(FakeSDK):
+        def check_health(self):
+            return dms.HealthStatus(
+                ok=False,
+                services=[
+                    dms.ServiceHealth(
+                        service="postgres",
+                        ok=False,
+                        latency_ms=1,
+                        error="connection failed",
+                    )
+                ],
+                checked_at=NOW,
+            )
+
+    with client_for(UnhealthySDK()) as client:
+        response = client.get("/health/readiness")
+
+    assert response.status_code == 503
+    assert response.json()["status"] == "error"
+    assert response.json()["details"]["dms"]["ok"] is False
+    assert "connection failed" not in response.text
+
+
+def test_sdk_factory_failure_aborts_application_startup():
+    def failing_factory():
+        raise RuntimeError("SDK startup failed")
+
+    app = create_application(
+        sdk_factory=failing_factory,
+        config=AppConfig(enabled_services=[], required_services=[]),
+        include_auth_router=False,
+    )
+
+    with pytest.raises(RuntimeError, match="SDK startup failed"):
+        with TestClient(app):
+            pass
+
+
+def test_sdk_close_failure_is_reported_during_shutdown():
+    class CloseFailingSDK(FakeSDK):
+        def close(self):
+            self.closed = True
+            raise RuntimeError("SDK close failed")
+
+    sdk = CloseFailingSDK()
+
+    with pytest.raises(RuntimeError, match="SDK close failed"):
+        with client_for(sdk):
+            pass
 
     assert sdk.closed is True

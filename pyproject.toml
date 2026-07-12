@@ -19,6 +19,7 @@ indent-width = 4
 
 [tool.pytest.ini_options]
 testpaths = ["test_docmesh_doc"]
+pythonpath = ["."]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
 anyio_mode = "auto"
