@@ -38,6 +38,7 @@ class FakeSDK:
         self.upload_request = None
         self.upload_stream_request = None
         self.delete_args = None
+        self.list_args = None
         self.stream_closed = False
 
     def upload_document(self, request):
@@ -64,6 +65,10 @@ class FakeSDK:
         if document_id == "missing":
             raise dms.DocumentNotFoundError(document_id)
         return metadata(document_id)
+
+    def list_documents(self, *, offset=0, limit=100, status=None):
+        self.list_args = (offset, limit, status)
+        return [metadata("doc-1"), metadata("doc-2")]
 
     def get_document_content(self, document_id):
         return dms.DocumentContent(
@@ -181,6 +186,35 @@ def test_sdk_not_found_uses_documented_error_envelope():
     assert response.status_code == 404
     assert response.json()["error"]["code"] == "DOCUMENT_NOT_FOUND"
     assert response.json()["error"]["correlation_id"] == response.headers["X-Correlation-ID"]
+
+
+def test_list_documents_passes_pagination_and_status_to_sdk():
+    sdk = FakeSDK()
+    with client_for(sdk) as client:
+        response = client.get(
+            "/documents?offset=10&limit=20&status=available",
+            headers={"X-Correlation-ID": "list-request-1"},
+        )
+
+    assert response.status_code == 200
+    assert response.headers["X-Correlation-ID"] == "list-request-1"
+    assert [item["document_id"] for item in response.json()] == ["doc-1", "doc-2"]
+    assert all("storage_key" not in item for item in response.json())
+    assert sdk.list_args == (10, 20, dms.DocumentStatus.AVAILABLE)
+
+
+@pytest.mark.parametrize(
+    "query",
+    ["offset=-1", "limit=0", "status=unknown"],
+)
+def test_list_documents_rejects_invalid_query_parameters(query):
+    sdk = FakeSDK()
+    with client_for(sdk) as client:
+        response = client.get(f"/documents?{query}")
+
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "VALIDATION_ERROR"
+    assert sdk.list_args is None
 
 
 def test_invalid_chunk_size_is_normalized_to_400():

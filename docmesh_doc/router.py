@@ -72,6 +72,18 @@ def upload_document(
     return metadata_response(result.metadata)
 
 
+@router.get("", response_model=list[DocumentMetadataResponse])
+def list_documents(
+    sdk: DmsSdk,
+    user: CurrentUser,
+    offset: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1)] = 100,
+    status: dms.DocumentStatus | None = None,
+) -> list[DocumentMetadataResponse]:
+    items = sdk.list_documents(offset=offset, limit=limit, status=status)
+    return [metadata_response(item) for item in items]
+
+
 @router.get("/{document_id}", response_model=DocumentMetadataResponse)
 def get_document_metadata(document_id: str, sdk: DmsSdk, user: CurrentUser) -> DocumentMetadataResponse:
     return metadata_response(sdk.get_document_metadata(document_id))

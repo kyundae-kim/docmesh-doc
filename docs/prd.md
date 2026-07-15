@@ -30,7 +30,7 @@ DocMesh Document Service는 다음의 역할 분리를 제품화한다.
 ### 2.2 MVP 목표
 
 1. 문서 본문과 메타데이터를 하나의 문서 ID로 관리한다.
-2. 파일 업로드, 메타데이터 조회, 전체 콘텐츠 조회, 스트리밍 다운로드, soft delete, hard delete를 HTTP API로 제공한다.
+2. 파일 업로드, 문서 목록·메타데이터 조회, 전체 콘텐츠 조회, 스트리밍 다운로드, soft delete, hard delete를 HTTP API로 제공한다.
 3. `fastapi-core.create_app(...)`를 공통 앱 진입점으로 사용하여 health, 설정, 인증, lifecycle을 일관되게 구성한다.
 4. SDK 생성과 종료를 FastAPI lifespan에 연결하여 서비스 종료 시 SDK와 stream 자원을 정리한다.
 5. MinIO와 metadata store의 실패를 readiness 및 표준 오류 응답으로 식별 가능하게 한다.
@@ -60,7 +60,7 @@ DocMesh Document Service는 다음의 역할 분리를 제품화한다.
 ### 4.1 포함 범위
 
 - HTTP 기반 문서 업로드
-- 문서 메타데이터와 콘텐츠 조회
+- 문서 목록, 메타데이터와 콘텐츠 조회
 - streaming 방식의 다운로드
 - soft delete 및 hard delete
 - 문서 ID의 생성 또는 호출자 지정 ID 사용
@@ -141,6 +141,7 @@ DocMesh Document Service는 다음의 역할 분리를 제품화한다.
 | FR-DOC-007 | 권한 있는 호출자에게 hard delete를 제공해야 한다. | Must | object와 metadata 삭제가 완료되거나 실패가 식별 가능한 오류로 반환된다. |
 | FR-DOC-008 | filename, uploader/created_by, 사용자 정의 metadata, checksum을 문서 metadata로 관리해야 한다. | Must | 업로드 시 제공한 정보가 metadata 조회 결과에서 확인된다. |
 | FR-DOC-009 | 업로드된 원본 filename과 uploader 정보는 MinIO object metadata가 아니라 document metadata에 저장해야 한다. | Must | object metadata에 해당 업무 정보가 기록되지 않고 document metadata에서 조회된다. |
+| FR-DOC-010 | 문서 목록을 offset/limit으로 조회하고 상태로 필터링할 수 있어야 한다. | Must | 목록 응답이 pagination과 상태 filter를 SDK에 전달하고 내부 `storage_key`를 노출하지 않는다. |
 
 ### 6.3 오류 및 정합성
 
@@ -178,7 +179,7 @@ DocMesh Document Service는 다음의 역할 분리를 제품화한다.
 
 ### 8.1 API 설계 원칙
 
-- API는 HTTP resource 중심으로 문서 생성, metadata 조회, 콘텐츠 다운로드, 삭제를 제공한다.
+- API는 HTTP resource 중심으로 문서 생성, 목록·metadata 조회, 콘텐츠 다운로드, 삭제를 제공한다.
 - upload는 multipart/form-data 또는 확정된 바이너리 전송 계약을 사용하며, filename과 content type은 명시적으로 받는다.
 - 다운로드는 저장된 content type과 안전한 `Content-Disposition` 정책을 적용한다.
 - metadata response에는 최소한 document ID, filename, content type, 크기, 상태, 생성/수정 시각, created_by, checksum, 사용자 metadata를 포함한다.
@@ -232,7 +233,6 @@ MVP는 다음 모두를 만족할 때 출시 가능하다.
 | 가정 | PostgreSQL은 모든 환경의 metadata store이며, MinIO는 모든 환경에서 필수다. | MVP 구현 전 |
 | 제약 | 현재 수집된 `dms-core`/`fastapi-core` 문서는 직접적인 FastAPI adapter의 확정 구현을 제공하지 않는다. 서비스 route·dependency·오류 매핑은 본 제품에서 정의·검증해야 한다. | SRS/API 설계 |
 | 제약 | 참조 문서 간 내부 버전 표기와 Git tag가 일치하지 않을 수 있다. 실제 배포 전 잠금된 패키지의 public API를 테스트로 검증한다. | 의존성 업그레이드 및 release 전 |
-| 미결 | 문서 API의 최종 URI, upload payload 형식, pagination/목록 조회 필요 여부 | API Reference 작성 전 |
 | 미결 | soft-deleted 문서의 관리자 조회·복구 정책 | MVP 이후 또는 보안 정책 확정 시 |
 | 미결 | 인증 provider와 문서별 권한 모델(소유자, 역할, 테넌트)의 세부 정책 | 보안 설계 전 |
 | 미결 | hard delete의 승인·감사·보존 정책 | 운영 출시 전 |

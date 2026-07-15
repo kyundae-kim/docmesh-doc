@@ -18,7 +18,7 @@
 본 문서는 다음을 다룬다.
 
 - FastAPI 애플리케이션 조립과 lifecycle
-- 문서 생성·metadata 조회·콘텐츠 조회·streaming download·soft/hard delete
+- 문서 생성·목록 조회·metadata 조회·콘텐츠 조회·streaming download·soft/hard delete
 - PostgreSQL·MinIO 저장소 연결과 정합성 처리
 - 인증·권한·오류·health/readiness·관측성
 - 테스트와 수용 가능한 운영 동작
@@ -148,7 +148,7 @@ FastAPI application
 | SRS-DOM-002 | soft delete는 MinIO object를 삭제하거나 변경하지 않고 PostgreSQL metadata의 상태를 `deleted`로, `deleted_at`을 삭제 시각으로 갱신해야 한다. |
 | SRS-DOM-003 | hard delete는 object 삭제 후 metadata 행을 제거해야 한다. |
 | SRS-DOM-004 | soft-deleted 문서의 일반 metadata 조회와 콘텐츠 조회는 외부에서 존재 여부를 추론하기 어렵도록 동일한 not-found 정책을 사용해야 한다. |
-| SRS-DOM-005 | 문서 목록, 복구, 버전 관리는 MVP에서 제공하지 않아야 한다. |
+| SRS-DOM-005 | 문서 복구와 버전 관리는 MVP에서 제공하지 않아야 한다. |
 
 ## 6. HTTP 인터페이스 요구사항
 
@@ -159,6 +159,7 @@ FastAPI application
 | 논리 기능 | HTTP method 및 URI | 성공 응답 | 필수 동작 |
 | --- | --- | --- | --- |
 | 문서 생성 | `POST /documents` | `201 Created` + metadata | filename, content type, 본문 및 선택 metadata를 검증·저장 |
+| 문서 목록 조회 | `GET /documents` | `200 OK` + metadata 배열 | offset/limit pagination과 선택 status filter 적용 |
 | metadata 조회 | `GET /documents/{document_id}` | `200 OK` + metadata | 삭제되지 않은 문서 metadata 반환 |
 | 전체 콘텐츠 조회 | `GET /documents/{document_id}/content` | `200 OK` + bytes | 작은 문서에 한해 구현 가능하며 content type 보존 |
 | streaming download | `GET /documents/{document_id}/download` | `200 OK` + streaming body | chunk 단위 body 전송 및 stream close |
@@ -181,6 +182,7 @@ FastAPI application
 | SRS-API-010 | soft delete route는 `sdk.delete_document(document_id, hard_delete=False)`를 호출해야 한다. |
 | SRS-API-011 | hard delete route는 권한 확인 후 `sdk.delete_document(document_id, hard_delete=True)`를 호출해야 한다. |
 | SRS-API-012 | 모든 DMS route는 성공 응답에 request correlation ID를 header 또는 확정된 response envelope로 제공해야 한다. |
+| SRS-API-013 | `GET /documents`는 `sdk.list_documents(...)`를 호출하고 각 항목에서 내부 `storage_key`를 제외해야 한다. |
 
 ## 7. 정합성 및 오류 처리 요구사항
 

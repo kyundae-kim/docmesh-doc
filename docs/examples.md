@@ -172,7 +172,20 @@ curl --fail --silent --show-error \
 
 ## 5. 문서 조회
 
-### 5.1 Metadata 조회
+### 5.1 문서 목록 조회
+
+`offset` 기본값은 `0`, `limit` 기본값은 `100`이다. `status`에는 `uploaded`, `available`, `deleting`, `deleted`, `failed` 중 하나를 선택해서 전달할 수 있다.
+
+```bash
+curl --fail --silent --show-error \
+  --header "Authorization: Bearer *** \
+  --header 'Accept: application/json' \
+  "$BASE_URL/documents?offset=0&limit=100&status=available" | jq
+```
+
+응답은 `DocumentMetadata` 객체 배열이며 각 항목에 내부 `storage_key`를 포함하지 않는다.
+
+### 5.2 Metadata 조회
 
 ```bash
 curl --fail --silent --show-error \
@@ -183,7 +196,7 @@ curl --fail --silent --show-error \
 
 `storage_key`는 내부 저장소 식별자이므로 response에 포함되지 않는다.
 
-### 5.2 전체 콘텐츠 조회
+### 5.3 전체 콘텐츠 조회
 
 작은 문서는 `/content` endpoint로 단일 response body를 받아 파일로 저장할 수 있다. 대용량 문서에는 다음 절의 streaming download를 사용한다.
 
@@ -196,7 +209,7 @@ curl --fail --silent --show-error \
 
 response의 `Content-Type`, `Content-Length`, `Content-Disposition` header는 저장된 문서의 content type, 크기, 원본 파일명을 반영한다.
 
-### 5.3 Streaming download
+### 5.4 Streaming download
 
 `/download` endpoint는 본문을 chunk 단위로 전송한다. `curl --remote-header-name`은 서버의 `Content-Disposition` filename을 사용한다.
 

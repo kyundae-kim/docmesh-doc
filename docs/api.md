@@ -31,6 +31,7 @@ DocMesh Document Service는 `dms-core` 문서 lifecycle을 HTTP API로 제공한
 | access token 발급 | `POST` | `/token` | 불필요 | 200 |
 | 현재 사용자 조회 | `GET` | `/user` | 필요 | 200 |
 | 문서 생성 | `POST` | `/documents` | 필요 | 201 |
+| 문서 목록 조회 | `GET` | `/documents` | 필요 | 200 |
 | 문서 metadata 조회 | `GET` | `/documents/{document_id}` | 필요 | 200 |
 | 문서 전체 콘텐츠 조회 | `GET` | `/documents/{document_id}/content` | 필요 | 200 |
 | 문서 streaming download | `GET` | `/documents/{document_id}/download` | 필요 | 200 |
@@ -47,7 +48,7 @@ DocMesh Document Service는 `dms-core` 문서 lifecycle을 HTTP API로 제공한
 
 | 권한 | 대상 route |
 | --- | --- |
-| 인증된 사용자 | 생성, metadata 조회, 콘텐츠 조회, download, soft delete |
+| 인증된 사용자 | 생성, 목록·metadata 조회, 콘텐츠 조회, download, soft delete |
 | `document:delete:hard` | hard delete |
 
 인증되지 않은 요청은 `401 UNAUTHENTICATED`, 인증은 되었지만 요구 권한이 없는 요청은 `403 FORBIDDEN`을 반환한다. `401` 응답에는 `WWW-Authenticate: Bearer` header를 포함한다.
@@ -254,7 +255,32 @@ curl -X POST "$BASE_URL/documents" \
 | 500 | `DOCUMENT_CONSISTENCY_ERROR` | metadata 저장과 object cleanup이 모두 실패 |
 | 503 | `METADATA_STORE_ERROR` / `OBJECT_STORAGE_ERROR` | PostgreSQL 또는 MinIO 작업 실패 |
 
-### 4.2 `GET /documents/{document_id}` — metadata 조회
+### 4.2 `GET /documents` — 문서 목록 조회
+
+문서 metadata 목록을 반환한다. 응답은 `DocumentMetadata` 객체의 JSON 배열이며 각 항목에서 내부 `storage_key`를 제외한다.
+
+#### Query parameter
+
+| 이름 | 타입 | 필수 | 기본값 | 제약 및 설명 |
+| --- | --- | --- | --- | --- |
+| `offset` | integer | 아니오 | `0` | 0 이상 |
+| `limit` | integer | 아니오 | `100` | 1 이상 |
+| `status` | string | 아니오 | 없음 | `uploaded`, `available`, `deleting`, `deleted`, `failed` 중 하나. 생략하면 모든 상태를 조회한다. |
+
+#### 200 response
+
+- Content-Type: `application/json`
+- Body: [DocumentMetadata schema](#24-documentmetadata-schema) 배열
+
+#### 오류
+
+| 상태 | 코드 | 조건 |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | 잘못된 offset, limit 또는 status |
+| 401 | `UNAUTHENTICATED` | 인증 실패 |
+| 503 | `METADATA_STORE_ERROR` | PostgreSQL 조회 실패 |
+
+### 4.3 `GET /documents/{document_id}` — metadata 조회
 
 문서 metadata를 반환한다. soft-deleted 문서는 존재하지 않는 문서와 동일하게 404로 처리한다.
 
@@ -277,9 +303,9 @@ curl -X POST "$BASE_URL/documents" \
 | 404 | `DOCUMENT_NOT_FOUND` | 문서가 없거나 soft-deleted 상태 |
 | 503 | `METADATA_STORE_ERROR` | PostgreSQL 조회 실패 |
 
-### 4.3 `GET /documents/{document_id}/content` — 전체 콘텐츠 조회
+### 4.4 `GET /documents/{document_id}/content` — 전체 콘텐츠 조회
 
-문서 본문을 단일 HTTP response body로 반환한다. 대용량 문서는 [streaming download](#44-get-documentsdocument_iddownload--streaming-download)를 사용해야 한다.
+문서 본문을 단일 HTTP response body로 반환한다. 대용량 문서는 [streaming download](#45-get-documentsdocument_iddownload--streaming-download)를 사용해야 한다.
 
 #### 200 response headers
 
@@ -299,7 +325,7 @@ curl -X POST "$BASE_URL/documents" \
 | 500 | `DOCUMENT_CONSISTENCY_ERROR` | PostgreSQL metadata는 있으나 MinIO object가 없음 |
 | 503 | `METADATA_STORE_ERROR` / `OBJECT_STORAGE_ERROR` | 저장소 작업 실패 |
 
-### 4.4 `GET /documents/{document_id}/download` — streaming download
+### 4.5 `GET /documents/{document_id}/download` — streaming download
 
 문서 본문을 chunk 단위로 내려받는다. route는 SDK `get_document_content_stream(...)`과 `DocumentContentStream.iter_chunks()`를 사용하며 response 종료·오류·연결 해제 시 stream을 close한다.
 
@@ -335,7 +361,7 @@ curl --fail --location \
 | 500 | `DOCUMENT_CONSISTENCY_ERROR` | PostgreSQL metadata는 있으나 MinIO object가 없음 |
 | 503 | `METADATA_STORE_ERROR` / `OBJECT_STORAGE_ERROR` | 저장소 작업 실패 |
 
-### 4.5 `DELETE /documents/{document_id}` — soft delete
+### 4.6 `DELETE /documents/{document_id}` — soft delete
 
 MinIO object는 유지하고 PostgreSQL metadata의 상태를 `deleted`로, `deleted_at`을 삭제 시각으로 갱신한다.
 
@@ -367,7 +393,7 @@ MinIO object는 유지하고 PostgreSQL metadata의 상태를 `deleted`로, `del
 | 500 | `DOCUMENT_CONSISTENCY_ERROR` | 삭제 과정의 정합성 오류 |
 | 503 | `METADATA_STORE_ERROR` / `OBJECT_STORAGE_ERROR` | 저장소 작업 실패 |
 
-### 4.6 `DELETE /documents/{document_id}?hard=true` — hard delete
+### 4.7 `DELETE /documents/{document_id}?hard=true` — hard delete
 
 문서 본문을 삭제하고 PostgreSQL metadata 행을 제거한다. `document:delete:hard` 권한이 필요하다.
 
@@ -514,6 +540,7 @@ Health API는 인증 없이 호출 가능해야 하며 `fastapi-core` 공통 hea
 | Route | 200 | 201 | 400 | 401 | 403 | 404 | 409 | 500 | 503 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `POST /documents` |  | 생성 없음 | 입력 오류 | 인증 실패 |  |  | ID 중복 | 정합성/내부 오류 | 저장소 오류 |
+| `GET /documents` | 목록 |  | pagination/filter 오류 | 인증 실패 |  |  |  | 내부 오류 | PostgreSQL 오류 |
 | `GET /documents/{id}` | metadata |  |  | 인증 실패 |  | 문서 없음 |  | 내부 오류 | PostgreSQL 오류 |
 | `GET /documents/{id}/content` | bytes |  |  | 인증 실패 |  | 문서 없음 |  | 정합성 오류 | 저장소 오류 |
 | `GET /documents/{id}/download` | stream |  | chunk 오류 | 인증 실패 |  | 문서 없음 |  | 정합성 오류 | 저장소 오류 |
@@ -524,8 +551,8 @@ Health API는 인증 없이 호출 가능해야 하며 `fastapi-core` 공통 hea
 ## 7. 구현 및 테스트 준수 사항
 
 1. `POST /documents`는 `UploadDocumentRequest`로 변환한 뒤 `sdk.upload_document(...)`를 호출한다.
-2. metadata/content/download/delete route는 각각 SDK의 `get_document_metadata(...)`, `get_document_content(...)`, `get_document_content_stream(...)`, `delete_document(...)`를 호출한다.
+2. 목록/metadata/content/download/delete route는 각각 SDK의 `list_documents(...)`, `get_document_metadata(...)`, `get_document_content(...)`, `get_document_content_stream(...)`, `delete_document(...)`를 호출한다.
 3. DMS SDK 오류는 [공통 오류 코드](#23-공통-오류-코드)에 정의한 상태와 code로 변환한다.
 4. download route는 stream의 정상 완료, 예외, 클라이언트 연결 종료에서 `close()`가 호출되는지 테스트한다.
-5. 통합 테스트는 PostgreSQL과 MinIO를 사용해 upload, metadata 조회, content/download, soft delete, hard delete, readiness, storage 장애를 검증한다.
+5. 통합 테스트는 PostgreSQL과 MinIO를 사용해 upload, 목록·metadata 조회, content/download, soft delete, hard delete, readiness, storage 장애를 검증한다.
 6. OpenAPI 생성 결과에는 이 문서의 route, request/response schema, security requirement, status code를 반영한다.

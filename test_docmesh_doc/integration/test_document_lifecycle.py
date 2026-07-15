@@ -62,11 +62,17 @@ def test_metadata_lookup_and_streaming_download_use_real_stores(
     client, sdk, _ = integration_client
     assert upload(client, document_id).status_code == 201
 
+    list_response = client.get(
+        "/documents", params={"status": "available", "limit": 1000}
+    )
     metadata_response = client.get(f"/documents/{document_id}")
     download_response = client.get(
         f"/documents/{document_id}/download", params={"chunk_size": 7}
     )
 
+    assert list_response.status_code == 200
+    assert document_id in {item["document_id"] for item in list_response.json()}
+    assert all("storage_key" not in item for item in list_response.json())
     assert metadata_response.status_code == 200
     assert metadata_response.json()["status"] == "available"
     assert download_response.status_code == 200

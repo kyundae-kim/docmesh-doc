@@ -16,7 +16,7 @@
 
 - FastAPI lifespan을 통한 DMS SDK 생성·재사용·종료
 - 실제 PostgreSQL metadata store와 MinIO object store를 사용하는 문서 lifecycle
-- upload, metadata/content 조회, streaming download, soft delete, hard delete
+- upload, 목록·metadata/content 조회, streaming download, soft delete, hard delete
 - liveness와 PostgreSQL·MinIO 상태를 반영한 readiness
 - 필수 설정 누락 및 외부 의존성 장애 시 startup/readiness 동작
 - metadata/object 저장 실패와 보상 처리, 정합성 오류
@@ -120,6 +120,14 @@ MINIO_SECURE=false
 1. 문서를 업로드한 뒤 `GET /documents/{document_id}`를 호출한다.
 2. 업로드 정보와 조회 metadata가 일치하고 `storage_key`가 노출되지 않음을 확인한다.
 3. `GET /documents/{document_id}/content`의 body, `Content-Type`, `Content-Length`, 안전한 inline `Content-Disposition`을 확인한다.
+
+### INT-DOC-003A 문서 목록 조회
+
+**관련 요구사항:** FR-DOC-010, SRS-API-013
+
+1. 문서를 업로드한 뒤 `GET /documents?status=available`을 호출한다.
+2. 목록에 생성한 문서가 포함되고 `storage_key`가 노출되지 않음을 확인한다.
+3. `offset`, `limit`, `status`가 SDK에 전달되며 잘못된 값은 저장소 호출 전에 `400 VALIDATION_ERROR`로 거부됨을 확인한다.
 
 ### INT-DOC-004 streaming download와 자원 정리
 
