@@ -45,17 +45,22 @@ def upload_document(
     metadata: Annotated[str, Form()] = "{}",
     checksum: Annotated[str | None, Form()] = None,
 ) -> DocumentMetadataResponse:
-    content = file.file.read()
     filename = (file.filename or "").strip()
     content_type = (file.content_type or "").strip()
     try:
         extra_metadata: Any = json.loads(metadata)
     except json.JSONDecodeError as exc:
         raise dms.ValidationError("metadata must be valid JSON") from exc
-    if not content or not filename or filename == "." or not content_type or not isinstance(extra_metadata, dict):
+    size = file.size
+    if size is None:
+        file.file.seek(0, 2)
+        size = file.file.tell()
+    file.file.seek(0)
+    if size <= 0 or not filename or filename == "." or not content_type or not isinstance(extra_metadata, dict):
         raise dms.ValidationError("invalid upload")
-    result = sdk.upload_document(dms.UploadDocumentRequest(
-        content=content,
+    result = sdk.upload_document_stream(dms.UploadDocumentStreamRequest(
+        stream=file.file,
+        size=size,
         filename=filename,
         content_type=content_type,
         document_id=document_id or None,
@@ -110,7 +115,6 @@ def delete_document(
     hard: bool = False,
 ):
     if hard and "document:delete:hard" not in user.roles:
-        from fastapi import Request
         # Raised as a documented service error by the application handler.
         raise PermissionError("document:delete:hard")
     result = sdk.delete_document(document_id, hard_delete=hard)

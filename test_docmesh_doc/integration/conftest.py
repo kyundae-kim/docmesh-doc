@@ -99,4 +99,4 @@ def integration_client(
 
         user = _wait_for_authenticated_user(client)
 
-        yield client, app.state.dms_sdk, user
+        yield client, app.state.resource_registry.require("dms"), user

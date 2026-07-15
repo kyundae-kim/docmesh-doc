@@ -36,11 +36,23 @@ class FakeSDK:
     def __init__(self) -> None:
         self.closed = False
         self.upload_request = None
+        self.upload_stream_request = None
         self.delete_args = None
         self.stream_closed = False
 
     def upload_document(self, request):
         self.upload_request = request
+        item = metadata(request.document_id or "generated-id")
+        return dms.UploadDocumentResult(
+            document_id=item.document_id,
+            storage_key=item.storage_key,
+            metadata=item,
+        )
+
+    def upload_document_stream(self, request):
+        self.upload_stream_request = request
+        content = request.stream.read()
+        assert len(content) == request.size
         item = metadata(request.document_id or "generated-id")
         return dms.UploadDocumentResult(
             document_id=item.document_id,
@@ -92,6 +104,7 @@ class FakeSDK:
 def test_sdk_from_environment_passes_an_environment_snapshot(monkeypatch):
     captured_env = None
     sdk = FakeSDK()
+    monkeypatch.delenv("DMS_METADATA_BACKEND", raising=False)
 
     def create_sdk(env):
         nonlocal captured_env
@@ -101,14 +114,19 @@ def test_sdk_from_environment_passes_an_environment_snapshot(monkeypatch):
     monkeypatch.setattr(dms, "create_sdk_from_environment", create_sdk)
 
     assert sdk_from_environment() is sdk
-    assert captured_env == dict(os.environ)
+    assert captured_env == {**os.environ, "DMS_METADATA_BACKEND": "postgresql"}
     assert captured_env is not os.environ
+    assert os.environ.get("DMS_METADATA_BACKEND") is None
 
 
 def client_for(sdk: FakeSDK, *, roles: list[str] | None = None) -> TestClient:
     app = create_application(
         sdk,
-        config=AppConfig(enabled_services=[], required_services=[]),
+        config=AppConfig(
+            startup_healthcheck=False,
+            enabled_services=[],
+            required_services=[],
+        ),
         include_auth_router=False,
     )
     app.dependency_overrides[get_current_user] = lambda: UserInfo(
@@ -117,7 +135,7 @@ def client_for(sdk: FakeSDK, *, roles: list[str] | None = None) -> TestClient:
     return TestClient(app)
 
 
-def test_upload_converts_multipart_to_sdk_request_and_hides_storage_key():
+def test_upload_streams_multipart_to_sdk_request_and_hides_storage_key():
     sdk = FakeSDK()
     with client_for(sdk) as client:
         response = client.post(
@@ -131,8 +149,28 @@ def test_upload_converts_multipart_to_sdk_request_and_hides_storage_key():
     assert response.headers["X-Correlation-ID"] == "request-1"
     assert response.headers["Location"] == "/documents/doc-1"
     assert "storage_key" not in response.json()
-    assert sdk.upload_request.created_by == "user-1"
-    assert sdk.upload_request.metadata == {"category": "contract"}
+    assert sdk.upload_request is None
+    assert sdk.upload_stream_request.size == 3
+    assert sdk.upload_stream_request.filename == "contract.pdf"
+    assert sdk.upload_stream_request.content_type == "application/pdf"
+    assert sdk.upload_stream_request.created_by == "user-1"
+    assert sdk.upload_stream_request.metadata == {"category": "contract"}
+
+
+def test_dms_sdk_is_owned_by_the_managed_resource_registry():
+    sdk = FakeSDK()
+    app = create_application(
+        sdk,
+        config=AppConfig(enabled_services=[], required_services=[]),
+        include_auth_router=False,
+    )
+
+    with TestClient(app):
+        assert app.state.resource_registry.require("dms") is sdk
+        assert not hasattr(app.state, "dms_sdk")
+        assert not hasattr(app.state, "readiness_checks")
+
+    assert sdk.closed is True
 
 
 def test_sdk_not_found_uses_documented_error_envelope():
@@ -253,7 +291,7 @@ def test_sdk_close_failure_is_reported_during_shutdown():
 
     sdk = CloseFailingSDK()
 
-    with pytest.raises(RuntimeError, match="SDK close failed"):
+    with pytest.RaisesGroup(RuntimeError, match="managed resource shutdown failed"):
         with client_for(sdk):
             pass
 

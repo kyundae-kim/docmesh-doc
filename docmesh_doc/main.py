@@ -1,15 +1,13 @@
 from __future__ import annotations
 
 import os
-from contextlib import asynccontextmanager
-from uuid import uuid4
 
 import dms
 from docmesh_py_core.config import CommonConfig, ServiceConfigs
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from fastapi_core import create_app
+from fastapi_core import ManagedResource, create_app
 from fastapi_core.config import AppConfig
 
 from docmesh_doc.errors import (
@@ -26,7 +24,9 @@ def _check_dms_readiness(sdk: dms.DefaultDocumentManagementSDK) -> None:
 
 
 def sdk_from_environment() -> dms.DefaultDocumentManagementSDK:
-    return dms.create_sdk_from_environment(dict(os.environ))
+    environment = dict(os.environ)
+    environment["DMS_METADATA_BACKEND"] = "postgresql"
+    return dms.create_sdk_from_environment(environment)
 
 
 def create_application(
@@ -36,40 +36,21 @@ def create_application(
     settings: ServiceConfigs | None = None,
     include_auth_router: bool = True,
 ) -> FastAPI:
-    @asynccontextmanager
-    async def lifespan(application: FastAPI):
-        application_sdk = sdk if sdk is not None else sdk_from_environment()
-        application.state.dms_sdk = application_sdk
-        application.state.readiness_checks["dms"] = lambda: _check_dms_readiness(
-            application_sdk
-        )
-        application.state.readiness_services["dms"] = {
-            "enabled": True,
-            "required": True,
-        }
-        application.state.required_services.add("dms")
-        try:
-            yield
-        finally:
-            application_sdk.close()
-
     if settings is None and sdk is not None:
         settings = ServiceConfigs(common=CommonConfig())
 
+    dms_resource = ManagedResource(
+        name="dms",
+        factory=lambda _application: sdk if sdk is not None else sdk_from_environment(),
+        healthcheck=_check_dms_readiness,
+        required=True,
+    )
     application = create_app(
         config=config,
         settings=settings,
-        lifespan=lifespan,
         include_auth_router=include_auth_router,
+        resources=(dms_resource,),
     )
-
-    @application.middleware("http")
-    async def correlation_id(request: Request, call_next):
-        supplied = request.headers.get("X-Correlation-ID", "").strip()
-        request.state.correlation_id = supplied[:128] if supplied else str(uuid4())
-        response = await call_next(request)
-        response.headers["X-Correlation-ID"] = request.state.correlation_id
-        return response
 
     async def forbidden_handler(request: Request, exc: PermissionError) -> JSONResponse:
         return error_response(request, ErrorContract(403, "FORBIDDEN", "Permission denied."))
