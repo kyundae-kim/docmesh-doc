@@ -1,10 +1,10 @@
 ---
 title: fastapi-core configuration model
 created: 2026-07-11
-updated: 2026-07-12
+updated: 2026-07-15
 type: concept
 tags: [fastapi, fastapi-core, configuration, deployment, security, observability]
-sources: [raw/articles/fastapi-core-api-v0.1.6.md, raw/articles/fastapi-core-config-v0.1.6.md, raw/articles/fastapi-core-config-v0.2.0.md, raw/articles/fastapi-core-examples-v0.1.6.md, raw/articles/dms-core-config-v0.2.0.md]
+sources: [raw/articles/fastapi-core-api-v0.1.6.md, raw/articles/fastapi-core-api-v0.3.0.md, raw/articles/fastapi-core-config-v0.1.6.md, raw/articles/fastapi-core-config-v0.2.0.md, raw/articles/fastapi-core-config-v0.3.0.md, raw/articles/fastapi-core-env-example-v0.3.0.md, raw/articles/fastapi-core-examples-v0.1.6.md, raw/articles/dms-core-config-v0.2.0.md, raw/articles/docmesh-py-core-config-v0.2.0.md]
 confidence: medium
 ---
 
@@ -20,9 +20,17 @@ DMS FastAPI 배포는 `ROOT_PATH`, `TOKEN_URL`, CORS 설정, `DOCMESH_SERVICES`,
 
 `build_docmesh_env_overlay()`의 Keycloak, MinIO, NATS 등의 값은 개발·테스트용 fallback이므로 운영 배포값이 아니다. 운영 환경에서는 secret/token/비밀번호를 명시적 환경변수나 외부 secret 주입으로 제공하고, wildcard CORS와 credential 조합을 피하며, required service 집합을 배포 정책으로 선언해야 한다.
 
+`v0.3.0`의 `.env.example`은 자동으로 읽히는 파일이 아니라 배포 시 주입할 값을 설명하는 template이다. 활성 기본 surface는 `DOCMESH_SERVICES=keycloak`, `READINESS_REQUIRED_SERVICES=keycloak`, localhost CORS origins, startup healthcheck 비활성화이며, 실제 service credential과 연결 정보는 주석 처리되고 `[REDACTED]`로 표기된다. CSV 목록을 빈 값으로 설정하면 빈 목록이 되고 기본값을 쓰려면 변수를 제거해야 한다. ^[raw/articles/fastapi-core-env-example-v0.3.0.md]
+
 `v0.2.0` 설정 문서는 PostgreSQL을 `ServiceConfigs`가 다루는 외부 시스템, development/test fallback, 그리고 전용 dependency 범위에 포함한다. 이는 PostgreSQL 지원이 `fastapi-core` 자체의 문서 저장 API를 뜻하는 것은 아니며, [[docmesh-py-core]]가 제공하는 설정·client wrapper를 [[fastapi-core-app-assembly]]가 선택 서비스와 readiness에 연결하는 application-layer 통합이다. ^[raw/articles/fastapi-core-config-v0.2.0.md]
 
-`CORS_ORIGINS`, `DOCMESH_SERVICES`, `READINESS_REQUIRED_SERVICES`에 빈 문자열을 명시하면 현재 validator는 `None`으로 바꾸며, non-optional list 필드는 기본값으로 복원되지 않아 validation error가 된다. 기본 동작을 쓰려면 빈 값으로 설정하지 말고 환경변수 자체를 생략해야 한다. ^[raw/articles/fastapi-core-config-v0.2.0.md]
+`v0.2.0` config 문서는 `CORS_ORIGINS`, `DOCMESH_SERVICES`, `READINESS_REQUIRED_SERVICES`의 빈 문자열이 validation error라고 기록하지만, `v0.3.0` API는 환경변수 빈 문자열을 빈 목록으로 해석하고 미설정일 때만 기본값을 사용한다고 문서화한다. 새 ref를 채택할 때는 빈 `DOCMESH_SERVICES`가 keycloak 기본값이 아니라 빈 enabled set이 되는지 설치된 패키지와 테스트에서 확인해야 한다. ^[raw/articles/fastapi-core-api-v0.3.0.md]
+
+`v0.3.0` config는 `DOCMESH_SERVICE_ALTERNATIVES`를 세미콜론 그룹·쉼표 서비스 목록으로 파싱하고, readiness per-service/overall timeout과 `DOCMESH_HEALTHCHECK_ENABLED`의 `startup_healthcheck` alias를 `AppConfig` 계약에 포함한다. `required_services`는 `enabled_services`의 부분집합이어야 한다. `load_docmesh_settings(...)`는 development/test overlay mapping을 `docmesh_py_core.load_service_configs(env, ...)`에 직접 전달해 프로세스 환경을 변경하지 않는다. ^[raw/articles/fastapi-core-config-v0.3.0.md]
+
+같은 이름의 `DOCMESH_HEALTHCHECK_ENABLED`는 `docmesh-py-core.CommonConfig.healthcheck_enabled`와 FastAPI `AppConfig.startup_healthcheck`에 각각 관여할 수 있다. Py Core의 기본값은 `true`지만 FastAPI startup policy 기본값은 `false`이므로, DMS 배포는 startup network check 여부를 별도로 결정해야 한다. production 보안 제약은 FastAPI가 재구현하지 않고 Py Core loader/assembly의 `validate_runtime_security()` 결과에 의존한다. ^[raw/articles/fastapi-core-config-v0.3.0.md]
+
+업스트림 `docmesh-py-core`는 공백 문자열을 미설정으로 보고 selected service만 validation하도록 `load_service_configs(services=...)`를 제공한다. 반대로 `load_available_service_configs(...)`는 관련 prefix가 하나라도 있으면 부분 설정을 오류로 처리한다. 따라서 FastAPI의 enabled-service 선택, deployment secret 주입, DMS SDK가 실제로 소비하는 저장소 설정을 같은 목록으로 취급하지 말고 각각의 loader 경계를 확인해야 한다. 또한 `DOCMESH_HEALTHCHECK_ENABLED`는 자동 startup healthcheck 스위치가 아니라 소비 앱이 `check_on_startup` 정책으로 해석해야 하는 config 값이다. ^[raw/articles/docmesh-py-core-config-v0.2.0.md]
 
 `AppConfig` 직접 주입, 환경변수 설정, SQLite만 선택 로딩하는 실행 예제는 [[fastapi-core-usage-patterns]]를 참고한다. 이 예제들은 [[fastapi-core-app-assembly]]의 readiness 상태와 service selection이 함께 바뀐다는 점을 보여 준다. ^[raw/articles/fastapi-core-examples-v0.1.6.md]
 
@@ -38,7 +46,11 @@ DMS FastAPI 배포는 `ROOT_PATH`, `TOKEN_URL`, CORS 설정, `DOCMESH_SERVICES`,
 ## Sources
 
 - `raw/articles/fastapi-core-api-v0.1.6.md`
+- `raw/articles/fastapi-core-api-v0.3.0.md`
 - `raw/articles/fastapi-core-config-v0.1.6.md`
 - `raw/articles/fastapi-core-config-v0.2.0.md`
+- `raw/articles/fastapi-core-config-v0.3.0.md`
+- `raw/articles/fastapi-core-env-example-v0.3.0.md`
 - `raw/articles/fastapi-core-examples-v0.1.6.md`
 - `raw/articles/dms-core-config-v0.2.0.md`
+- `raw/articles/docmesh-py-core-config-v0.2.0.md`

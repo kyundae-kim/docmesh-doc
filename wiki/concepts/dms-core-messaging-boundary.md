@@ -1,16 +1,18 @@
 ---
 title: dms-core messaging boundary
 created: 2026-07-11
-updated: 2026-07-12
+updated: 2026-07-15
 type: concept
 tags: [dms-core, dms, messaging, integration, architecture]
-sources: [raw/articles/dms-core-messaging-v0.2.0.md, raw/articles/fastapi-core-messaging-v0.1.6.md, raw/articles/fastapi-core-messaging-v0.2.0.md]
+sources: [raw/articles/dms-core-config-v0.3.0.md, raw/articles/dms-core-messaging-v0.2.0.md, raw/articles/fastapi-core-messaging-v0.1.6.md, raw/articles/fastapi-core-messaging-v0.2.0.md]
 confidence: medium
 ---
 
 # dms-core messaging boundary
 
 현재 `dms-core`는 동기식 Python SDK이며 message broker publish/subscribe, event payload serialization, async queue, webhook을 공개 API로 제공하지 않는다. `NATS_SERVERS`가 런타임에 필요할 수 있는 경우도 `docmesh-py-core` 설정 검증의 요구사항일 뿐, SDK가 NATS를 사용한다는 근거는 아니다.
+
+v0.3.0 DMS `.env.example` 기준으로는 Keycloak, NATS, Langfuse, Milvus, Ollama 설정이 템플릿에 포함되지 않으며 DMS SDK 조립 대상도 아니다. 별도 hosting application 또는 upstream loader가 이를 요구할 수 있다는 가능성과 SDK의 직접 설정 범위는 구분해야 한다. ^[raw/articles/dms-core-config-v0.3.0.md]
 
 ## Hosting application versus SDK
 
@@ -23,5 +25,6 @@ DMS SDK에 event publisher/consumer, message model, retry/idempotency/ordering p
 ## Sources
 
 - `raw/articles/dms-core-messaging-v0.2.0.md`
+- `raw/articles/dms-core-config-v0.3.0.md`
 - `raw/articles/fastapi-core-messaging-v0.1.6.md`
 - `raw/articles/fastapi-core-messaging-v0.2.0.md`

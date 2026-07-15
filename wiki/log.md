@@ -92,3 +92,84 @@
 - Body SHA-256: `b3f57c0b008a695c780172cf42b93ba4a967ddac3624c93b97365d89700f086b`.
 - The source distinguishes enabled-service metadata from actual NATS readiness-check creation, qualifies cleanup to normal custom-lifespan completion, and documents NATS builder dependency failures.
 - Updated: `concepts/fastapi-core-messaging-integration.md`, `concepts/fastapi-core-app-assembly.md`, `concepts/dms-core-messaging-boundary.md`.
+
+## [2026-07-15] ingest | docmesh-py-core API Reference (Git tag v0.2.0)
+- Captured immutable source: `raw/articles/docmesh-py-core-api-v0.2.0.md`.
+- Source URL: `https://raw.githubusercontent.com/kyundae-kim/docmesh-py-core/v0.2.0/docs/api.md`.
+- Body SHA-256: `0c82f08deda80af99da937df1ff7af331b58998f03afa0723daa9c61d91bd069`.
+- The package API directly confirms the upstream configuration/client/health boundary previously observed through `fastapi-core`, including separate synchronous and asynchronous assembly paths, NATS builder semantics, cleanup contracts, and production security validation.
+- Updated: `entities/docmesh-py-core.md`, `index.md`.
+
+## [2026-07-15] ingest | docmesh-py-core Configuration Guide (Git tag v0.2.0)
+- Captured immutable source: `raw/articles/docmesh-py-core-config-v0.2.0.md`.
+- Source URL: `https://raw.githubusercontent.com/kyundae-kim/docmesh-py-core/v0.2.0/docs/config.md`.
+- Body SHA-256: `96598b5b3efc39ddbe39a334821148ab5c2e5e6ea0fbaee7df5ae79c12d3bf39`.
+- The source distinguishes selected-service validation from available-service discovery, confirms that `DOCMESH_HEALTHCHECK_ENABLED` does not automatically set assembly startup health policy, and defines production security-mode/TLS guardrails.
+- Updated: `entities/docmesh-py-core.md`, `concepts/fastapi-core-configuration.md`, `concepts/dms-core-configuration.md`, `index.md`.
+
+## [2026-07-15] ingest | docmesh-py-core Examples (Git tag v0.2.0)
+- Captured immutable source: `raw/articles/docmesh-py-core-examples-v0.2.0.md`.
+- Source URL: `https://raw.githubusercontent.com/kyundae-kim/docmesh-py-core/v0.2.0/docs/examples.md`.
+- Body SHA-256: `8fc686267a380c738a607f5488fdad58ae46e99895325171f641b524b16668aa`.
+- The examples establish assembly-first lifecycle patterns, distinguish synchronous bundles from NATS-capable async runtimes, and show selective service loading plus explicit health policy.
+- Created: `concepts/docmesh-py-core-usage-patterns.md`.
+- Updated: `entities/docmesh-py-core.md`, `index.md`.
+
+## [2026-07-15] ingest | fastapi-core API Reference (Git tag v0.3.0)
+- Captured immutable source: `raw/articles/fastapi-core-api-v0.3.0.md`.
+- Source URL: `https://raw.githubusercontent.com/kyundae-kim/fastapi-core/v0.3.0/docs/api.md`.
+- Body SHA-256: `ab50c8866b1dbc7c2e3596775637e484f86c783b47c41d2e260b0fe5dcb6f7ad`.
+- The v0.3.0 body differs from v0.1.6/main and documents `ManagedResource`, a typed `readiness_registry`, app-local OAuth2 scheme, structured problem-details/correlation-ID extensions, and ServiceRuntime cleanup in `finally` after custom-lifespan shutdown errors.
+- It also conflicts with the v0.2.0 config snapshot on blank CSV environment-variable behavior; the configuration page retains both claims and marks v0.3.0 as the newer reference pending installed-package verification.
+- Current workspace check: `fastapi-core` is not directly declared in `pyproject.toml` and cannot be imported, so this is an upstream-reference reconciliation only.
+- Updated: `entities/fastapi-core.md`, `concepts/fastapi-core-app-assembly.md`, `concepts/fastapi-core-configuration.md`, `concepts/fastapi-core-messaging-integration.md`.
+
+## [2026-07-15] ingest | fastapi-core configuration reference (Git tag v0.3.0)
+- Captured immutable source: `raw/articles/fastapi-core-config-v0.3.0.md`.
+- Source URL: `https://raw.githubusercontent.com/kyundae-kim/fastapi-core/v0.3.0/docs/config.md`.
+- Body SHA-256: `0435ff9aaee92480011ffe1795b33bb40ca1c37619ebdaa5a36fda616bb30f15`.
+- The configuration reference confirms v0.3.0's app-local OAuth2 token URL, typed runtime/readiness assembly, blank CSV-to-empty-list behavior, service alternatives, and distinct Py Core versus FastAPI interpretations of `DOCMESH_HEALTHCHECK_ENABLED`.
+- Updated: `entities/fastapi-core.md`, `concepts/fastapi-core-app-assembly.md`, `concepts/fastapi-core-configuration.md`.
+
+## [2026-07-15] ingest | fastapi-core examples (Git tag v0.3.0)
+- Captured immutable source: `raw/articles/fastapi-core-examples-v0.3.0.md`.
+- Source URL: `https://raw.githubusercontent.com/kyundae-kim/fastapi-core/v0.3.0/docs/examples.md`.
+- Body SHA-256: `59bf3ec60a3149fb6c9fbd8a6d1f44bc4e6ba661d67ab3fb52d7e3d636ec9460`.
+- Examples confirm v0.3.0's `ManagedResource` domain-SDK pattern, typed readiness registration, role/scope/permission dependencies, app-level correlation-ID problem details, and async runtime cleanup guarantees.
+- The document body is dated 2026-07-03 despite the v0.3.0 Git ref; this is recorded as an upstream reference only because the workspace does not install `fastapi-core`.
+- Updated: `entities/fastapi-core.md`, `concepts/fastapi-core-usage-patterns.md`, `concepts/fastapi-core-app-assembly.md`.
+
+## [2026-07-15] ingest | fastapi-core environment template (Git tag v0.3.0)
+- Captured immutable source: `raw/articles/fastapi-core-env-example-v0.3.0.md`.
+- Source URL: `https://raw.githubusercontent.com/kyundae-kim/fastapi-core/v0.3.0/.env.example`.
+- Body SHA-256: `8e8fb5db435657abaaf7863bd5acbdebc7a268c05790519ab6fde22edba7714c`.
+- The template is not auto-loaded; it separates directly consumed AppConfig values from optional Py Core service settings, documents blank CSV behavior, and uses redacted placeholders for credentials.
+- Updated: `concepts/fastapi-core-configuration.md`.
+
+## [2026-07-15] ingest | dms-core API Reference (Git tag v0.3.0)
+- Captured immutable source: `raw/articles/dms-core-api-v0.3.0.md`.
+- Source URL: `https://raw.githubusercontent.com/kyundae-kim/dms-core/v0.3.0/docs/api.md`.
+- Body SHA-256: `a896c17ce9b3a03eef938549ea1132468c689ebf48795d07b97b0222fa6779ec`.
+- The v0.3.0 body differs from v0.2.0 and adds streaming upload with validated size/checksum, persistent creator-scoped idempotency, bounded inspection/reconciliation, non-connecting environment diagnosis, and a pre-storage metadata policy.
+- Updated: `entities/dms-core.md`, `concepts/dms-core-usage-patterns.md`, `concepts/dms-core-document-lifecycle.md`, `concepts/dms-core-configuration.md`.
+
+## [2026-07-15] ingest | dms-core configuration reference (Git tag v0.3.0)
+- Captured immutable source: `raw/articles/dms-core-config-v0.3.0.md`.
+- Source URL: `https://raw.githubusercontent.com/kyundae-kim/dms-core/v0.3.0/docs/config.md`.
+- Body SHA-256: `bc6b0af9daa8d0c0ff867affe309d3e039f9dfebad9278a6930e26371ce14e9a`.
+- The v0.3.0 body differs from v0.2.0: it adds explicit metadata-backend selection and strict ambiguity rejection, scopes `.env.example` to DMS storage settings, documents TLS/secret hygiene, and aligns component options with streaming/idempotency/metadata policies.
+- Updated: `entities/dms-core.md`, `concepts/dms-core-configuration.md`, `concepts/dms-core-usage-patterns.md`, `concepts/dms-core-messaging-boundary.md`.
+
+## [2026-07-15] ingest | dms-core API examples (Git tag v0.3.0)
+- Captured immutable source: `raw/articles/dms-core-examples-v0.3.0.md`.
+- Source URL: `https://raw.githubusercontent.com/kyundae-kim/dms-core/v0.3.0/docs/examples.md`.
+- Body SHA-256: `2f69edbc5ae88a020edc46669e3087d1f3fc798f5fff3223343a08ecce0f5c61`.
+- The v0.3.0 body differs from v0.2.0 and provides executable flows for streaming upload, status-filtered listing, checksum-backed idempotency, dry-run/batch reconciliation, SQLite backend diagnosis, and metadata/size policies.
+- Updated: `entities/dms-core.md`, `concepts/dms-core-usage-patterns.md`, `concepts/dms-core-document-lifecycle.md`, `concepts/dms-core-configuration.md`.
+
+## [2026-07-15] ingest | dms-core environment template (Git tag v0.3.0)
+- Captured immutable source: `raw/articles/dms-core-env-example-v0.3.0.md`.
+- Source URL: `https://raw.githubusercontent.com/kyundae-kim/dms-core/v0.3.0/.env.example`.
+- Body SHA-256: `f36b8685e484c4da13c32aca6488eb3bd3d941707db3decf61a7ae0f4a674417`.
+- The template defines DMS SDK-only storage assembly: explicit PostgreSQL default, placeholder-safe disabled health checks, MinIO TLS, SQLite switching guidance, and reuse of existing storage variables for integration tests.
+- Updated: `entities/dms-core.md`, `concepts/dms-core-configuration.md`.

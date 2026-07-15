@@ -1,10 +1,10 @@
 ---
 title: fastapi-core messaging integration
 created: 2026-07-11
-updated: 2026-07-12
+updated: 2026-07-15
 type: concept
 tags: [fastapi, fastapi-core, messaging, integration, deployment, observability]
-sources: [raw/articles/fastapi-core-api-v0.1.6.md, raw/articles/fastapi-core-config-v0.1.6.md, raw/articles/fastapi-core-messaging-v0.1.6.md, raw/articles/fastapi-core-messaging-v0.2.0.md, raw/articles/dms-core-messaging-v0.2.0.md]
+sources: [raw/articles/fastapi-core-api-v0.1.6.md, raw/articles/fastapi-core-api-v0.3.0.md, raw/articles/fastapi-core-config-v0.1.6.md, raw/articles/fastapi-core-messaging-v0.1.6.md, raw/articles/fastapi-core-messaging-v0.2.0.md, raw/articles/dms-core-messaging-v0.2.0.md]
 confidence: medium
 ---
 
@@ -20,7 +20,7 @@ confidence: medium
 
 ## Extension boundary
 
-기본 service-client lifecycle은 `create_app()`이 관리하고 custom lifespan이 정상 종료되는 경로에서 정리된다. custom lifespan의 startup 또는 shutdown이 예외로 끝나면 `close_service_clients(...)` 호출은 보장되지 않는다. 연결 상태 객체를 route/service layer에서 직접 사용할 필요가 있으면 custom lifespan에서 `app.state`를 확장하고 프로젝트별 dependency를 구현한다. 이 경계는 [[fastapi-core]]의 공개 표면을 보존하며, 설정/client-wrapper의 업스트림 계약은 [[docmesh-py-core]]에 있다. ^[raw/articles/fastapi-core-messaging-v0.2.0.md]
+`v0.3.0` API 기준 기본 service-client lifecycle은 `ServiceRuntime`이 관리한다. custom lifespan shutdown이 예외로 끝나도 내부 wrapper는 `finally`에서 managed resource를 역순 정리하고 runtime close를 수행한다. 연결 상태 객체를 route/service layer에서 직접 사용할 필요가 있으면 `ManagedResource` 또는 custom lifespan에서 `app.state`를 확장하고 프로젝트별 dependency를 구현한다. 이 경계는 [[fastapi-core]]의 공개 표면을 보존하며, 설정/client-wrapper의 업스트림 계약은 [[docmesh-py-core]]에 있다. ^[raw/articles/fastapi-core-api-v0.3.0.md]
 
 ## DMS deployment guidance
 
@@ -35,6 +35,7 @@ NATS credential 및 연결 세부 설정은 `ServiceConfigs` 영역에서 해석
 ## Sources
 
 - `raw/articles/fastapi-core-api-v0.1.6.md`
+- `raw/articles/fastapi-core-api-v0.3.0.md`
 - `raw/articles/fastapi-core-config-v0.1.6.md`
 - `raw/articles/fastapi-core-messaging-v0.1.6.md`
 - `raw/articles/fastapi-core-messaging-v0.2.0.md`
