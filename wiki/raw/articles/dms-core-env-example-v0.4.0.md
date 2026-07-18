@@ -1,0 +1,63 @@
+---
+source_url: https://raw.githubusercontent.com/kyundae-kim/dms-core/v0.4.0/.env.example
+ingested: 2026-07-18
+sha256: 7dba780a63eaf6341adf698d084dc6fbe2a67e2ab61fb3d68b5dc75048e69021
+---
+# DMS SDK environment example
+#
+# DMS is a Python SDK, not a standalone API server.
+# create_sdk_from_environment(env) always needs:
+# - one metadata store: PostgreSQL via POSTGRES_* or SQLite via SQLITE_PATH
+# - one object store: MinIO via MINIO_*
+#
+# Metadata store selection rule:
+# - DMS_METADATA_BACKEND=postgresql|sqlite explicitly selects and validates one backend.
+# - Without it, any POSTGRES_ variable selects PostgreSQL; otherwise SQLITE_PATH selects SQLite.
+# - If both are configured in auto mode, PostgreSQL is selected with a warning.
+# - DMS_CONFIGURATION_STRICT=true rejects that ambiguous auto configuration.
+#
+# For local SQLite development, remove or comment out POSTGRES_* variables.
+
+# -----------------------------------------------------------------------------
+# Common runtime
+# -----------------------------------------------------------------------------
+DOCMESH_ENV=development
+# The example endpoints below are placeholders, so disable connection checks
+# until they are replaced with reachable services.
+DOCMESH_HEALTHCHECK_ENABLED=false
+DMS_METADATA_BACKEND=postgresql
+# DMS_CONFIGURATION_STRICT=false
+
+# -----------------------------------------------------------------------------
+# Metadata store: PostgreSQL option
+# -----------------------------------------------------------------------------
+# Use this for integration/production-like environments.
+# Comment this out when you intend to use SQLITE_PATH instead.
+POSTGRES_HOST=postgres.example.com
+POSTGRES_PORT=5432
+POSTGRES_DB=dms
+POSTGRES_USER=dms
+POSTGRES_PASSWORD=replace-me
+
+# -----------------------------------------------------------------------------
+# Metadata store: SQLite option
+# -----------------------------------------------------------------------------
+# Use this for local/test metadata storage.
+# SQLite replaces only the metadata store; MinIO is still required for content.
+# SQLITE_PATH=/tmp/dms.db
+
+# -----------------------------------------------------------------------------
+# Object storage: MinIO
+# -----------------------------------------------------------------------------
+MINIO_ENDPOINT=minio.example.com:9000
+MINIO_ACCESS_KEY=minio-access-key
+MINIO_SECRET_KEY=replace-me
+MINIO_BUCKET=documents
+MINIO_SECURE=true
+
+
+# -----------------------------------------------------------------------------
+# Integration tests
+# -----------------------------------------------------------------------------
+# Real integration tests reuse the existing POSTGRES_/MINIO_ variables above.
+# Tests are skipped when those services are not configured/reachable.

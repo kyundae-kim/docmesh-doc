@@ -1,5 +1,5 @@
 logging:
-  level: DEBUG
+  level: INFO
 
 cors:
   origins:
@@ -9,10 +9,29 @@ cors:
 auth:
   verify_jwt: true
   allow_insecure_jwt_decode: false
+  use_introspection: false
+
+health:
+  check_keycloak: true
+  check_database: true
+  check_minio: true
+  check_langfuse: false
+
+lifecycle:
+  eager_keycloak: false
+  eager_database: true
+  eager_minio: true
+  eager_langfuse: false
+  eager_milvus: false
+  eager_async_milvus: false
+  eager_ollama: false
+  eager_nats: false
+  use_docmesh_registry: false
+  use_docmesh_healthchecks: false
 
 keycloak:
   http_url: "http://keycloak:8080/"
   manage_url: "http://keycloak:9000/"
-  realm: "restapi"
-  client_id: "fastapi"
-  client_secret: null
+  realm: "docmesh"
+  client_id: "document"
+  client_secret: "[REDACTED]"

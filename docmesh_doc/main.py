@@ -1,4 +1,3 @@
-from docmesh_doc.factory import create_app
+from docmesh_doc.application import create_application
 
-
-app = create_app()
+app = create_application()

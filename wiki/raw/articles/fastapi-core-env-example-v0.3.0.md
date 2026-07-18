@@ -1,0 +1,155 @@
+---
+source_url: https://raw.githubusercontent.com/kyundae-kim/fastapi-core/v0.3.0/.env.example
+ingested: 2026-07-15
+sha256: 8e8fb5db435657abaaf7863bd5acbdebc7a268c05790519ab6fde22edba7714c
+---
+# -----------------------------------------------------------------------------
+# AppConfig: fastapi-core가 직접 읽는 앱 조립 설정
+# docs/config.md §3, docs/api.md §7.1, docs/examples.md §8 기준
+# 이 파일은 자동으로 읽히지 않는다. 실행 환경에서 필요한 값을 환경변수로 주입한다.
+# -----------------------------------------------------------------------------
+ROOT_PATH=
+TOKEN_URL=/token
+CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+CORS_CREDENTIALS=false
+READINESS_PARALLEL=false
+READINESS_TIMEOUT_SECONDS=5
+READINESS_OVERALL_TIMEOUT_SECONDS=15
+DOCMESH_HEALTHCHECK_ENABLED=false
+DOCMESH_LOG_LEVEL=WARNING
+APP_LOG_PATH=
+APP_LOG_JSON=true
+APP_LOG_FORCE=false
+DOCMESH_SERVICES=keycloak
+READINESS_REQUIRED_SERVICES=keycloak
+
+# DOCMESH_SERVICES, READINESS_REQUIRED_SERVICES, CORS_ORIGINS는 CSV 문자열이다.
+# 이 목록형 변수에 빈 값을 설정하면 빈 목록으로 해석된다. 기본값을 쓰려면 변수를 제거한다.
+# 목록형 변수에 공백만 넣는 값은 사용하지 않는다.
+# READINESS_REQUIRED_SERVICES의 항목은 모두 DOCMESH_SERVICES에 포함되어야 한다.
+# 서비스 대안이 필요하면 활성 서비스 중 적어도 하나를 각 그룹에 포함한다.
+# DOCMESH_SERVICE_ALTERNATIVES=postgres,sqlite
+# 예시:
+# DOCMESH_SERVICES=keycloak,postgres,nats
+# READINESS_REQUIRED_SERVICES=keycloak
+
+# -----------------------------------------------------------------------------
+# DocMesh settings: load_docmesh_settings(...)가 사용하는 대표 서비스 설정
+# docs/config.md §5, §10 기준
+# 현재 테스트/개발 기본 surface 와 맞춘 최소 예시를 우선 제공한다.
+# -----------------------------------------------------------------------------
+
+# 서비스별 자격증명과 연결 정보는 필요한 서비스를 DOCMESH_SERVICES에 추가한 뒤에만
+# 주입한다. 아래 예시는 의도적으로 주석 처리되어 있으며 실제 secret을 저장소에 넣지 않는다.
+
+# Keycloak (auth provider 기본 구성)
+# KEYCLOAK_URL=https://keycloak.example.com
+# KEYCLOAK_REALM=docmesh
+# KEYCLOAK_CLIENT_ID=fastapi-core
+# KEYCLOAK_CLIENT_SECRET=[REDACTED]
+
+# 실제 Keycloak password-grant 통합 테스트에서만 설정한다.
+# KEYCLOAK_TOKEN_USERNAME=
+# KEYCLOAK_TOKEN_PASSWORD=
+# FASTAPI_CORE_TEST_SCOPE=openid profile
+# FASTAPI_CORE_TEST_INVALID_TOKEN=invalid.token.value
+
+# PostgreSQL (DSN 방식 또는 아래 개별 접속 항목 중 하나를 선택)
+# POSTGRES_DSN=postgresql+psycopg://docmesh:[REDACTED]@postgres.example.com:5432/docmesh
+
+# SQLite (로컬 개발/테스트용 기본 저장소 예시)
+# SQLITE_PATH=:memory:
+
+# MinIO
+# MINIO_ENDPOINT=minio.example.com:9000
+# MINIO_ACCESS_KEY=[REDACTED]
+# MINIO_SECRET_KEY=[REDACTED]
+# MINIO_SECURE=false
+# MINIO_BUCKET=docmesh
+
+# Milvus
+# MILVUS_URI=http://milvus.example.com:19530
+
+# Ollama
+# OLLAMA_HOST=http://ollama.example.com:11434
+
+# Langfuse
+# LANGFUSE_HOST=http://langfuse.example.com:3000
+# LANGFUSE_PUBLIC_KEY=[REDACTED]
+# LANGFUSE_SECRET_KEY=[REDACTED]
+
+# NATS
+# NATS_SERVERS=nats://nats.example.com:4222
+# NATS_TOKEN=[REDACTED]
+
+# -----------------------------------------------------------------------------
+# 선택적 확장 설정
+# 아래 값들은 현재 fastapi-core가 직접 소비하는 AppConfig 필드는 아니지만,
+# docmesh_py_core 설정 로더/서비스 구성에서 함께 사용할 수 있다.
+# 필요할 때만 활성화하라.
+# -----------------------------------------------------------------------------
+
+# Keycloak token fetch / transport
+# KEYCLOAK_TOKEN_GRANT_TYPE=client_credentials
+# KEYCLOAK_TOKEN_SCOPE=openid profile email
+# KEYCLOAK_REQUEST_TIMEOUT_SECONDS=10
+# KEYCLOAK_MAX_RETRIES=3
+# KEYCLOAK_VERIFY_SSL=true
+# KEYCLOAK_JWKS_CACHE_TTL_SECONDS=300
+
+# PostgreSQL
+# POSTGRES_DSN 대신 개별 접속 항목을 사용할 때 활성화:
+# POSTGRES_HOST=postgres.local
+# POSTGRES_PORT=5432
+# POSTGRES_DB=docmesh
+# POSTGRES_USER=docmesh
+# POSTGRES_PASSWORD=change-me
+# POSTGRES_SSLMODE=prefer
+# POSTGRES_CONNECT_TIMEOUT_SECONDS=10
+# POSTGRES_POOL_SIZE=5
+# POSTGRES_MAX_OVERFLOW=10
+
+# SQLite
+# SQLITE_READONLY=false
+# SQLITE_ENABLE_WAL=false
+# SQLITE_BUSY_TIMEOUT_MS=5000
+
+# MinIO
+# MINIO_SECURE=true
+# MINIO_REGION=ap-northeast-2
+# MINIO_BUCKET=docmesh
+# MINIO_REQUEST_TIMEOUT_SECONDS=30
+# MINIO_MAX_RETRIES=3
+
+# Milvus
+# MILVUS_TOKEN=change-me
+# MILVUS_DB_NAME=default
+# MILVUS_SECURE=false
+# MILVUS_CONNECT_TIMEOUT_SECONDS=10
+# MILVUS_REQUEST_TIMEOUT_SECONDS=30
+# MILVUS_MAX_RETRIES=3
+
+# Ollama
+# OLLAMA_GENERATION_MODEL=llama3.1:8b
+# OLLAMA_EMBEDDING_MODEL=nomic-embed-text
+# OLLAMA_REQUEST_TIMEOUT_SECONDS=120
+# OLLAMA_MAX_RETRIES=2
+
+# Langfuse
+# LANGFUSE_ENABLED=true
+# LANGFUSE_ENVIRONMENT=development
+# LANGFUSE_REQUEST_TIMEOUT_SECONDS=10
+# LANGFUSE_MAX_RETRIES=3
+
+# NATS
+# 인증 방식은 하나만 선택:
+# 1) token
+# NATS_TOKEN=change-me
+# 2) user/password
+# NATS_USER=docmesh
+# NATS_PASSWORD=change-me
+# 3) creds file
+# NATS_CREDS_FILE=/run/secrets/nats.creds
+# NATS_NAME=docmesh-py-core
+# NATS_CONNECT_TIMEOUT_SECONDS=10
+# NATS_MAX_RECONNECT_ATTEMPTS=10

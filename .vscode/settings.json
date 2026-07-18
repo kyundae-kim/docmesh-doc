@@ -2,7 +2,7 @@
     "python.testing.unittestArgs": [
         "-v",
         "-s",
-        "./test_fastapi_template",
+        "./test_docmesh_doc",
         "-p",
         "test_*.py"
     ],
@@ -11,6 +11,6 @@
         "test_docmesh_doc"
     ],
     "python.testing.unittestEnabled": false,
-    "git.autoRepositoryDetection": true,
-    "git.repositoryScanMaxDepth": 4
+    "python.terminal.useEnvFile": true,
+    "python.envFile": "${workspaceFolder}/.devcontainer/.env"
 }

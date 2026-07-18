@@ -1,25 +1,17 @@
 [project]
 name = "docmesh-doc"
-version = "0.1.1"
+version = "0.2.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "fastapi[standard]>=0.135.3",
+    "dms",
+    "docmesh-py-core",
     "fastapi-core",
-    "hermes-agent>=0.14.0",
-    "httpx>=0.28.1",
-    "minio>=7.2.18",
-    "pyjwt[crypto]>=2.12.1",
-    "pytest>=9.0.3",
-    "alembic>=1.18.4",
 ]
 
 [tool.fastapi]
 entrypoint = "docmesh_doc.main:app"
-
-[tool.uv.sources]
-fastapi-core = { git = "https://github.com/kyundae-kim/fastapi-core.git" }
 
 [tool.ruff]
 line-length = 88
@@ -27,5 +19,20 @@ indent-width = 4
 
 [tool.pytest.ini_options]
 testpaths = ["test_docmesh_doc"]
+pythonpath = ["."]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
+anyio_mode = "auto"
+markers = [
+    "integration: tests that require real external services such as PostgreSQL and MinIO",
+]
+
+[tool.uv.sources]
+docmesh-py-core = { git = "https://github.com/kyundae-kim/docmesh-py-core.git", rev = "v0.3.0" }
+fastapi-core = { git = "https://github.com/kyundae-kim/fastapi-core.git", rev = "v0.4.0" }
+dms = { git = "https://github.com/kyundae-kim/dms-core.git", rev = "v0.4.0" }
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
