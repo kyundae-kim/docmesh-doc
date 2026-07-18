@@ -173,3 +173,59 @@
 - Body SHA-256: `f36b8685e484c4da13c32aca6488eb3bd3d941707db3decf61a7ae0f4a674417`.
 - The template defines DMS SDK-only storage assembly: explicit PostgreSQL default, placeholder-safe disabled health checks, MinIO TLS, SQLite switching guidance, and reuse of existing storage variables for integration tests.
 - Updated: `entities/dms-core.md`, `concepts/dms-core-configuration.md`.
+
+## [2026-07-18] ingest | fastapi-core GitHub Wiki API Reference
+- Captured immutable source: `raw/articles/fastapi-core-wiki-api-reference.md`.
+- Source URL: `https://raw.githubusercontent.com/wiki/kyundae-kim/fastapi-core/API-Reference.md` (requested GitHub Wiki page: `https://github.com/kyundae-kim/fastapi-core/wiki/API-Reference`).
+- Body SHA-256: `e63403d7258d83c27f02ae31ea1f598b1cb95b68197aa349095b004fd80f28b4`.
+- The GitHub Wiki page labels itself `fastapi-core 0.3.0`, but its body differs from the v0.3.0 tag API snapshot: it documents `runtime` rather than `settings` injection, adds `ResourceKey`/`ErrorRenderer`, and marks `app.state.settings`/`app.state.service_clients` as absent. The consuming project declares `fastapi-core` at Git ref `v0.4.0`; import-based runtime verification was unavailable, so this is a documentation-only reconciliation and the discrepancy remains explicit.
+- Updated: `entities/fastapi-core.md`, `concepts/fastapi-core-app-assembly.md`, `concepts/fastapi-core-usage-patterns.md`, `concepts/fastapi-core-messaging-integration.md`, `index.md`.
+
+## [2026-07-18] ingest | fastapi-core GitHub Wiki Configuration
+- Captured immutable source: `raw/articles/fastapi-core-wiki-configuration.md`.
+- Source URL: `https://raw.githubusercontent.com/wiki/kyundae-kim/fastapi-core/Configuration.md` (requested GitHub Wiki page: `https://github.com/kyundae-kim/fastapi-core/wiki/Configuration`).
+- Body SHA-256: `54914b72be02ed9d93422762d2c954b03287078a58d598d12dcc1787324e3ef3`.
+- The Wiki page labels itself `fastapi-core 0.3.0` and `docmesh-py-core v0.3.0`, confirms the AppConfig/DocMesh service-settings boundary and runtime injection, but differs from the v0.3.0 tagged config snapshot on whether `build_docmesh_env_overlay()` supplies development fallbacks. The consuming project declares `fastapi-core` at Git ref `v0.4.0`; import-based runtime verification was unavailable, so the discrepancy remains a documentation-only reconciliation.
+- Updated: `entities/fastapi-core.md`, `concepts/fastapi-core-configuration.md`, `concepts/fastapi-core-app-assembly.md`.
+
+## [2026-07-18] ingest | fastapi-core GitHub Wiki Examples
+- Captured immutable source: `raw/articles/fastapi-core-wiki-examples.md`.
+- Source URL: `https://raw.githubusercontent.com/wiki/kyundae-kim/fastapi-core/Examples.md` (requested GitHub Wiki page: `https://github.com/kyundae-kim/fastapi-core/wiki/Examples`).
+- Body SHA-256: `34f12a1db95df8ac04efd82a33fd79ce13f819151399a90fa6ee8ef315331887`.
+- The Wiki page labels itself `fastapi-core 0.3.0`, but its body differs from the v0.3.0 tag examples snapshot and exercises `ResourceKey`, error rendering, runtime/settings dependencies, lifecycle ownership, direct router boundaries, and selected-service configuration loading. The consuming project declares `fastapi-core` at Git ref `v0.4.0`; import-based runtime verification was unavailable, so this remains a documentation-only reconciliation.
+- Updated: `entities/fastapi-core.md`, `concepts/fastapi-core-usage-patterns.md`, `concepts/fastapi-core-app-assembly.md`, `concepts/fastapi-core-configuration.md`.
+
+## [2026-07-18] ingest | fastapi-core environment template (Git tag v0.4.0)
+- Captured immutable source: `raw/articles/fastapi-core-env-example-v0.4.0.md`.
+- Source URL: `https://raw.githubusercontent.com/kyundae-kim/fastapi-core/v0.4.0/.env.example` (requested GitHub blob URL was converted to the raw content endpoint).
+- Body SHA-256: `f0470cb2a9012f50e0b3c1c0766ff15ee1e776859587fffca1767f73ea891dfd`.
+- The v0.4.0 template differs from v0.3.0: it uses a service-free minimum (`DOCMESH_SERVICES=` and `READINESS_REQUIRED_SERVICES=`), requires explicit dotenv loading if used, documents alternatives/security-mode configuration, and gives a fuller redacted catalog of service settings. The consuming project declares the same Git ref but import-based runtime verification was unavailable, so this is an upstream template reconciliation rather than a verified runtime migration.
+- Updated: `entities/fastapi-core.md`, `concepts/fastapi-core-configuration.md`, `concepts/fastapi-core-app-assembly.md`.
+
+## [2026-07-18] ingest | dms-core GitHub Wiki API Reference v0.4.0
+- Captured immutable source: `raw/articles/dms-core-wiki-api-reference-v0.4.0.md`.
+- Source URL: `https://raw.githubusercontent.com/wiki/kyundae-kim/dms-core/API-Reference-v0.4.0.md` (requested GitHub Wiki page: `https://github.com/kyundae-kim/dms-core/wiki/API-Reference-v0.4.0`).
+- Body SHA-256: `1fb7094ec67b80fe202e8ac3557a42c930343149ea5fd4e7a1af93397fb8609b`.
+- The v0.4.0 contract adds bounded unknown-size stream upload, explicit idempotency scope and operation lookup, cursor pagination, public metadata without `storage_key`, reconciliation plans/audit hooks, and structured metadata validation. The project declares Git ref `v0.4.0`; installed `dms 0.4.0` confirmed the central symbols and signatures, and the application adapter already excludes `storage_key` from HTTP responses.
+- Updated: `entities/dms-core.md`, `concepts/dms-core-usage-patterns.md`, `concepts/dms-core-document-lifecycle.md`, `concepts/dms-core-configuration.md`, `concepts/fastapi-core-app-assembly.md`, `index.md`.
+
+## [2026-07-18] ingest | dms-core GitHub Wiki Configuration v0.4.0
+- Captured immutable source: `raw/articles/dms-core-wiki-configuration-v0.4.0.md`.
+- Source URL: `https://raw.githubusercontent.com/wiki/kyundae-kim/dms-core/Configuration-v0.4.0.md` (requested GitHub Wiki page: `https://github.com/kyundae-kim/dms-core/wiki/Configuration-v0.4.0`).
+- Body SHA-256: `cb8cdafa78abc125bc6bd31016609ab6001d1a12d069a512c4ebee6077b5d193`.
+- The v0.4.0 configuration contract removes `POSTGRES_DSN` from DMS environment assembly, requires individual PostgreSQL connection fields, makes common DocMesh validation observable through `diagnose_environment()`, and clarifies that factory metadata limits do not automatically wrap a custom validator. Installed `dms 0.4.0` rejected a DSN-only diagnosis and accepted individual fields, confirming the migration for this project.
+- Updated: `entities/dms-core.md`, `concepts/dms-core-configuration.md`, `concepts/dms-core-usage-patterns.md`, `concepts/fastapi-core-configuration.md`, `index.md`.
+
+## [2026-07-18] ingest | dms-core GitHub Wiki Examples v0.4.0
+- Captured immutable source: `raw/articles/dms-core-wiki-examples-v0.4.0.md`.
+- Source URL: `https://raw.githubusercontent.com/wiki/kyundae-kim/dms-core/Examples-v0.4.0.md` (requested GitHub Wiki page: `https://github.com/kyundae-kim/dms-core/wiki/Examples-v0.4.0`).
+- Body SHA-256: `e0b0f2f0d4061d6a2e2fed0b8209d9fbf9b842c38c04b675e2c96fa5460be875`.
+- The v0.4.0 examples confirm context-managed SDK and stream ownership, public metadata, explicit idempotency scope and operation lookup, known/unknown-size streaming differences, cursor traversal, explicit soft/hard deletion, structured metadata policy, and plan-based audited recovery. Installed `dms 0.4.0` confirmed the cited models, fields, and method signatures; the current adapter safely excludes `storage_key` but still uses supported offset-list and compatibility delete APIs.
+- Updated: `entities/dms-core.md`, `concepts/dms-core-usage-patterns.md`, `concepts/dms-core-document-lifecycle.md`, `concepts/dms-core-configuration.md`, `concepts/fastapi-core-app-assembly.md`, `index.md`.
+
+## [2026-07-18] ingest | dms-core environment template (Git tag v0.4.0)
+- Captured immutable source: `raw/articles/dms-core-env-example-v0.4.0.md`.
+- Source URL: `https://raw.githubusercontent.com/kyundae-kim/dms-core/v0.4.0/.env.example` (requested GitHub blob URL was converted to the raw content endpoint).
+- Body SHA-256: `7dba780a63eaf6341adf698d084dc6fbe2a67e2ab61fb3d68b5dc75048e69021`.
+- The v0.4.0 template differs from v0.3.0 by replacing `POSTGRES_DSN` with individual PostgreSQL host/port/database/user/password fields while retaining explicit PostgreSQL selection, required MinIO storage, disabled startup checks for placeholder endpoints, TLS guidance, and integration-test reuse. Installed `dms 0.4.0` diagnosed the complete template as valid PostgreSQL + MinIO configuration with health checks disabled and no missing keys or warnings.
+- Updated: `entities/dms-core.md`, `concepts/dms-core-configuration.md`, `concepts/fastapi-core-configuration.md`, `index.md`.

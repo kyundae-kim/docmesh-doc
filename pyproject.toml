@@ -28,9 +28,9 @@ markers = [
 ]
 
 [tool.uv.sources]
-docmesh-py-core = { git = "https://github.com/kyundae-kim/docmesh-py-core.git", rev = "v0.2.0" }
-fastapi-core = { git = "https://github.com/kyundae-kim/fastapi-core.git", rev = "v0.3.0" }
-dms = { git = "https://github.com/kyundae-kim/dms-core.git", rev = "v0.3.0" }
+docmesh-py-core = { git = "https://github.com/kyundae-kim/docmesh-py-core.git", rev = "v0.3.0" }
+fastapi-core = { git = "https://github.com/kyundae-kim/fastapi-core.git", rev = "v0.4.0" }
+dms = { git = "https://github.com/kyundae-kim/dms-core.git", rev = "v0.4.0" }
 
 [dependency-groups]
 dev = [

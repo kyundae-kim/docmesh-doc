@@ -1,16 +1,16 @@
 ---
 title: fastapi-core messaging integration
 created: 2026-07-11
-updated: 2026-07-15
+updated: 2026-07-18
 type: concept
 tags: [fastapi, fastapi-core, messaging, integration, deployment, observability]
-sources: [raw/articles/fastapi-core-api-v0.1.6.md, raw/articles/fastapi-core-api-v0.3.0.md, raw/articles/fastapi-core-config-v0.1.6.md, raw/articles/fastapi-core-messaging-v0.1.6.md, raw/articles/fastapi-core-messaging-v0.2.0.md, raw/articles/dms-core-messaging-v0.2.0.md]
+sources: [raw/articles/fastapi-core-api-v0.1.6.md, raw/articles/fastapi-core-api-v0.3.0.md, raw/articles/fastapi-core-wiki-api-reference.md, raw/articles/fastapi-core-config-v0.1.6.md, raw/articles/fastapi-core-messaging-v0.1.6.md, raw/articles/fastapi-core-messaging-v0.2.0.md, raw/articles/dms-core-messaging-v0.2.0.md]
 confidence: medium
 ---
 
 # fastapi-core messaging integration
 
-`fastapi-core`에서 NATS 같은 메시징은 독립적인 FastAPI 공개 API가 아니라 service client, readiness, lifecycle에 연결되는 선택 가능한 외부 서비스다. 기본 제공 범위는 `get_nats_connection_builder()`와 공통 service lookup까지이며 publisher/subscriber helper, connection-state dependency, messaging route는 제공하지 않는다. NATS가 비활성화되었거나 service-client map에 없으면 builder dependency는 503을, 등록 객체의 타입이 맞지 않으면 500을 반환한다. ^[raw/articles/fastapi-core-messaging-v0.2.0.md]
+`fastapi-core`에서 NATS 같은 메시징은 독립적인 FastAPI 공개 API가 아니라 service client, readiness, lifecycle에 연결되는 선택 가능한 외부 서비스다. 기본 제공 범위는 `get_nats_connection_builder()`와 공통 service lookup까지이며 publisher/subscriber helper, connection-state dependency, messaging route는 제공하지 않는다. NATS가 비활성화되었거나 runtime에 없으면 builder dependency는 503을, 등록 객체의 타입이 맞지 않으면 500을 반환한다. ^[raw/articles/fastapi-core-messaging-v0.2.0.md] ^[raw/articles/fastapi-core-wiki-api-reference.md]
 
 ## Service selection and health policy
 
@@ -36,6 +36,7 @@ NATS credential 및 연결 세부 설정은 `ServiceConfigs` 영역에서 해석
 
 - `raw/articles/fastapi-core-api-v0.1.6.md`
 - `raw/articles/fastapi-core-api-v0.3.0.md`
+- `raw/articles/fastapi-core-wiki-api-reference.md`
 - `raw/articles/fastapi-core-config-v0.1.6.md`
 - `raw/articles/fastapi-core-messaging-v0.1.6.md`
 - `raw/articles/fastapi-core-messaging-v0.2.0.md`
