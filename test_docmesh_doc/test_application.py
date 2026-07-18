@@ -1,34 +1,44 @@
 from __future__ import annotations
 
+import os
+
 import dms
 import pytest
 from fastapi.testclient import TestClient
 from fastapi_core.config import AppConfig
 
-from docmesh_doc import dms_runtime
-from docmesh_doc.application import build_dms_resource, create_application
+from docmesh_doc.application import create_application
 from test_docmesh_doc.support import NOW, FakeSDK, client_for
 
 
-def test_build_dms_resource_uses_injected_sdk():
+def test_application_creates_dms_sdk_from_process_environment_at_startup(monkeypatch):
     sdk = FakeSDK()
+    captured_environment = None
+    monkeypatch.setenv("DMS_METADATA_BACKEND", "postgresql")
+    monkeypatch.setenv("DMS_CONFIGURATION_STRICT", "true")
+    monkeypatch.delenv("POSTGRES_DSN", raising=False)
 
-    resource = build_dms_resource(sdk)
+    def create_sdk(environment):
+        nonlocal captured_environment
+        captured_environment = environment
+        return sdk
 
-    assert resource.name == "dms"
-    assert resource.factory(None) is sdk
-    assert resource.healthcheck is dms_runtime.check_dms_readiness
-    assert resource.required is True
-    assert resource.close is None
+    monkeypatch.setattr(
+        dms,
+        "diagnose_environment",
+        lambda _environment: pytest.fail("application must delegate diagnosis to DMS"),
+    )
+    monkeypatch.setattr(dms, "create_sdk_from_environment", create_sdk)
+    app = create_application(
+        config=AppConfig(enabled_services=[], required_services=[]),
+        include_auth_router=False,
+    )
 
+    with TestClient(app):
+        assert app.state.resource_registry.require("dms") is sdk
 
-def test_build_dms_resource_creates_sdk_at_startup(monkeypatch):
-    sdk = FakeSDK()
-    monkeypatch.setattr(dms_runtime, "create_dms_sdk", lambda: sdk)
-
-    resource = build_dms_resource()
-
-    assert resource.factory(None) is sdk
+    assert captured_environment == dict(os.environ)
+    assert captured_environment is not os.environ
 
 
 def test_dms_sdk_is_owned_by_the_managed_resource_registry():
@@ -92,10 +102,10 @@ def test_readiness_returns_503_when_dms_sdk_is_unhealthy():
 
 
 def test_sdk_environment_failure_aborts_application_startup(monkeypatch):
-    def failing_create_dms_sdk():
+    def failing_create_dms_sdk(_environment):
         raise RuntimeError("SDK startup failed")
 
-    monkeypatch.setattr(dms_runtime, "create_dms_sdk", failing_create_dms_sdk)
+    monkeypatch.setattr(dms, "create_sdk_from_environment", failing_create_dms_sdk)
     app = create_application(
         config=AppConfig(enabled_services=[], required_services=[]),
         include_auth_router=False,

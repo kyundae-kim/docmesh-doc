@@ -3,16 +3,14 @@ from __future__ import annotations
 from typing import Annotated
 
 import dms
-from fastapi import APIRouter, File, Form, Query, Response, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Query, Response, UploadFile
 from fastapi.responses import StreamingResponse
 
 from docmesh_doc.dependencies import CurrentUser, DmsSdk
 from docmesh_doc.document_http import (
-    build_upload_request,
     content_disposition,
     parse_metadata_form,
     require_readable_document,
-    to_metadata_response,
     validate_upload_file,
 )
 from docmesh_doc.schemas import DeleteDocumentResponse, DocumentMetadataResponse
@@ -32,19 +30,19 @@ def upload_document(
 ) -> DocumentMetadataResponse:
     extra_metadata = parse_metadata_form(metadata)
     filename, content_type, size = validate_upload_file(file)
-    request = build_upload_request(
+    request = dms.UploadDocumentStreamRequest(
         stream=file.file,
         size=size,
         filename=filename,
         content_type=content_type,
-        document_id=document_id,
+        document_id=document_id or None,
         metadata=extra_metadata,
         created_by=user.sub,
-        checksum=checksum,
+        checksum=checksum or None,
     )
     result = sdk.upload_document_stream(request)
     response.headers["Location"] = f"/documents/{result.document_id}"
-    return to_metadata_response(result.metadata)
+    return dms.public_metadata(result)
 
 
 @router.get("", response_model=list[DocumentMetadataResponse])
@@ -56,12 +54,12 @@ def list_documents(
     status: dms.DocumentStatus | None = None,
 ) -> list[DocumentMetadataResponse]:
     items = sdk.list_documents(offset=offset, limit=limit, status=status)
-    return [to_metadata_response(item) for item in items]
+    return [dms.public_metadata(item) for item in items]
 
 
 @router.get("/{document_id}", response_model=DocumentMetadataResponse)
 def get_document_metadata(document_id: str, sdk: DmsSdk, user: CurrentUser) -> DocumentMetadataResponse:
-    return to_metadata_response(require_readable_document(sdk, document_id))
+    return dms.public_metadata(require_readable_document(sdk, document_id))
 
 
 @router.get("/{document_id}/content")
@@ -104,16 +102,9 @@ def delete_document(
     hard: bool = False,
 ):
     if hard and "document:delete:hard" not in user.roles:
-        # Raised as a documented service error by the application handler.
-        raise PermissionError("document:delete:hard")
-    result = (
+        raise HTTPException(status_code=403, detail="Permission denied.")
+    return (
         sdk.hard_delete_document(document_id)
         if hard
         else sdk.soft_delete_document(document_id)
-    )
-    return DeleteDocumentResponse(
-        document_id=result.document_id,
-        deleted=result.deleted,
-        hard_deleted=result.hard_deleted,
-        status=result.status.value,
     )
