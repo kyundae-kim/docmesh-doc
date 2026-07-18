@@ -13,7 +13,7 @@ from fastapi_core.schemas import UserInfo
 from minio import Minio
 from sqlalchemy import URL, create_engine, text
 
-from docmesh_doc.main import create_application
+from docmesh_doc.application import create_application
 
 
 pytestmark = pytest.mark.integration
