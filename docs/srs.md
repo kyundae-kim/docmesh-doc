@@ -79,9 +79,9 @@ FastAPI application
 
 | ID | 요구사항 |
 | --- | --- |
-| SRS-ARC-001 | 애플리케이션은 `fastapi_core.create_app(config=..., settings=..., lifespan=...)`으로 생성해야 한다. |
+| SRS-ARC-001 | 애플리케이션은 `fastapi_core.create_app(config=..., resources=..., error_renderer=...)`으로 생성해야 한다. |
 | SRS-ARC-002 | DMS route는 공통 health router와 충돌하지 않는 별도 router로 등록해야 한다. |
-| SRS-ARC-003 | DMS SDK 인스턴스는 FastAPI lifespan 시작 시 한 번 생성하고, route가 전용 dependency를 통해 재사용할 수 있는 `app.state` 경계에 보관해야 한다. |
+| SRS-ARC-003 | DMS SDK 인스턴스는 `ManagedResource`로 lifespan 시작 시 한 번 생성하고, route가 전용 dependency를 통해 `app.state.resource_registry`에서 재사용해야 한다. |
 | SRS-ARC-004 | route, dependency, background callback은 `DefaultDocumentManagementSDK`를 직접 생성해서는 안 된다. |
 | SRS-ARC-005 | SDK 생성이 실패하면 애플리케이션은 요청 처리를 시작해서는 안 되며, 오류 원인을 안전하게 기록해야 한다. |
 | SRS-ARC-006 | lifespan 종료 시 SDK `close()`를 호출해야 하며, SDK close 실패도 오류로 기록해야 한다. |
@@ -91,8 +91,8 @@ FastAPI application
 
 | ID | 요구사항 |
 | --- | --- |
-| SRS-STO-001 | 서비스는 모든 환경에서 `POSTGRES_DSN`으로 PostgreSQL metadata store를 구성해야 한다. |
-| SRS-STO-002 | `POSTGRES_DSN`이 없거나 PostgreSQL 연결을 구성할 수 없으면 서비스는 startup을 실패해야 한다. |
+| SRS-STO-001 | 서비스는 모든 환경에서 `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`로 PostgreSQL metadata store를 구성해야 한다. `POSTGRES_DSN`은 사용하지 않는다. |
+| SRS-STO-002 | PostgreSQL 개별 연결 필드가 없거나 연결을 구성할 수 없으면 서비스는 startup을 실패해야 한다. |
 | SRS-STO-003 | 서비스는 `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_BUCKET`으로 MinIO object store를 구성해야 한다. |
 | SRS-STO-004 | MinIO bucket 설정이 없거나 MinIO client를 구성할 수 없으면 서비스는 startup을 실패해야 한다. |
 | SRS-STO-005 | PostgreSQL 및 MinIO의 startup health check를 기본 활성화해야 한다. 명시적으로 비활성화하는 개발 설정은 MVP 배포 설정에 포함해서는 안 된다. |
@@ -174,15 +174,15 @@ FastAPI application
 | SRS-API-002 | 업로드 route는 입력값을 `UploadDocumentRequest`로 변환해 `sdk.upload_document(...)`를 호출해야 한다. |
 | SRS-API-003 | 본문이 비어 있거나 filename/content type이 trim 후 비어 있으면 저장소 호출 전에 validation 오류를 반환해야 한다. |
 | SRS-API-004 | 지정된 `document_id`가 이미 존재하면 duplicate 오류를 반환해야 한다. |
-| SRS-API-005 | `GET /documents/{document_id}`는 `sdk.get_document_metadata(...)`를 호출하고 외부 계약에 맞게 metadata를 직렬화해야 한다. |
+| SRS-API-005 | `GET /documents/{document_id}`는 `sdk.get_document_metadata(...)`를 호출하고 `dms.public_metadata(...)` 경계를 거쳐 metadata를 직렬화해야 한다. |
 | SRS-API-006 | `GET /documents/{document_id}/content`는 `sdk.get_document_content(...)`를 호출하고 저장된 content type과 안전한 filename disposition을 유지해야 한다. |
 | SRS-API-007 | `GET /documents/{document_id}/download`는 `sdk.get_document_content_stream(...)` 결과를 `StreamingResponse`로 변환해야 한다. |
 | SRS-API-008 | streaming response는 `DocumentContentStream.iter_chunks()`를 사용하고, 완료·클라이언트 연결 종료·예외 경로 모두에서 `DocumentContentStream.close()`를 호출해야 한다. |
 | SRS-API-009 | streaming chunk size를 외부 입력으로 노출하는 경우 양의 정수만 허용하고, 0 이하 값은 validation 오류로 처리해야 한다. |
-| SRS-API-010 | soft delete route는 `sdk.delete_document(document_id, hard_delete=False)`를 호출해야 한다. |
-| SRS-API-011 | hard delete route는 권한 확인 후 `sdk.delete_document(document_id, hard_delete=True)`를 호출해야 한다. |
+| SRS-API-010 | soft delete route는 `sdk.soft_delete_document(document_id)`를 호출해야 한다. |
+| SRS-API-011 | hard delete route는 권한 확인 후 `sdk.hard_delete_document(document_id)`를 호출해야 한다. |
 | SRS-API-012 | 모든 DMS route는 성공 응답에 request correlation ID를 header 또는 확정된 response envelope로 제공해야 한다. |
-| SRS-API-013 | `GET /documents`는 `sdk.list_documents(...)`를 호출하고 각 항목에서 내부 `storage_key`를 제외해야 한다. |
+| SRS-API-013 | `GET /documents`는 `sdk.list_documents(...)`를 호출하고 각 항목을 `dms.public_metadata(...)`로 변환해 내부 `storage_key`를 제외해야 한다. |
 
 ## 7. 정합성 및 오류 처리 요구사항
 
@@ -255,7 +255,13 @@ DMS route 오류는 다음 최소 구조를 사용해야 한다. 최종 Pydantic
 
 | 설정 | 필수 여부 | 요구사항 |
 | --- | --- | --- |
-| `POSTGRES_DSN` | 필수 | PostgreSQL metadata store 연결 문자열 |
+| `POSTGRES_HOST` | 필수 | PostgreSQL host |
+| `POSTGRES_PORT` | 필수 | PostgreSQL port |
+| `POSTGRES_DB` | 필수 | PostgreSQL database |
+| `POSTGRES_USER` | 필수 | PostgreSQL user |
+| `POSTGRES_PASSWORD` | 필수 | PostgreSQL password |
+| `DMS_METADATA_BACKEND` | 필수 | `postgresql`로 명시 |
+| `DMS_CONFIGURATION_STRICT` | 필수 | 모호한 구성 거부를 위해 `true` 사용 |
 | `MINIO_ENDPOINT` | 필수 | MinIO 서버 endpoint |
 | `MINIO_ACCESS_KEY` | 필수 | MinIO 접근 키 |
 | `MINIO_SECRET_KEY` | 필수 | MinIO 비밀 키 |
@@ -277,7 +283,7 @@ DMS route 오류는 다음 최소 구조를 사용해야 한다. 최종 Pydantic
 | ID | 요구사항 |
 | --- | --- |
 | SRS-CFG-001 | 서비스는 startup 전에 PostgreSQL·MinIO·Keycloak을 포함한 필수 설정의 누락·공백 여부를 검증해야 한다. |
-| SRS-CFG-002 | `POSTGRES_DSN` 및 MinIO credential은 secret provider 또는 환경변수에서 읽어야 하며 source code, 기본값, API response에 하드코딩해서는 안 된다. |
+| SRS-CFG-002 | `POSTGRES_PASSWORD` 및 MinIO credential은 secret provider 또는 환경변수에서 읽어야 하며 source code, 기본값, API response에 하드코딩해서는 안 된다. |
 | SRS-CFG-003 | `DOCMESH_SERVICES` 및 `READINESS_REQUIRED_SERVICES`는 DMS SDK의 PostgreSQL·MinIO health 정책을 대체해서는 안 된다. |
 | SRS-CFG-004 | 운영 배포에서 `fastapi-core` 개발 fallback 설정을 실제 credential·endpoint·CORS 정책 대신 사용해서는 안 된다. |
 
@@ -309,8 +315,8 @@ DMS route 오류는 다음 최소 구조를 사용해야 한다. 최종 Pydantic
 
 ## 12. 구현 전 확인 항목
 
-1. `dms-core` version `v0.2.0`에서 PostgreSQL adapter가 `POSTGRES_DSN`으로 정상 조립되는지 통합 테스트로 확인한다.
-2. `fastapi-core` version `v0.2.0`의 custom lifespan과 내부 service-client 정리 뒤에도 DMS SDK 종료가 누락되지 않는지 startup·shutdown 예외 경로를 포함해 확인한다.
-3. `fastapi-core` 기본 service-client readiness에 더해 DMS SDK `check_health()`를 필수 `dms` check로 `app.state.readiness_checks`에 등록하고, 실패 시 readiness 503을 반환하는지 테스트한다.
+1. `dms-core` version `v0.4.0`에서 PostgreSQL adapter가 개별 `POSTGRES_*` 필드로 정상 조립되는지 통합 테스트로 확인한다.
+2. `fastapi-core` version `v0.4.0`의 managed resource lifecycle에서 DMS SDK 종료가 누락되지 않는지 startup·shutdown 예외 경로를 포함해 확인한다.
+3. DMS SDK `check_health()`를 필수 `dms` managed resource health check로 등록하고, 실패 시 readiness 503을 반환하는지 테스트한다.
 4. upload payload의 최종 형식(multipart/form-data 또는 binary body), hard delete 권한 role, deleted 문서의 HTTP 응답 세부사항은 [API Reference](api.md)에서 확정한다.
 5. `docmesh-py-core` 설정 loader가 DMS 이외의 fallback 설정을 요구할 수 있으므로, 운영 배포에서 필요한 최소 설정을 실제 startup 테스트로 확정한다.

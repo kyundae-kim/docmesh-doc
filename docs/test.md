@@ -62,7 +62,13 @@ uv run pytest
 ```env
 DOCMESH_ENV=test
 DOCMESH_HEALTHCHECK_ENABLED=true
-POSTGRES_DSN=postgresql://<user>:<password>@<host>:5432/<database>
+DMS_METADATA_BACKEND=postgresql
+DMS_CONFIGURATION_STRICT=true
+POSTGRES_HOST=<host>
+POSTGRES_PORT=5432
+POSTGRES_DB=<database>
+POSTGRES_USER=<user>
+POSTGRES_PASSWORD=<db-secret>
 MINIO_ENDPOINT=<host>:9000
 MINIO_ACCESS_KEY=<access-key>
 MINIO_SECRET_KEY=<secret-key>
@@ -70,7 +76,7 @@ MINIO_BUCKET=<test-bucket>
 MINIO_SECURE=false
 ```
 
-인증 router를 포함해 앱을 시작하는 job은 `KEYCLOAK_URL`, `KEYCLOAK_REALM`, `KEYCLOAK_CLIENT_ID`, `KEYCLOAK_CLIENT_SECRET`도 제공한다. credential과 전체 DSN은 pytest 출력, assertion message, snapshot 및 CI artifact에 기록하지 않는다.
+인증 router를 포함해 앱을 시작하는 job은 `KEYCLOAK_URL`, `KEYCLOAK_REALM`, `KEYCLOAK_CLIENT_ID`, `KEYCLOAK_CLIENT_SECRET`도 제공한다. credential과 전체 연결 정보는 pytest 출력, assertion message, snapshot 및 CI artifact에 기록하지 않는다.
 
 ### 3.3 격리와 정리
 
@@ -147,7 +153,7 @@ MINIO_SECURE=false
 1. 문서를 업로드한 뒤 `DELETE /documents/{document_id}`를 호출한다.
 2. 응답이 `hard_deleted=false`, 상태 `deleted`를 나타내는지 확인한다.
 3. PostgreSQL metadata의 상태와 `deleted_at`이 갱신되었음을 확인한다.
-4. MinIO object가 삭제되거나 변경되지 않았음을 확인한다.
+4. MinIO object가 삭제되고 PostgreSQL의 deleted metadata는 보존되었음을 확인한다.
 5. 이후 metadata, content, download 요청이 모두 동일한 not-found 정책을 따르는지 확인한다.
 
 ### INT-DOC-006 hard delete와 권한
@@ -175,7 +181,7 @@ MINIO_SECURE=false
 **관련 요구사항:** FR-APP-001 ~ FR-APP-004, SRS-ARC-001 ~ SRS-ARC-007
 
 1. 실제 환경 factory로 애플리케이션 lifespan을 시작한다.
-2. SDK가 한 번만 생성되고 여러 요청에서 같은 app state 인스턴스를 사용하는지 확인한다.
+2. SDK가 한 번만 생성되고 여러 요청에서 `app.state.resource_registry`의 같은 managed resource 인스턴스를 사용하는지 확인한다.
 3. liveness가 `200`을 반환하는지 확인한다.
 4. PostgreSQL·MinIO가 정상일 때 readiness가 `200`을 반환하는지 확인한다.
 5. lifespan 종료 시 SDK와 저장소 client가 닫히는지 확인한다.
@@ -184,7 +190,7 @@ MINIO_SECURE=false
 
 **관련 요구사항:** FR-OPS-003, SRS-STO-002, SRS-STO-004, SRS-CFG-001
 
-`POSTGRES_DSN`, `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_BUCKET`을 각각 제거하거나 공백으로 설정한 parameterized test를 실행한다. 각 경우 요청 수신 전 startup이 실패하고 오류에 secret 또는 전체 DSN이 포함되지 않음을 확인한다.
+`POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_BUCKET`을 각각 제거하거나 공백으로 설정한 parameterized test를 실행한다. 각 경우 요청 수신 전 startup이 실패하고 오류에 secret 또는 전체 연결 정보가 포함되지 않음을 확인한다.
 
 ### INT-OPS-003 PostgreSQL 장애와 readiness
 

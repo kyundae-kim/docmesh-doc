@@ -8,9 +8,10 @@ from uuid import uuid4
 import dms
 import pytest
 from fastapi.testclient import TestClient
+from fastapi_core.config import AppConfig
 from fastapi_core.schemas import UserInfo
 from minio import Minio
-from sqlalchemy import create_engine, text
+from sqlalchemy import URL, create_engine, text
 
 from docmesh_doc.main import create_application
 
@@ -18,7 +19,11 @@ from docmesh_doc.main import create_application
 pytestmark = pytest.mark.integration
 
 _REQUIRED_ENV = (
-    "POSTGRES_DSN",
+    "POSTGRES_HOST",
+    "POSTGRES_PORT",
+    "POSTGRES_DB",
+    "POSTGRES_USER",
+    "POSTGRES_PASSWORD",
     "MINIO_ENDPOINT",
     "MINIO_ACCESS_KEY",
     "MINIO_SECRET_KEY",
@@ -55,7 +60,16 @@ def integration_env() -> dict[str, str]:
 
 @pytest.fixture(scope="session", autouse=True)
 def prepare_integration_services(integration_env: dict[str, str]) -> Iterator[None]:
-    engine = create_engine(integration_env["POSTGRES_DSN"])
+    engine = create_engine(
+        URL.create(
+            "postgresql+psycopg",
+            username=integration_env["POSTGRES_USER"],
+            password=integration_env["POSTGRES_PASSWORD"],
+            host=integration_env["POSTGRES_HOST"],
+            port=int(integration_env["POSTGRES_PORT"]),
+            database=integration_env["POSTGRES_DB"],
+        )
+    )
     with engine.connect() as connection:
         connection.execute(text("SELECT 1"))
 
@@ -83,7 +97,13 @@ def document_id() -> str:
 def integration_client(
     integration_env: dict[str, str],
 ) -> Iterator[tuple[TestClient, dms.DefaultDocumentManagementSDK, UserInfo]]:
-    app = create_application()
+    app = create_application(
+        config=AppConfig(
+            startup_healthcheck=True,
+            enabled_services=["keycloak"],
+            required_services=["keycloak"],
+        )
+    )
     with TestClient(app) as client:
         token_response = client.post(
             "/token",

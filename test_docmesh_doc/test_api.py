@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import os
+from dataclasses import replace
 from datetime import UTC, datetime
 from io import BytesIO
+from types import SimpleNamespace
 
 import dms
 import pytest
@@ -37,7 +39,7 @@ class FakeSDK:
         self.closed = False
         self.upload_request = None
         self.upload_stream_request = None
-        self.delete_args = None
+        self.delete_call = None
         self.list_args = None
         self.stream_closed = False
 
@@ -90,12 +92,21 @@ class FakeSDK:
             _close_callback=lambda: setattr(self, "stream_closed", True),
         )
 
-    def delete_document(self, document_id, *, hard_delete=False):
-        self.delete_args = (document_id, hard_delete)
+    def soft_delete_document(self, document_id):
+        self.delete_call = ("soft", document_id)
         return dms.DeleteDocumentResult(
             document_id=document_id,
             deleted=True,
-            hard_deleted=hard_delete,
+            hard_deleted=False,
+            status=dms.DocumentStatus.DELETED,
+        )
+
+    def hard_delete_document(self, document_id):
+        self.delete_call = ("hard", document_id)
+        return dms.DeleteDocumentResult(
+            document_id=document_id,
+            deleted=True,
+            hard_deleted=True,
             status=dms.DocumentStatus.DELETED,
         )
 
@@ -108,20 +119,65 @@ class FakeSDK:
 
 def test_sdk_from_environment_passes_an_environment_snapshot(monkeypatch):
     captured_env = None
+    diagnosed_env = None
     sdk = FakeSDK()
     monkeypatch.delenv("DMS_METADATA_BACKEND", raising=False)
+    monkeypatch.delenv("DMS_CONFIGURATION_STRICT", raising=False)
+    monkeypatch.setenv("POSTGRES_DSN", "postgresql+psycopg://legacy.example/test")
+
+    def diagnose_environment(env):
+        nonlocal diagnosed_env
+        diagnosed_env = env
+        return SimpleNamespace(valid=True, missing_required_keys=(), warnings=())
 
     def create_sdk(env):
         nonlocal captured_env
         captured_env = env
         return sdk
 
+    monkeypatch.setattr(dms, "diagnose_environment", diagnose_environment)
     monkeypatch.setattr(dms, "create_sdk_from_environment", create_sdk)
 
     assert sdk_from_environment() is sdk
-    assert captured_env == {**os.environ, "DMS_METADATA_BACKEND": "postgresql"}
+    expected_environment = dict(os.environ)
+    expected_environment.pop("POSTGRES_DSN")
+    assert captured_env == {
+        **expected_environment,
+        "DMS_METADATA_BACKEND": "postgresql",
+        "DMS_CONFIGURATION_STRICT": "true",
+    }
+    assert diagnosed_env is captured_env
     assert captured_env is not os.environ
     assert os.environ.get("DMS_METADATA_BACKEND") is None
+    assert os.environ.get("DMS_CONFIGURATION_STRICT") is None
+
+
+def test_sdk_from_environment_rejects_invalid_diagnosis_before_assembly(monkeypatch):
+    assembled = False
+
+    monkeypatch.setattr(
+        dms,
+        "diagnose_environment",
+        lambda _env: SimpleNamespace(
+            valid=False,
+            missing_required_keys=("POSTGRES_PASSWORD", "MINIO_BUCKET"),
+            warnings=(),
+        ),
+    )
+
+    def create_sdk(_env):
+        nonlocal assembled
+        assembled = True
+
+    monkeypatch.setattr(dms, "create_sdk_from_environment", create_sdk)
+
+    with pytest.raises(
+        dms.ConfigurationError,
+        match="POSTGRES_PASSWORD, MINIO_BUCKET",
+    ):
+        sdk_from_environment()
+
+    assert assembled is False
 
 
 def client_for(sdk: FakeSDK, *, roles: list[str] | None = None) -> TestClient:
@@ -188,6 +244,43 @@ def test_sdk_not_found_uses_documented_error_envelope():
     assert response.json()["error"]["correlation_id"] == response.headers["X-Correlation-ID"]
 
 
+def test_metadata_responses_use_dms_public_metadata_boundary(monkeypatch):
+    calls = []
+    public_metadata = dms.public_metadata
+
+    def track_public_metadata(value):
+        calls.append(value)
+        return public_metadata(value)
+
+    monkeypatch.setattr(dms, "public_metadata", track_public_metadata)
+
+    with client_for(FakeSDK()) as client:
+        response = client.get("/documents/doc-1")
+
+    assert response.status_code == 200
+    assert len(calls) == 1
+    assert calls[0].document_id == "doc-1"
+    assert "storage_key" not in response.json()
+
+
+def test_framework_http_errors_use_documented_error_envelope():
+    with client_for(FakeSDK()) as client:
+        response = client.get(
+            "/route-that-does-not-exist",
+            headers={"X-Correlation-ID": "missing-route-1"},
+        )
+
+    assert response.status_code == 404
+    assert response.headers["Content-Type"].startswith("application/json")
+    assert response.json() == {
+        "error": {
+            "code": "NOT_FOUND",
+            "message": "Not Found",
+            "correlation_id": "missing-route-1",
+        }
+    }
+
+
 def test_list_documents_passes_pagination_and_status_to_sdk():
     sdk = FakeSDK()
     with client_for(sdk) as client:
@@ -243,7 +336,7 @@ def test_hard_delete_requires_permission_before_sdk_call():
 
     assert response.status_code == 403
     assert response.json()["error"]["code"] == "FORBIDDEN"
-    assert sdk.delete_args is None
+    assert sdk.delete_call is None
 
 
 def test_hard_delete_calls_sdk_for_authorized_user():
@@ -253,7 +346,38 @@ def test_hard_delete_calls_sdk_for_authorized_user():
 
     assert response.status_code == 200
     assert response.json()["hard_deleted"] is True
-    assert sdk.delete_args == ("doc-1", True)
+    assert sdk.delete_call == ("hard", "doc-1")
+
+
+def test_soft_delete_calls_explicit_sdk_method():
+    sdk = FakeSDK()
+    with client_for(sdk) as client:
+        response = client.delete("/documents/doc-1")
+
+    assert response.status_code == 200
+    assert response.json()["hard_deleted"] is False
+    assert sdk.delete_call == ("soft", "doc-1")
+
+
+def test_soft_deleted_documents_are_hidden_from_read_routes():
+    sdk = FakeSDK()
+    sdk.get_document_metadata = lambda document_id: replace(
+        metadata(document_id),
+        status=dms.DocumentStatus.DELETED,
+        deleted_at=NOW,
+    )
+
+    with client_for(sdk) as client:
+        responses = (
+            client.get("/documents/doc-1"),
+            client.get("/documents/doc-1/content"),
+            client.get("/documents/doc-1/download"),
+        )
+
+    assert [response.status_code for response in responses] == [404, 404, 404]
+    assert {
+        response.json()["error"]["code"] for response in responses
+    } == {"DOCUMENT_NOT_FOUND"}
 
 
 def test_lifespan_closes_sdk():

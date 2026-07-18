@@ -10,7 +10,7 @@
 
 ## 1. 목적과 범위
 
-이 문서는 DocMesh Document Service에서 `fastapi-core v0.2.0`의 service-client, readiness, lifecycle 확장 지점을 통해 NATS 같은 메시징 서비스를 연동할 때의 책임 경계를 정의한다.
+이 문서는 DocMesh Document Service에서 `fastapi-core v0.4.0`의 service runtime, readiness, managed lifecycle 확장 지점을 통해 NATS 같은 메시징 서비스를 연동할 때의 책임 경계를 정의한다.
 
 MVP의 문서 upload, 조회, download, soft/hard delete는 동기 HTTP API와 `dms-core` SDK로 수행한다. 문서 event schema, broker publish/subscribe, 비동기 작업 queue 및 webhook 계약은 MVP 범위 밖이다.
 
@@ -25,16 +25,16 @@ MVP의 문서 upload, 조회, download, soft/hard delete는 동기 HTTP API와 `
 
 `NATS_SERVERS`가 환경에 존재한다는 사실만으로 DMS SDK 또는 서비스가 메시지를 발행·구독한다고 판단하지 않는다. 실제 메시징 기능은 별도 요구사항, event schema, handler 및 테스트가 추가된 경우에만 활성 기능으로 본다.
 
-## 3. fastapi-core v0.2.0 통합 표면
+## 3. fastapi-core v0.4.0 통합 표면
 
 `fastapi-core`에서 NATS는 독립된 FastAPI route가 아니라 선택 가능한 service client다.
 
 - `AppConfig.enabled_services` / `DOCMESH_SERVICES`: 조립 대상 서비스 목록
 - `AppConfig.required_services` / `READINESS_REQUIRED_SERVICES`: 실패 시 readiness 503을 유발할 필수 서비스 목록
-- `app.state.service_clients`: 조립된 client 또는 builder 저장소
-- `app.state.readiness_checks`: 실제 생성된 readiness check
-- `app.state.readiness_services`: enabled/required metadata
-- `app.state.required_services`: 필수 서비스 집합
+- `app.state.service_runtime`: 조립된 client 또는 builder와 lifecycle을 소유하는 runtime
+- `app.state.service_runtime.checks`: 실제 생성된 readiness check
+- `app.state.service_runtime.selected_services`: 조립 대상으로 선택된 서비스 집합
+- `app.state.service_runtime.required_services`: 필수 서비스 집합
 - `get_nats_connection_builder()`: NATS connection builder dependency
 - custom lifespan: 실제 connection 및 project-specific 자원 관리 확장 지점
 
@@ -47,7 +47,7 @@ NATS를 사용하지 않는 MVP 기본 배포에서는 `nats`를 `DOCMESH_SERVIC
 NATS를 선택 서비스로 활성화하는 예:
 
 ```env
-DOCMESH_SERVICES=postgres,minio,keycloak,nats
+DOCMESH_SERVICES=keycloak,nats
 READINESS_REQUIRED_SERVICES=keycloak
 NATS_SERVERS=nats://nats.internal:4222
 NATS_TOKEN=<secret>
@@ -76,7 +76,7 @@ READINESS_REQUIRED_SERVICES=keycloak,nats
 | 선택 NATS check 실패 | 200 | `degraded` |
 | 필수 NATS check 실패 | 503 | `error` |
 
-운영 검증에서는 enabled metadata만 확인하지 않고 `app.state.readiness_checks`에 `nats` check가 실제 등록되었는지 확인해야 한다.
+운영 검증에서는 enabled metadata만 확인하지 않고 `app.state.service_runtime.checks`에 `nats` check가 실제 등록되었는지 확인해야 한다.
 
 ## 6. Lifecycle 정책
 
@@ -91,7 +91,7 @@ from fastapi_core import create_app
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    builder = app.state.service_clients["nats"]
+    builder = app.state.service_runtime.require("nats")
     connection = await builder.connect()
     app.state.nats_connection = connection
     try:
@@ -106,7 +106,7 @@ app = create_app(lifespan=lifespan)
 
 위 코드는 lifecycle 구조를 설명하는 예시다. 실제 builder의 연결·종료 method는 잠금된 `docmesh-py-core` public API를 기준으로 구현하고 테스트해야 한다.
 
-`fastapi-core v0.2.0`은 정상적인 custom lifespan 종료 뒤 내부 service clients를 정리한다. custom lifespan startup 또는 shutdown이 예외로 끝나는 경우 내부 정리가 항상 보장된다고 가정하지 않는다. 서비스는 자신이 생성한 메시징 자원을 `try/finally`로 정리하고 다음 실패 경로를 테스트해야 한다.
+`fastapi-core v0.4.0`의 managed lifespan은 service runtime 종료를 소유한다. 다만 custom lifespan에서 직접 생성한 NATS connection은 서비스가 `try/finally`로 정리하고 다음 실패 경로를 테스트해야 한다.
 
 - connection 생성 실패
 - subscriber 시작 실패

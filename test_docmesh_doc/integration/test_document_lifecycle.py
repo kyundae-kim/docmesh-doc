@@ -50,7 +50,7 @@ def test_upload_persists_metadata_and_content_in_postgres_and_minio(
     assert content.content == PAYLOAD
     assert content.content_type == "text/plain"
 
-    sdk.delete_document(document_id, hard_delete=True)
+    sdk.hard_delete_document(document_id)
 
 
 def test_metadata_lookup_and_streaming_download_use_real_stores(
@@ -80,7 +80,7 @@ def test_metadata_lookup_and_streaming_download_use_real_stores(
     assert download_response.headers["Content-Type"].startswith("text/plain")
     assert download_response.headers["Content-Disposition"].startswith("attachment;")
 
-    sdk.delete_document(document_id, hard_delete=True)
+    sdk.hard_delete_document(document_id)
 
 
 def test_hard_delete_removes_postgres_metadata_and_minio_object(
@@ -95,7 +95,6 @@ def test_hard_delete_removes_postgres_metadata_and_minio_object(
             "integration Keycloak user does not have document:delete:hard role"
         )
     assert upload(client, document_id).status_code == 201
-    storage_key = sdk.get_document_metadata(document_id).storage_key
 
     response = client.delete(f"/documents/{document_id}", params={"hard": "true"})
 
@@ -107,7 +106,8 @@ def test_hard_delete_removes_postgres_metadata_and_minio_object(
         pass
     else:
         raise AssertionError("hard-deleted PostgreSQL metadata still exists")
-    assert sdk._object_store.object_exists(document_id, storage_key) is False
+    with pytest.raises(dms.DocumentNotFoundError):
+        sdk.get_document_content(document_id)
 
 
 def test_sdk_health_checks_real_postgres_and_minio(

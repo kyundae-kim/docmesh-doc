@@ -363,7 +363,7 @@ curl --fail --location \
 
 ### 4.6 `DELETE /documents/{document_id}` — soft delete
 
-MinIO object는 유지하고 PostgreSQL metadata의 상태를 `deleted`로, `deleted_at`을 삭제 시각으로 갱신한다.
+MinIO object를 삭제하고 PostgreSQL metadata는 상태를 `deleted`로, `deleted_at`을 삭제 시각으로 갱신해 보존한다.
 
 #### Query parameter
 
@@ -551,8 +551,9 @@ Health API는 인증 없이 호출 가능해야 하며 `fastapi-core` 공통 hea
 ## 7. 구현 및 테스트 준수 사항
 
 1. `POST /documents`는 `UploadDocumentRequest`로 변환한 뒤 `sdk.upload_document(...)`를 호출한다.
-2. 목록/metadata/content/download/delete route는 각각 SDK의 `list_documents(...)`, `get_document_metadata(...)`, `get_document_content(...)`, `get_document_content_stream(...)`, `delete_document(...)`를 호출한다.
-3. DMS SDK 오류는 [공통 오류 코드](#23-공통-오류-코드)에 정의한 상태와 code로 변환한다.
-4. download route는 stream의 정상 완료, 예외, 클라이언트 연결 종료에서 `close()`가 호출되는지 테스트한다.
-5. 통합 테스트는 PostgreSQL과 MinIO를 사용해 upload, 목록·metadata 조회, content/download, soft delete, hard delete, readiness, storage 장애를 검증한다.
-6. OpenAPI 생성 결과에는 이 문서의 route, request/response schema, security requirement, status code를 반영한다.
+2. 목록/metadata/content/download route는 각각 SDK의 `list_documents(...)`, `get_document_metadata(...)`, `get_document_content(...)`, `get_document_content_stream(...)`를 호출하며 외부 metadata는 `public_metadata(...)`로 변환한다.
+3. soft/hard delete route는 각각 `soft_delete_document(...)`, `hard_delete_document(...)`를 명시적으로 호출한다.
+4. DMS SDK 오류는 `fastapi-core`의 error mapper/renderer를 통해 [공통 오류 코드](#23-공통-오류-코드)에 정의한 상태와 code로 변환한다.
+5. download route는 stream의 정상 완료, 예외, 클라이언트 연결 종료에서 `close()`가 호출되는지 테스트한다.
+6. 통합 테스트는 PostgreSQL과 MinIO를 사용해 upload, 목록·metadata 조회, content/download, soft delete, hard delete, readiness, storage 장애를 검증한다.
+7. OpenAPI 생성 결과에는 이 문서의 route, request/response schema, security requirement, status code를 반영한다.
