@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-from dms.sdk import DocumentManagementSDK
-from fastapi import HTTPException, Request, status
+from typing import Annotated
+
+from dms import DefaultDocumentManagementSDK
+from fastapi import Depends
+from fastapi_core.dependencies import get_current_user, get_resource
+from fastapi_core.schemas import UserInfo
 
 
-def get_dms_sdk(request: Request) -> DocumentManagementSDK:
-    sdk = getattr(request.app.state, "dms_sdk", None)
-    if sdk is None:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="DMS SDK is not initialized",
-        )
-    return sdk
+DmsSdk = Annotated[DefaultDocumentManagementSDK, Depends(get_resource("dms"))]
+CurrentUser = Annotated[UserInfo, Depends(get_current_user)]

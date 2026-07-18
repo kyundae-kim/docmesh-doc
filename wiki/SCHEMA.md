@@ -1,26 +1,17 @@
 # Wiki Schema
 
 ## Domain
-`fastapi-core` 기반의 API 레이어와 DMS SDK 기반의 서비스 레이어를 사용해 문서(document)와 문서 관련 메타데이터를 관리하는 시스템 지식 베이스.
-
-이 위키는 다음을 다룬다:
-- `fastapi-core`를 활용한 API 레이어 구성, dependency/lifespan 관리, 인증/인가, 운영 패턴
-- DMS SDK를 서비스 레이어로 활용하는 방식과 서비스 조립, health check, 종료 정리 계약
-- 문서 업로드/다운로드/조회/삭제 API
-- 문서 메타데이터 모델, 저장 방식, 검증 규칙
-- 인증/인가, 감사(audit), 검색, 버전 관리, 비동기 처리
-- 스토리지 계층(MinIO/S3, 로컬 파일시스템 등)과 애플리케이션 계층의 연계
-- FastAPI 애플리케이션 구조, 운영/관측, 외부 연동
+`dms-core`를 도메인/로직 코어로, `fastapi-core`를 FastAPI 컴포넌트 계층으로 사용해 DMS(Document Management System)를 FastAPI로 배포하는 아키텍처, 구현, 운영 지식.
 
 ## Conventions
-- File names: lowercase, hyphens, no spaces (e.g., `document-metadata-model.md`)
-- Every wiki page starts with YAML frontmatter
-- Use `[[wikilinks]]` to link between pages (minimum 2 outbound links per page)
-- When updating a page, always bump the `updated` date
-- Every new page must be added to `index.md` under the correct section
-- Every action must be appended to `log.md`
-- On pages that synthesize 3+ sources, append provenance markers like `^[raw/articles/source-file.md]` to paragraphs whose claims trace to a specific source
-- Raw sources in `raw/` are immutable; corrections and interpretations belong in wiki pages only
+- 파일명은 소문자와 하이픈만 사용한다(예: `dms-core.md`).
+- `raw/`는 원문 보관 영역이며 생성 후 수정하지 않는다.
+- `entities/`, `concepts/`, `comparisons/`, `queries/`의 모든 위키 페이지는 아래 YAML frontmatter로 시작한다.
+- 위키 페이지 간에는 `[[wikilinks]]`를 사용한다. 새 페이지는 가능하면 최소 2개의 기존 페이지로 연결한다. 초기 핵심 페이지가 아직 없으면 첫 관련 페이지가 생성된 뒤 상호 연결을 보완한다.
+- 페이지를 갱신할 때 `updated` 날짜를 변경한다.
+- 새 위키 페이지는 `index.md`의 적절한 섹션에 추가하고, 모든 작업은 `log.md`에 기록한다.
+- 3개 이상 소스를 종합한 페이지의 문단에는 해당 근거를 `^[raw/.../source.md]` 형식으로 표시한다.
+- 태그는 아래 taxonomy의 항목만 사용한다. 새로운 태그가 필요하면 먼저 이 문서에 추가한다.
 
 ## Frontmatter
 ```yaml
@@ -37,137 +28,44 @@ contradictions: [other-page-slug]
 ---
 ```
 
-Notes:
-- `confidence`, `contested`, and `contradictions` are optional but recommended for evolving design decisions or single-source claims.
-- `sources` must always list the raw source files that support the page.
+`confidence`, `contested`, `contradictions`는 해당할 때만 넣는다. 단일 출처 또는 빠르게 변하는 주장에는 보통 `confidence: medium` 또는 `low`를 쓴다.
 
-## raw/ Frontmatter
+## Raw-source Frontmatter
 ```yaml
 ---
-source_url: https://example.com/article
+source_url: https://example.com/source
 ingested: YYYY-MM-DD
-sha256: <hex digest of the raw content below the frontmatter>
+sha256: <body-only SHA-256>
 ---
 ```
 
-The `sha256` is computed over the raw body only, excluding the frontmatter.
+해시는 frontmatter 뒤의 본문에 대해서만 계산한다. 동일 URL을 재수집하면 해시를 비교해 동일하면 건너뛰고, 변경되었으면 source drift로 기록한다.
 
 ## Tag Taxonomy
-Every tag used on a page must appear here first.
-
-### API / Architecture
-- api
-- rest
-- endpoint
-- router
-- service
-- repository
-- architecture
-- async
-- background-task
-
-### Document Domain
-- document
-- metadata
-- schema
-- validation
-- versioning
-- search
-- indexing
-- classification
-
-### Storage / Data
-- database
-- orm
-- sqlalchemy
-- postgres
-- minio
-- s3
-- filesystem
-- migration
-
-### Security / Governance
-- auth
-- authorization
-- audit
-- compliance
-- privacy
-
-### Operations / Quality
-- testing
-- observability
-- logging
-- deployment
-- performance
-- reliability
-
-### Meta
-- comparison
-- decision
-- convention
-- issue
-- roadmap
-
-Rule: if a new tag is needed, add it here before using it on any page.
+- **System/domain:** `dms`, `document`, `metadata`, `storage`, `workflow`
+- **Application/API:** `fastapi`, `api`, `fastapi-core`, `dms-core`, `integration`, `messaging`
+- **Platform/operations:** `deployment`, `container`, `configuration`, `security`, `observability`
+- **Engineering:** `architecture`, `testing`, `migration`, `performance`, `dependency`
 
 ## Page Thresholds
-- **Create a page** when an entity/concept appears in 2+ sources OR is central to one source
-- **Add to existing page** when a source mentions something already covered
-- **DON'T create a page** for passing mentions, minor details, or out-of-scope topics
-- **Split a page** when it exceeds ~200 lines — break into sub-topics with cross-links
-- **Archive a page** when its content is fully superseded — move to `_archive/`, remove from index
+- 엔티티나 개념이 2개 이상의 소스에 등장하거나 한 소스의 중심 주제이면 페이지를 만든다.
+- 기존에 다룬 대상이면 새 페이지 대신 기존 페이지를 갱신한다.
+- 단순 언급, 주변적 세부 사항, 도메인 밖의 정보는 페이지를 만들지 않는다.
+- 페이지가 약 200줄을 넘으면 하위 주제로 분리한다.
+- 완전히 대체된 페이지는 `_archive/`로 옮기고 index에서 제거한다.
 
 ## Entity Pages
-One page per notable entity such as:
-- API resources (`document`, `document-metadata`, `upload-session`)
-- External systems (`minio`, `postgres`, `nats`)
-- Major internal components (`document-service`, `metadata-repository`)
-
-Each entity page should include:
-- Overview / responsibility
-- Key fields, behaviors, and lifecycle
-- Relationships to other entities via `[[wikilinks]]`
-- Relevant source references
+주요 컴포넌트, 패키지, 서비스별로 한 페이지를 둔다. 목적, 핵심 API/설정, 관계, 근거 소스를 포함한다.
 
 ## Concept Pages
-One page per core topic such as:
-- document lifecycle
-- metadata validation strategy
-- storage abstraction
-- search and indexing
-- authentication and authorization flows
-
-Each concept page should include:
-- Definition / explanation
-- Current implementation or intended design
-- Open questions or trade-offs
-- Related concepts via `[[wikilinks]]`
+배포 구조, 의존성 경계, 문서 수명주기, 인증/권한, 저장소 연동 같은 설계 주제별로 한 페이지를 둔다. 정의, 현재 결정, 미해결 질문, 관련 페이지를 포함한다.
 
 ## Comparison Pages
-Use comparison pages for side-by-side analyses such as:
-- MinIO vs filesystem storage
-- synchronous vs background processing
-- inline metadata vs normalized metadata tables
-
-Include:
-- What is being compared and why
-- Dimensions of comparison (table preferred)
-- Decision / synthesis
-- Sources
+대안이나 구현 방식을 비교한다. 비교 목적, 표 형식의 기준, 결론/권고, 근거를 포함한다.
 
 ## Update Policy
-When new information conflicts with existing content:
-1. Check dates — newer sources generally supersede older ones
-2. If genuinely contradictory, note both positions with dates and sources
-3. Mark the contradiction in frontmatter with `contradictions: [page-name]`
-4. Set `contested: true` when unresolved
-5. Flag the issue in a lint report for review
-
-## Suggested Top-Level Themes
-The initial wiki should expect content around:
-- Document CRUD API design
-- Metadata schema and storage strategy
-- File/object storage integration
-- Search, filtering, and pagination
-- Access control and auditability
-- Operational concerns for FastAPI services
+새 정보가 기존 정보와 충돌하면:
+1. 출처와 날짜를 비교한다.
+2. 실제로 상충하면 양쪽 견해와 날짜/출처를 기록한다.
+3. frontmatter에 `contradictions`와 필요 시 `contested: true`를 넣는다.
+4. lint 보고서에서 사용자 검토 항목으로 표시한다.

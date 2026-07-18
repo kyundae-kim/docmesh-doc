@@ -1,0 +1,170 @@
+---
+source_url: https://raw.githubusercontent.com/kyundae-kim/fastapi-core/v0.4.0/.env.example
+ingested: 2026-07-18
+sha256: f0470cb2a9012f50e0b3c1c0766ff15ee1e776859587fffca1767f73ea891dfd
+---
+# -----------------------------------------------------------------------------
+# fastapi-core AppConfig
+#
+# 이 파일은 자동으로 로드되지 않는다. 필요한 값을 실행 환경에 주입하거나 애플리케이션의
+# dotenv 로더에서 명시적으로 사용한다. 필드 정의는 fastapi_core/config.py를 기준으로 한다.
+# -----------------------------------------------------------------------------
+ROOT_PATH=
+TOKEN_URL=/token
+CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+CORS_CREDENTIALS=false
+READINESS_PARALLEL=false
+READINESS_TIMEOUT_SECONDS=5
+READINESS_OVERALL_TIMEOUT_SECONDS=15
+DOCMESH_HEALTHCHECK_ENABLED=false
+DOCMESH_LOG_LEVEL=WARNING
+APP_LOG_PATH=
+APP_LOG_JSON=true
+APP_LOG_FORCE=false
+
+# 서비스 없는 최소 실행 기준이다. 필요한 서비스를 활성화하고 아래 서비스 설정도 함께
+# 주입한다. 빈 CSV 환경변수는 빈 목록으로 해석되며, AppConfig 기본값을 사용하려면 해당
+# 환경변수 자체를 제거한다.
+DOCMESH_SERVICES=
+READINESS_REQUIRED_SERVICES=
+
+# DOCMESH_SERVICES, READINESS_REQUIRED_SERVICES, CORS_ORIGINS는 CSV 문자열이다.
+# READINESS_REQUIRED_SERVICES의 모든 항목은 DOCMESH_SERVICES에도 포함되어야 한다.
+# 대안 그룹은 세미콜론으로 구분하고, 각 그룹 안의 서비스는 쉼표로 구분한다.
+# DOCMESH_SERVICE_ALTERNATIVES=postgres,sqlite;minio,milvus
+# 예시: `DOCMESH_SERVICES`는 keycloak,postgres,nats로 설정하고
+# `READINESS_REQUIRED_SERVICES`는 keycloak,postgres로 설정할 수 있다.
+
+# -----------------------------------------------------------------------------
+# docmesh-py-core 공통 설정
+#
+# fastapi-core는 활성 서비스 설정을 현재 프로세스 환경에서 읽어 ServiceRuntime을 조립한다.
+# 운영 환경에서는 DOCMESH_ENV 또는 DOCMESH_SECURITY_MODE로 운영 보안 검증을 활성화한다.
+# -----------------------------------------------------------------------------
+# DOCMESH_ENV=development
+# DOCMESH_SECURITY_MODE=development
+# DOCMESH_PRODUCTION_ALIASES=prod,production
+
+# -----------------------------------------------------------------------------
+# Keycloak
+# DOCMESH_SERVICES에 keycloak을 추가할 때 URL, realm, client ID가 필요하다.
+# confidential client(KEYCLOAK_CLIENT_PUBLIC=false)에는 client secret도 필요하다.
+# -----------------------------------------------------------------------------
+# KEYCLOAK_URL=https://keycloak.example.com
+# KEYCLOAK_REALM=docmesh
+# KEYCLOAK_CLIENT_ID=fastapi-core
+# KEYCLOAK_CLIENT_SECRET=[REDACTED]
+# KEYCLOAK_CLIENT_PUBLIC=false
+# KEYCLOAK_VERIFY_SSL=true
+# KEYCLOAK_AUDIENCE=
+# KEYCLOAK_TOKEN_GRANT_TYPE=password
+# KEYCLOAK_TOKEN_SCOPE=openid profile email
+# KEYCLOAK_TOKEN_USERNAME=
+# KEYCLOAK_TOKEN_PASSWORD=[REDACTED]
+# KEYCLOAK_REQUEST_TIMEOUT_SECONDS=10
+# KEYCLOAK_MAX_RETRIES=3
+# KEYCLOAK_JWKS_CACHE_TTL_SECONDS=300
+
+# realm/client provisioning을 사용할 때만 활성화한다. 관리자 인증은 service account 또는
+# username/password 중 정확히 하나를 선택한다.
+# KEYCLOAK_PROVISIONING_ENABLED=false
+# KEYCLOAK_PROVISIONING_DRY_RUN=false
+# KEYCLOAK_ADMIN_REALM=master
+# KEYCLOAK_ADMIN_CLIENT_ID=admin-cli
+# KEYCLOAK_ADMIN_CLIENT_SECRET=[REDACTED]
+# KEYCLOAK_ADMIN_USERNAME=
+# KEYCLOAK_ADMIN_PASSWORD=[REDACTED]
+# KEYCLOAK_REALM_ENABLED=true
+# KEYCLOAK_REALM_DISPLAY_NAME=
+# KEYCLOAK_CLIENT_REDIRECT_URIS=http://localhost:3000/*
+# KEYCLOAK_CLIENT_WEB_ORIGINS=http://localhost:3000
+# KEYCLOAK_REALM_ROLES=
+# KEYCLOAK_CLIENT_ROLES=
+
+# 실제 password-grant 통합 테스트에서만 사용한다.
+# FASTAPI_CORE_TEST_SCOPE=openid profile
+# FASTAPI_CORE_TEST_INVALID_TOKEN=invalid.token.value
+
+# -----------------------------------------------------------------------------
+# PostgreSQL
+# 개별 접속 항목이 현재 권장 방식이다. POSTGRES_DSN은 deprecated 호환 경로이므로 개별
+# 접속 항목과 함께 설정하지 않는다.
+# -----------------------------------------------------------------------------
+# POSTGRES_HOST=postgres.example.com
+# POSTGRES_PORT=5432
+# POSTGRES_DB=docmesh
+# POSTGRES_USER=docmesh
+# POSTGRES_PASSWORD=[REDACTED]
+# POSTGRES_SSLMODE=prefer
+# POSTGRES_CONNECT_TIMEOUT_SECONDS=10
+# POSTGRES_POOL_SIZE=5
+# POSTGRES_MAX_OVERFLOW=10
+# POSTGRES_DSN=postgresql+psycopg://docmesh:[REDACTED]@postgres.example.com:5432/docmesh
+
+# -----------------------------------------------------------------------------
+# SQLite
+# -----------------------------------------------------------------------------
+# SQLITE_PATH=:memory:
+# SQLITE_READONLY=false
+# SQLITE_ENABLE_WAL=false
+# SQLITE_BUSY_TIMEOUT_MS=5000
+
+# -----------------------------------------------------------------------------
+# MinIO
+# -----------------------------------------------------------------------------
+# MINIO_ENDPOINT=minio.example.com:9000
+# MINIO_ACCESS_KEY=[REDACTED]
+# MINIO_SECRET_KEY=[REDACTED]
+# MINIO_SECURE=true
+# MINIO_REGION=ap-northeast-2
+# MINIO_BUCKET=docmesh
+# MINIO_REQUEST_TIMEOUT_SECONDS=30
+# MINIO_MAX_RETRIES=3
+
+# -----------------------------------------------------------------------------
+# Milvus
+# -----------------------------------------------------------------------------
+# MILVUS_URI=http://milvus.example.com:19530
+# MILVUS_TOKEN=[REDACTED]
+# MILVUS_DB_NAME=default
+# MILVUS_COLLECTION=
+# MILVUS_SECURE=false
+# MILVUS_CONNECT_TIMEOUT_SECONDS=10
+# MILVUS_REQUEST_TIMEOUT_SECONDS=30
+# MILVUS_MAX_RETRIES=3
+
+# -----------------------------------------------------------------------------
+# Ollama
+# -----------------------------------------------------------------------------
+# OLLAMA_HOST=http://ollama.example.com:11434
+# OLLAMA_GENERATION_MODEL=llama3.1:8b
+# OLLAMA_EMBEDDING_MODEL=nomic-embed-text
+# OLLAMA_REQUEST_TIMEOUT_SECONDS=120
+# OLLAMA_MAX_RETRIES=2
+
+# -----------------------------------------------------------------------------
+# Langfuse
+# Langfuse를 활성화하면 host와 public/secret key가 필요하다.
+# -----------------------------------------------------------------------------
+# LANGFUSE_ENABLED=true
+# LANGFUSE_HOST=http://langfuse.example.com:3000
+# LANGFUSE_PUBLIC_KEY=[REDACTED]
+# LANGFUSE_SECRET_KEY=[REDACTED]
+# LANGFUSE_RELEASE=
+# LANGFUSE_ENVIRONMENT=development
+# LANGFUSE_REQUEST_TIMEOUT_SECONDS=10
+# LANGFUSE_MAX_RETRIES=3
+
+# -----------------------------------------------------------------------------
+# NATS
+# 인증은 token, user/password, creds file 중 최대 하나만 선택한다.
+# -----------------------------------------------------------------------------
+# NATS_SERVERS=nats://nats.example.com:4222
+# NATS_TOKEN=[REDACTED]
+# NATS_USER=docmesh
+# NATS_PASSWORD=[REDACTED]
+# NATS_CREDS_FILE=/run/secrets/nats.creds
+# NATS_NAME=docmesh-py-core
+# NATS_CONNECT_TIMEOUT_SECONDS=10
+# NATS_MAX_RECONNECT_ATTEMPTS=10
+# -----------------------------------------------------------------------------
