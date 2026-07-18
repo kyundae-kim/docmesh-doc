@@ -4,8 +4,8 @@
 | --- | --- |
 | 제품명 | DocMesh Document Service |
 | 문서 상태 | Draft |
-| 버전 | 0.1 |
-| 작성일 | 2026-07-11 |
+| 버전 | 0.2 |
+| 최종 코드 대조일 | 2026-07-18 |
 | 대상 릴리스 | MVP |
 | 상위 문서 | [제품 요구사항 정의서](prd.md) |
 
@@ -13,7 +13,7 @@
 
 본 문서는 `dms-core` 문서 관리 SDK를 `fastapi-core` 기반 FastAPI 애플리케이션으로 서빙하는 DocMesh Document Service의 MVP 소프트웨어 요구사항을 정의한다.
 
-서비스는 문서 본문을 MinIO에, 문서 metadata를 PostgreSQL에 저장한다. PostgreSQL과 MinIO는 runtime, 개발, 테스트, 배포의 유일한 저장소 구성이다.
+현재 `.env.example` 배포 template은 문서 본문에 MinIO, metadata에 PostgreSQL을 선택한다. 애플리케이션 계층은 backend를 강제하지 않고 `dms.create_sdk_from_environment(dict(os.environ))`에 위임한다.
 
 본 문서는 다음을 다룬다.
 
@@ -33,7 +33,7 @@
 | 애플리케이션 계층 | `fastapi-core.create_app(...)` 위에 DMS route, dependency, lifespan을 조립한 FastAPI 서비스 |
 | metadata | 문서 ID, 원본 파일명, content type, 크기, 상태, 저장 key, 생성·수정 시각, 작성자, checksum, 사용자 정의 속성 |
 | object | MinIO에 저장되는 문서 본문 |
-| soft delete | metadata 상태를 `deleted`로 전환하는 삭제 방식 |
+| soft delete | object를 삭제하고 metadata 상태를 `deleted`로 보존하는 삭제 방식 |
 | hard delete | object를 삭제하고 metadata 행을 제거하는 삭제 방식 |
 | readiness | 필수 외부 의존성의 준비 상태를 나타내는 HTTP 상태 신호 |
 
@@ -66,7 +66,7 @@ FastAPI application
 | Python | Python 3.11 이상 |
 | 앱 factory | `fastapi-core.create_app(...)` 사용 |
 | DMS SDK | root package `dms`에서 SDK factory, 모델, 오류 타입 import |
-| metadata store | 모든 환경에서 PostgreSQL만 허용 |
+| metadata store | 배포 template은 PostgreSQL 선택; 애플리케이션 계층은 DMS backend를 강제하지 않음 |
 | object store | 모든 환경에서 MinIO 필수 |
 | SDK 조립 | `create_sdk_from_environment(...)` 또는 PostgreSQL/MinIO 구현체를 전달하는 `create_sdk_from_components(...)` 사용 |
 | 저장소 접근 | SQLAlchemy ORM을 사용하며 SQLAlchemy Core 스타일을 사용하지 않음 |
@@ -91,11 +91,11 @@ FastAPI application
 
 | ID | 요구사항 |
 | --- | --- |
-| SRS-STO-001 | 서비스는 모든 환경에서 `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`로 PostgreSQL metadata store를 구성해야 한다. `POSTGRES_DSN`은 사용하지 않는다. |
-| SRS-STO-002 | PostgreSQL 개별 연결 필드가 없거나 연결을 구성할 수 없으면 서비스는 startup을 실패해야 한다. |
+| SRS-STO-001 | PostgreSQL template은 `POSTGRES_HOST`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`와 선택 `POSTGRES_PORT`로 metadata store를 구성한다. port 기본값은 5432이며 권장 구성에서 `POSTGRES_DSN`을 함께 사용하지 않는다. |
+| SRS-STO-002 | PostgreSQL backend를 선택했는데 필수 개별 연결 필드가 없거나 연결을 구성할 수 없으면 SDK 조립 또는 health 단계가 실패한다. |
 | SRS-STO-003 | 서비스는 `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_BUCKET`으로 MinIO object store를 구성해야 한다. |
 | SRS-STO-004 | MinIO bucket 설정이 없거나 MinIO client를 구성할 수 없으면 서비스는 startup을 실패해야 한다. |
-| SRS-STO-005 | PostgreSQL 및 MinIO의 startup health check를 기본 활성화해야 한다. 명시적으로 비활성화하는 개발 설정은 MVP 배포 설정에 포함해서는 안 된다. |
+| SRS-STO-005 | startup health check는 `DOCMESH_HEALTHCHECK_ENABLED`에 따른다. 변수가 없으면 DMS environment factory는 `true`, `fastapi-core AppConfig`는 `false`를 기본으로 사용하며 `.env.example`은 명시적으로 `false`다. readiness의 `dms` check는 별도로 필수 등록된다. |
 | SRS-STO-006 | 원본 filename, `created_by`, 사용자 정의 metadata는 PostgreSQL document metadata에 보관하고 MinIO object metadata에는 저장하지 않아야 한다. |
 | SRS-STO-007 | PostgreSQL metadata에는 MinIO object를 찾기 위한 `storage_key`를 저장해야 한다. |
 
@@ -106,7 +106,7 @@ FastAPI application
 | SRS-SEC-001 | 문서 생성, metadata 조회, 콘텐츠 조회, streaming download, soft delete, hard delete route는 인증된 사용자만 접근할 수 있어야 한다. |
 | SRS-SEC-002 | 인증은 `fastapi-core`의 `get_current_user` dependency 또는 동등한 인증된 사용자 dependency를 사용해야 한다. |
 | SRS-SEC-003 | hard delete는 일반 문서 작업보다 강한 역할 기반 권한 검사(`require_permissions(...)` 또는 동등 정책)를 적용해야 한다. |
-| SRS-SEC-004 | 업로드 request의 `created_by`가 제공되지 않으면 인증된 사용자의 식별자를 사용해야 한다. 호출자가 제공한 `created_by`를 신뢰할지 여부는 API 계약에서 명시하고 권한 없이 다른 사용자로 위조할 수 없게 해야 한다. |
+| SRS-SEC-004 | 업로드 API는 `created_by` 입력 field를 노출하지 않으며 항상 인증된 사용자의 `sub`를 SDK request에 설정한다. 알 수 없는 multipart field는 FastAPI 기본 동작에 따라 route 인자로 사용되지 않는다. |
 | SRS-SEC-005 | 인증 실패는 401, 인증은 됐지만 권한이 부족한 경우는 403으로 응답해야 한다. |
 | SRS-SEC-006 | 운영 CORS origin은 명시적으로 설정해야 하며 credential을 허용하는 배포에서 wildcard origin을 사용해서는 안 된다. |
 
@@ -122,10 +122,10 @@ FastAPI application
 | `original_filename` | 업로드 시 받은 filename |
 | `content_type` | 업로드 시 받은 content type |
 | `file_size` | 저장된 본문 크기 |
-| `status` | `available`, `deleting`, `deleted`, `failed` 중 현재 상태 |
+| `status` | `uploaded`, `available`, `deleting`, `deleted`, `failed` 중 현재 상태 |
 | `created_at`, `updated_at` | 서버가 관리하는 시각 |
 | `deleted_at` | soft delete된 경우의 시각, 그 외 `null` |
-| `created_by` | 인증된 사용자 또는 허용된 호출자 값 |
+| `created_by` | 인증된 사용자의 `sub` |
 | `checksum` | 제공값 또는 SDK가 산출한 SHA-256 checksum |
 | `metadata` | 사용자 정의 key/value 정보 |
 
@@ -136,7 +136,7 @@ FastAPI application
 | 현재 상태 | 작업 | 다음 상태/결과 |
 | --- | --- | --- |
 | 신규 | 업로드 성공 | `available` |
-| `available` | soft delete | metadata의 상태와 `deleted_at`만 갱신하여 `deleted` |
+| `available` | soft delete | object 삭제 후 metadata 상태와 `deleted_at`을 갱신하여 `deleted` |
 | `available` | hard delete | `deleting`을 거쳐 metadata 제거 |
 | `deleting` | object 삭제 실패 | best-effort로 `failed` 전환 후 오류 반환 |
 | `deleted` | 일반 metadata/content 조회 | not-found 정책에 따라 차단 |
@@ -145,7 +145,7 @@ FastAPI application
 | ID | 요구사항 |
 | --- | --- |
 | SRS-DOM-001 | 업로드 성공 문서는 `available` 상태의 metadata와 접근 가능한 object를 가져야 한다. |
-| SRS-DOM-002 | soft delete는 MinIO object를 삭제하거나 변경하지 않고 PostgreSQL metadata의 상태를 `deleted`로, `deleted_at`을 삭제 시각으로 갱신해야 한다. |
+| SRS-DOM-002 | soft delete는 MinIO object를 삭제하고 PostgreSQL metadata의 상태를 `deleted`로, `deleted_at`을 삭제 시각으로 갱신해 metadata를 보존한다. |
 | SRS-DOM-003 | hard delete는 object 삭제 후 metadata 행을 제거해야 한다. |
 | SRS-DOM-004 | soft-deleted 문서의 일반 metadata 조회와 콘텐츠 조회는 외부에서 존재 여부를 추론하기 어렵도록 동일한 not-found 정책을 사용해야 한다. |
 | SRS-DOM-005 | 문서 복구와 버전 관리는 MVP에서 제공하지 않아야 한다. |
@@ -163,15 +163,15 @@ FastAPI application
 | metadata 조회 | `GET /documents/{document_id}` | `200 OK` + metadata | 삭제되지 않은 문서 metadata 반환 |
 | 전체 콘텐츠 조회 | `GET /documents/{document_id}/content` | `200 OK` + bytes | 작은 문서에 한해 구현 가능하며 content type 보존 |
 | streaming download | `GET /documents/{document_id}/download` | `200 OK` + streaming body | chunk 단위 body 전송 및 stream close |
-| soft delete | `DELETE /documents/{document_id}` | `200 OK` 또는 `204 No Content` | `hard_delete=False`로 SDK 호출 |
-| hard delete | `DELETE /documents/{document_id}?hard=true` | `200 OK` 또는 `204 No Content` | 강화된 권한 후 `hard_delete=True`로 SDK 호출 |
+| soft delete | `DELETE /documents/{document_id}` | `200 OK` + 삭제 결과 | `sdk.soft_delete_document(...)` 호출 |
+| hard delete | `DELETE /documents/{document_id}?hard=true` | `200 OK` + 삭제 결과 | role 확인 후 `sdk.hard_delete_document(...)` 호출 |
 | liveness | `GET /health/liveness` | `200 OK` | 공통 FastAPI health router 사용 |
 | readiness | `GET /health/readiness` | `200 OK` 또는 `503 Service Unavailable` | PostgreSQL·MinIO 준비 상태 반영 |
 
 | ID | 요구사항 |
 | --- | --- |
-| SRS-API-001 | `POST /documents`는 multipart/form-data 또는 API Reference에서 확정한 바이너리 request 계약으로 본문, filename, content type, 선택 `document_id`, `metadata`, `checksum`을 받아야 한다. |
-| SRS-API-002 | 업로드 route는 입력값을 `UploadDocumentRequest`로 변환해 `sdk.upload_document(...)`를 호출해야 한다. |
+| SRS-API-001 | `POST /documents`는 `multipart/form-data`로 `file`과 선택 `document_id`, `metadata`, `checksum`을 받는다. filename과 content type은 `UploadFile`에서 읽는다. |
+| SRS-API-002 | 업로드 route는 입력값을 `UploadDocumentStreamRequest`로 변환해 `sdk.upload_document_stream(...)`을 호출한다. |
 | SRS-API-003 | 본문이 비어 있거나 filename/content type이 trim 후 비어 있으면 저장소 호출 전에 validation 오류를 반환해야 한다. |
 | SRS-API-004 | 지정된 `document_id`가 이미 존재하면 duplicate 오류를 반환해야 한다. |
 | SRS-API-005 | `GET /documents/{document_id}`는 `sdk.get_document_metadata(...)`를 호출하고 `dms.public_metadata(...)` 경계를 거쳐 metadata를 직렬화해야 한다. |
@@ -216,6 +216,9 @@ DMS route 오류는 다음 최소 구조를 사용해야 한다. 최종 Pydantic
 | `StorageError` | 503 Service Unavailable | `OBJECT_STORAGE_ERROR` |
 | `MetadataStoreError` | 503 Service Unavailable | `METADATA_STORE_ERROR` |
 | `ConsistencyError` | 500 Internal Server Error | `DOCUMENT_CONSISTENCY_ERROR` |
+| `IdempotencyConflictError` | 409 Conflict | `IDEMPOTENCY_CONFLICT` |
+| `IdempotencyInProgressError` | 409 Conflict | `IDEMPOTENCY_IN_PROGRESS` |
+| `UploadOperationNotFoundError` | 404 Not Found | `UPLOAD_OPERATION_NOT_FOUND` |
 | 인증 실패 | 401 Unauthorized | `UNAUTHENTICATED` |
 | 권한 부족 | 403 Forbidden | `FORBIDDEN` |
 | 정의되지 않은 내부 오류 | 500 Internal Server Error | `INTERNAL_ERROR` |
@@ -241,22 +244,22 @@ DMS route 오류는 다음 최소 구조를 사용해야 한다. 최종 Pydantic
 | SRS-OPS-004 | DMS 필수 의존성 외 선택 서비스가 활성화된 경우에만 선택 서비스 실패에 대해 200 `status=degraded`를 반환할 수 있다. |
 | SRS-OPS-005 | readiness response의 서비스 오류 상세는 secret과 내부 endpoint를 마스킹해야 한다. |
 
-### 8.2 로깅 및 추적성
+### 8.2 로깅 및 추적성의 현재 구현
 
-| ID | 요구사항 |
+| ID | 현재 상태 |
 | --- | --- |
-| SRS-OBS-001 | 모든 DMS 요청은 correlation ID를 생성 또는 전달받아 request scope에 유지해야 한다. |
-| SRS-OBS-002 | 업로드, metadata 조회, 콘텐츠 조회, download, soft delete, hard delete, health check 결과를 구조화 로그로 남겨야 한다. |
-| SRS-OBS-003 | 구조화 로그에는 최소 `event`, `correlation_id`, `operation`, `outcome`, `document_id`(있는 경우), `status_code`, 오류 코드, latency를 포함해야 한다. |
-| SRS-OBS-004 | consistency 오류, startup 실패, shutdown/stream close 실패는 error-level 로그와 운영 알림 대상 이벤트로 기록해야 한다. |
-| SRS-OBS-005 | 파일 본문, access token, secret, password, 전체 DSN, MinIO credential은 로그에 기록해서는 안 된다. |
+| SRS-OBS-001 | `fastapi-core` middleware가 correlation ID를 request state와 response header에 유지하고 오류 renderer가 body에 포함한다. |
+| SRS-OBS-002 | 서비스 route 자체에는 작업별 구조화 logging 호출이 없다. dependency 내부 로그 외에 모든 HTTP 작업 결과가 기록된다고 보장하지 않는다. |
+| SRS-OBS-003 | `event`, `operation`, `outcome`, `document_id`, `status_code`, 오류 코드, latency 전체를 포함하는 service 전용 log schema는 구현되어 있지 않다. |
+| SRS-OBS-004 | 운영 알림 publisher는 구현되어 있지 않다. resource close와 SDK 내부 오류는 dependency logging 동작에 따른다. |
+| SRS-OBS-005 | 서비스 오류 renderer는 고정된 안전한 message를 사용한다. 전체 log secret 비노출은 현재 자동화 테스트로 완전히 검증되지 않는다. |
 
 ## 9. 설정 요구사항
 
 | 설정 | 필수 여부 | 요구사항 |
 | --- | --- | --- |
 | `POSTGRES_HOST` | 필수 | PostgreSQL host |
-| `POSTGRES_PORT` | 필수 | PostgreSQL port |
+| `POSTGRES_PORT` | 선택 | PostgreSQL port, 기본 5432 |
 | `POSTGRES_DB` | 필수 | PostgreSQL database |
 | `POSTGRES_USER` | 필수 | PostgreSQL user |
 | `POSTGRES_PASSWORD` | 필수 | PostgreSQL password |
@@ -267,7 +270,7 @@ DMS route 오류는 다음 최소 구조를 사용해야 한다. 최종 Pydantic
 | `MINIO_SECRET_KEY` | 필수 | MinIO 비밀 키 |
 | `MINIO_BUCKET` | 필수 | 문서 본문 bucket |
 | `MINIO_SECURE` | 선택 | MinIO TLS 사용 여부 |
-| `DOCMESH_HEALTHCHECK_ENABLED` | 선택 | 기본 `true`; MVP 배포에서 `false` 사용 금지 |
+| `DOCMESH_HEALTHCHECK_ENABLED` | 선택 | DMS factory 기본 `true`, AppConfig 기본 `false`; 명시 설정 권장 |
 | `ROOT_PATH` | 선택 | reverse proxy 하위 경로 |
 | `TOKEN_URL` | 인증 사용 시 필수 | OpenAPI OAuth2 token URL |
 | `CORS_ORIGINS` | 운영 필수 | 허용 origin CSV |
@@ -278,7 +281,7 @@ DMS route 오류는 다음 최소 구조를 사용해야 한다. 최종 Pydantic
 | `KEYCLOAK_URL` | 필수 | Keycloak base URL |
 | `KEYCLOAK_REALM` | 필수 | 인증 realm |
 | `KEYCLOAK_CLIENT_ID` | 필수 | OAuth2 client ID |
-| `KEYCLOAK_CLIENT_SECRET` | 필수 | OAuth2 client secret |
+| `KEYCLOAK_CLIENT_SECRET` | 조건부 | `KEYCLOAK_CLIENT_PUBLIC=false`일 때 OAuth2 client secret |
 
 | ID | 요구사항 |
 | --- | --- |
@@ -308,15 +311,15 @@ DMS route 오류는 다음 최소 구조를 사용해야 한다. 최종 Pydantic
 | 앱 조립 및 lifecycle | SRS-ARC-001 ~ SRS-ARC-007 |
 | PostgreSQL·MinIO 운영 구성 | SRS-STO-001 ~ SRS-STO-007, SRS-CFG-001 ~ SRS-CFG-004 |
 | 인증 및 권한 | SRS-SEC-001 ~ SRS-SEC-006 |
-| 문서 lifecycle | SRS-DOM-001 ~ SRS-DOM-005, SRS-API-001 ~ SRS-API-012 |
+| 문서 lifecycle | SRS-DOM-001 ~ SRS-DOM-005, SRS-API-001 ~ SRS-API-013 |
 | 오류 및 정합성 | SRS-ERR-001 ~ SRS-ERR-006 |
 | readiness 및 관측성 | SRS-OPS-001 ~ SRS-OPS-005, SRS-OBS-001 ~ SRS-OBS-005 |
 | 품질 및 테스트 | SRS-NFR-001 ~ SRS-NFR-008 |
 
-## 12. 구현 전 확인 항목
+## 12. 현재 확인 결과와 남은 검증
 
-1. `dms-core` version `v0.4.0`에서 PostgreSQL adapter가 개별 `POSTGRES_*` 필드로 정상 조립되는지 통합 테스트로 확인한다.
-2. `fastapi-core` version `v0.4.0`의 managed resource lifecycle에서 DMS SDK 종료가 누락되지 않는지 startup·shutdown 예외 경로를 포함해 확인한다.
-3. DMS SDK `check_health()`를 필수 `dms` managed resource health check로 등록하고, 실패 시 readiness 503을 반환하는지 테스트한다.
-4. upload payload의 최종 형식(multipart/form-data 또는 binary body), hard delete 권한 role, deleted 문서의 HTTP 응답 세부사항은 [API Reference](api.md)에서 확정한다.
-5. `docmesh-py-core` 설정 loader가 DMS 이외의 fallback 설정을 요구할 수 있으므로, 운영 배포에서 필요한 최소 설정을 실제 startup 테스트로 확정한다.
+1. 고정된 DMS dependency의 PostgreSQL/MinIO 조립과 실제 upload/download/health 경로를 통합 테스트한다. HTTP hard delete는 test user에게 `document:delete:hard` role이 있을 때만 실행되고 없으면 skip된다.
+2. managed resource가 DMS SDK를 한 번 생성·재사용하고 정상 종료 시 close하며 close 실패를 처리하는 동작을 단위 테스트한다. SDK 생성 후 다른 startup 단계 실패 경로는 별도 검증하지 않는다.
+3. DMS SDK `check_health()`는 필수 `dms` managed resource check로 등록되어 readiness 실패 시 503을 반환한다.
+4. upload는 `multipart/form-data`, hard delete role은 `document:delete:hard`, deleted 문서의 일반 읽기는 404로 확정되어 있다.
+5. 현재 미검증 범위는 HTTP readiness 장애·복구, soft delete 통합 경로, 저장 실패 보상/정합성 장애 주입, iterator 예외/client disconnect close, OpenAPI 오류·binary schema다.

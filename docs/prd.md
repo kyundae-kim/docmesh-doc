@@ -4,8 +4,8 @@
 | --- | --- |
 | 제품명 | DocMesh Document Service |
 | 문서 상태 | Draft |
-| 버전 | 0.1 |
-| 작성일 | 2026-07-11 |
+| 버전 | 0.2 |
+| 최종 코드 대조일 | 2026-07-18 |
 | 대상 릴리스 | MVP |
 | 제품 한 줄 정의 | `dms-core`의 문서 관리 기능을 `fastapi-core` 기반 FastAPI 컴포넌트로 제공하는 HTTP Document Management Service |
 
@@ -19,7 +19,7 @@ DocMesh Document Service는 다음의 역할 분리를 제품화한다.
 - **`fastapi-core`**: 앱 factory, 공통 health, 인증 router, 설정, readiness, lifecycle을 제공하는 FastAPI 컴포넌트 계층
 - **DocMesh Document Service**: 위 두 컴포넌트를 조립해 소비 시스템에 안정적인 HTTP API를 제공하는 배포 가능 제품
 
-문서 본문은 MinIO object store에, 문서 메타데이터는 모든 환경에서 PostgreSQL에 보관한다.
+현재 배포 template은 문서 본문에 MinIO, metadata에 PostgreSQL을 선택한다. 애플리케이션 계층은 backend를 강제하지 않고 DMS 환경 factory에 위임한다.
 
 ## 2. 제품 비전 및 목표
 
@@ -103,13 +103,13 @@ DocMesh Document Service는 다음의 역할 분리를 제품화한다.
 
 1. 소비 애플리케이션이 문서 ID와 삭제 방식(soft 또는 hard)을 지정한다.
 2. 서비스는 호출 권한 및 문서 상태를 검증한다.
-3. soft delete는 metadata를 `deleted` 상태로 남기고, hard delete는 object와 metadata를 제거한다.
+3. soft delete는 object를 삭제하고 metadata를 `deleted` 상태로 남기며, hard delete는 object와 metadata를 제거한다.
 4. 삭제 진행 중 상태는 `deleting`으로 관리하며, 저장소 작업 실패는 표준 오류 응답과 운영 로그로 남긴다.
 
 ### 5.4 서비스 시작 및 상태 점검
 
 1. 애플리케이션은 `fastapi-core.create_app(...)`으로 조립된다.
-2. custom lifespan에서 DMS SDK를 생성하고 필요 시 startup health check를 수행한다.
+2. `ManagedResource(name="dms")` factory가 DMS SDK를 생성하고 설정에 따라 startup health check를 수행한다.
 3. SDK 인스턴스는 route dependency가 접근할 수 있는 application state 경계에 보관한다.
 4. 종료 시 SDK와 열린 외부 자원을 close한다.
 5. 운영 플랫폼은 liveness와 readiness endpoint로 프로세스 및 필수 의존성 상태를 판정한다.
@@ -121,7 +121,7 @@ DocMesh Document Service는 다음의 역할 분리를 제품화한다.
 | ID | 요구사항 | 우선순위 | 수용 기준 |
 | --- | --- | --- | --- |
 | FR-APP-001 | 서비스는 `fastapi-core.create_app(...)`을 기반으로 FastAPI 앱을 생성해야 한다. | Must | 앱이 공통 health router 및 설정/state를 포함해 기동된다. |
-| FR-APP-002 | DMS SDK는 custom lifespan에서 한 번 생성하고 종료 시 close해야 한다. | Must | 정상 종료 및 기동 실패 경로에서 SDK close가 테스트로 검증된다. |
+| FR-APP-002 | DMS SDK는 `ManagedResource` lifespan에서 한 번 생성하고 종료 시 close해야 한다. | Must | 정상 종료와 close 실패 동작이 단위 테스트로 검증된다. SDK 생성 후 다른 startup 단계 실패 경로는 현재 별도 검증하지 않는다. |
 | FR-APP-003 | DMS route는 SDK 구현체를 직접 생성하지 않고 전용 FastAPI dependency를 통해 SDK를 획득해야 한다. | Must | route 단위 테스트에서 dependency override가 가능하다. |
 | FR-APP-004 | 서비스는 `GET /health/liveness`와 `GET /health/readiness`를 제공해야 한다. | Must | liveness는 프로세스 생존, readiness는 필수 의존성 상태를 반환한다. |
 | FR-APP-005 | 모든 문서 작업 route에 인증 dependency를 적용하고 hard delete에는 강화된 권한 dependency를 적용해야 한다. | Must | 인증되지 않거나 권한 없는 요청은 문서 작업을 수행할 수 없다. |
@@ -157,7 +157,7 @@ DocMesh Document Service는 다음의 역할 분리를 제품화한다.
 
 | ID | 요구사항 | 우선순위 | 수용 기준 |
 | --- | --- | --- | --- |
-| FR-OPS-001 | 서비스는 모든 환경에서 PostgreSQL을 metadata store, MinIO를 object store로 사용해야 한다. | Must | 두 의존성이 설정·연결되고 startup/readiness 검증 대상에 포함된다. |
+| FR-OPS-001 | 현재 배포 template은 PostgreSQL을 metadata store, MinIO를 object store로 선택해야 한다. | Must | `DMS_METADATA_BACKEND=postgresql`과 개별 `POSTGRES_*`, `MINIO_*`가 환경에 제공된다. 애플리케이션 코드는 다른 DMS backend를 거부하지 않는다. |
 | FR-OPS-003 | MinIO bucket 또는 metadata store 설정이 누락되면 서비스는 정상 준비 상태가 되면 안 된다. | Must | 구성 오류가 기동 실패 또는 readiness 실패로 드러난다. |
 | FR-OPS-004 | `ROOT_PATH`, `TOKEN_URL`, CORS, 활성 서비스, 필수 readiness 서비스를 환경 설정으로 명시할 수 있어야 한다. | Must | reverse proxy 및 배포별 URL/health 정책이 코드 변경 없이 적용된다. |
 | FR-OPS-005 | 운영 secret과 DSN은 외부 secret 주입 또는 명시적 환경변수로 제공해야 하며 로그에 원문을 남기면 안 된다. | Must | 설정/로그 점검에서 credential 노출이 없다. |
@@ -171,7 +171,7 @@ DocMesh Document Service는 다음의 역할 분리를 제품화한다.
 | 데이터 정합성 | 업로드는 본문 저장 후 metadata 저장 순서를 따르며, 실패 보상과 consistency 오류 추적을 제공한다. |
 | 성능/자원 | 대용량 다운로드는 streaming으로 제공하고, stream과 SDK는 예외·종료 경로를 포함해 반드시 close한다. |
 | 가용성 | liveness와 readiness를 분리한다. readiness는 DMS 필수 의존성 상태를 반영한다. |
-| 관측성 | 요청 ID 또는 상관 ID, 문서 ID, 작업 종류, 결과, 오류 유형을 구조화 로그로 남긴다. 파일 본문·access token·secret은 로그에 남기지 않는다. |
+| 관측성 | `fastapi-core` middleware가 correlation ID를 응답과 오류 envelope에 제공한다. 현재 서비스 route에는 문서 ID·작업·결과·latency를 모두 기록하는 전용 구조화 request log가 없다. |
 | 호환성 | Python 3.11 이상 및 저장소에 고정된 `dms`, `fastapi-core`, `docmesh-py-core` 의존성 버전과 호환되어야 한다. |
 | 테스트 | unit test는 request 변환·오류 매핑·dependency를, integration test는 PostgreSQL·MinIO·lifecycle·health를 검증한다. |
 
@@ -180,7 +180,7 @@ DocMesh Document Service는 다음의 역할 분리를 제품화한다.
 ### 8.1 API 설계 원칙
 
 - API는 HTTP resource 중심으로 문서 생성, 목록·metadata 조회, 콘텐츠 다운로드, 삭제를 제공한다.
-- upload는 multipart/form-data 또는 확정된 바이너리 전송 계약을 사용하며, filename과 content type은 명시적으로 받는다.
+- upload는 `multipart/form-data`를 사용한다. filename과 content type은 `UploadFile`에서 읽고 별도 form field로 받지 않는다.
 - 다운로드는 저장된 content type과 안전한 `Content-Disposition` 정책을 적용한다.
 - metadata response에는 최소한 document ID, filename, content type, 크기, 상태, 생성/수정 시각, created_by, checksum, 사용자 metadata를 포함한다.
 - API 오류 응답에는 기계 판독 가능한 오류 코드와 요청 상관 ID를 포함한다. 내부 stack trace, credential, 저장소 endpoint 상세는 외부 응답에 노출하지 않는다.
@@ -189,9 +189,11 @@ DocMesh Document Service는 다음의 역할 분리를 제품화한다.
 
 | 상태 | 의미 | 허용 작업 |
 | --- | --- | --- |
+| `uploaded` | object 저장 후 metadata lifecycle이 진행 중인 SDK 상태 | 목록 status filter에서 사용 가능 |
 | `available` | 본문과 metadata가 정상적으로 사용 가능한 문서 | metadata 조회, 다운로드, 삭제 |
 | `deleting` | 삭제 작업이 진행 중인 문서 | 재시도/조회 정책은 API 계약에서 제한적으로 정의 |
 | `deleted` | soft delete된 문서 | 일반 다운로드·조회 차단, 복구는 MVP 범위 밖 |
+| `failed` | SDK 작업이 실패한 문서 | 목록 status filter에서 사용 가능; 일반 읽기 차단은 현재 `deleted` 상태에만 명시 적용 |
 | hard deleted | object와 metadata가 제거된 문서 | 일반 API로 조회 불가 |
 
 ## 9. 배포 아키텍처 및 의존성 경계
@@ -212,25 +214,22 @@ DocMesh Document Service (FastAPI)
 - app factory, 공통 health, app state, CORS, 공통 설정과 readiness 정책은 `fastapi-core`의 책임이다.
 - 메시지 broker 연결이 필요해도 DMS SDK의 기능으로 간주하지 않으며, 서비스의 별도 lifecycle 확장으로 설계한다.
 
-## 10. 출시 수용 기준
+## 10. 현재 구현 기준선과 미검증 항목
 
-MVP는 다음 모두를 만족할 때 출시 가능하다.
+현재 코드와 자동화 테스트에서 확인되는 기준선은 다음과 같다.
 
-1. `fastapi-core` 기반 앱이 기동하고 liveness/readiness endpoint가 동작한다.
-2. PostgreSQL + MinIO 환경에서 파일 업로드 후 metadata 조회와 streaming 다운로드가 가능하다.
-3. soft delete와 권한이 제한된 hard delete가 API 계약대로 동작한다.
-4. 미존재 문서, 삭제 문서, 중복 문서, validation, storage, configuration, consistency 오류의 응답 계약이 테스트된다.
-5. object 저장 후 metadata 저장 실패 및 cleanup 실패 시나리오가 테스트되며, 정합성 오류가 운영 로그에서 식별된다.
-6. 필수 의존성 장애 시 readiness가 503을, 선택 의존성 장애 시 degraded 상태를 반환한다.
-7. 인증·권한·CORS·secret 주입이 운영 환경에서 명시적으로 설정되고, secret/파일 본문이 로그에 노출되지 않는다.
-8. SDK 및 response stream의 정상·오류·shutdown 정리 경로가 테스트된다.
-9. API Reference, 설정 정의서, 메시지 정의서, 테스트 정의서가 본 PRD의 범위 및 정책과 모순 없이 작성된다.
+1. `fastapi-core` 기반 앱 조립, DMS managed resource, liveness/readiness route가 구현되어 있다.
+2. route/API 테스트는 upload 변환, 목록·metadata, streaming download, soft-deleted content guard, 삭제 권한, 오류 envelope, resource lifecycle을 검증한다. 정상 `/content` body/header 계약은 현재 별도 검증하지 않는다.
+3. 저장소 통합 테스트는 실제 PostgreSQL·MinIO의 upload, 목록·metadata, streaming download와 SDK health를 검증한다. HTTP hard delete는 test user role이 있을 때만 실행되고 없으면 skip된다.
+4. 현재 통합 테스트가 검증하지 않는 항목은 HTTP `/content`, soft delete, HTTP readiness, 저장소 장애·복구, cleanup 실패, 실제 무인증 401, OpenAPI 오류/binary schema다.
+5. streaming iterator 예외와 client disconnect 시 close는 구현의 `finally`에 의존하며 현재 테스트는 정상 완료 close만 검증한다.
+6. 출시 판단 시 위 미검증 항목을 요구하는 조직 정책이 있다면 별도 release gate로 추가해야 한다. 현 문서는 이를 이미 자동화된 것으로 주장하지 않는다.
 
 ## 11. 가정, 제약 및 미결 사항
 
 | 구분 | 내용 | 결정 필요 시점 |
 | --- | --- | --- |
-| 가정 | PostgreSQL은 모든 환경의 metadata store이며, MinIO는 모든 환경에서 필수다. | MVP 구현 전 |
+| 현재 배포 선택 | `.env.example`은 PostgreSQL metadata store와 MinIO object store를 선택한다. 애플리케이션 계층은 metadata backend를 강제하지 않는다. | dependency 구성 변경 시 |
 | 제약 | 현재 수집된 `dms-core`/`fastapi-core` 문서는 직접적인 FastAPI adapter의 확정 구현을 제공하지 않는다. 서비스 route·dependency·오류 매핑은 본 제품에서 정의·검증해야 한다. | SRS/API 설계 |
 | 제약 | 참조 문서 간 내부 버전 표기와 Git tag가 일치하지 않을 수 있다. 실제 배포 전 잠금된 패키지의 public API를 테스트로 검증한다. | 의존성 업그레이드 및 release 전 |
 | 미결 | soft-deleted 문서의 관리자 조회·복구 정책 | MVP 이후 또는 보안 정책 확정 시 |

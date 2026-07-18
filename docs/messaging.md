@@ -4,8 +4,8 @@
 | --- | --- |
 | 제품명 | DocMesh Document Service |
 | 문서 상태 | Draft |
-| 버전 | 0.1 |
-| 작성일 | 2026-07-12 |
+| 버전 | 0.2 |
+| 최종 코드 대조일 | 2026-07-18 |
 | 참조 문서 | [PRD](prd.md), [SRS](srs.md), [설정 정의서](config.md), [테스트 정의서](test.md) |
 
 ## 1. 목적과 범위
@@ -32,7 +32,8 @@ MVP의 문서 upload, 조회, download, soft/hard delete는 동기 HTTP API와 `
 - `AppConfig.enabled_services` / `DOCMESH_SERVICES`: 조립 대상 서비스 목록
 - `AppConfig.required_services` / `READINESS_REQUIRED_SERVICES`: 실패 시 readiness 503을 유발할 필수 서비스 목록
 - `app.state.service_runtime`: 조립된 client 또는 builder와 lifecycle을 소유하는 runtime
-- `app.state.service_runtime.checks`: 실제 생성된 readiness check
+- `app.state.service_runtime.checks`: service runtime client에서 파생된 check map
+- `app.state.readiness_registry.specs`: `/health/readiness`가 실제 실행하는 등록 check
 - `app.state.service_runtime.selected_services`: 조립 대상으로 선택된 서비스 집합
 - `app.state.service_runtime.required_services`: 필수 서비스 집합
 - `get_nats_connection_builder()`: NATS connection builder dependency
@@ -62,8 +63,8 @@ READINESS_REQUIRED_SERVICES=keycloak,nats
 설정 원칙:
 
 1. `NATS_TOKEN`, password, credentials file 내용은 secret store 또는 권한이 제한된 환경변수로 주입한다.
-2. `DOCMESH_SERVICES`, `READINESS_REQUIRED_SERVICES`를 빈 문자열로 설정하지 않는다. 기본값을 사용하려면 변수를 제거한다.
-3. `enabled_services` metadata와 실제 client/readiness check 생성은 별개다. 설정 객체가 없거나 지원되지 않는 서비스는 enabled metadata에 남아도 check가 생성되지 않을 수 있다.
+2. `DOCMESH_SERVICES`와 `READINESS_REQUIRED_SERVICES`의 빈 문자열은 빈 목록을 뜻한다. 변수를 제거하면 기본값 `keycloak`이 적용되므로 두 설정은 서로 다르다.
+3. 미지원 service 이름은 runtime plan 생성 시 validation 오류가 된다. 선택된 service에 필수 설정이 없을 때도 해당 설정 model validation이 실패할 수 있다. selected metadata와 실제 readiness 등록 상태는 별도로 확인한다.
 4. NATS readiness는 PostgreSQL·MinIO를 검사하는 DMS SDK health를 대체하지 않는다.
 
 ## 5. Readiness 정책
@@ -76,7 +77,7 @@ READINESS_REQUIRED_SERVICES=keycloak,nats
 | 선택 NATS check 실패 | 200 | `degraded` |
 | 필수 NATS check 실패 | 503 | `error` |
 
-운영 검증에서는 enabled metadata만 확인하지 않고 `app.state.service_runtime.checks`에 `nats` check가 실제 등록되었는지 확인해야 한다.
+운영 검증에서는 enabled metadata만 확인하지 않고 `/health/readiness`가 사용하는 `app.state.readiness_registry.specs`에 `nats` check가 실제 등록되었는지 확인해야 한다. `app.state.service_runtime.checks`는 runtime client에서 파생된 중간 map이다.
 
 ## 6. Lifecycle 정책
 
@@ -145,6 +146,7 @@ MVP에는 표준 event가 없다. 향후 event를 추가할 때는 구현 전에
 
 ## 9. 현재 결정
 
+- 현재 `docmesh_doc` 소스에는 NATS connection, publisher, subscriber, event handler 또는 custom messaging lifespan 구현이 없다.
 - MVP에서는 NATS를 필수 의존성으로 사용하지 않는다.
 - `dms-core`에는 메시징 책임을 추가하지 않는다.
 - `fastapi-core`의 NATS builder와 readiness는 hosting-layer 확장 지점으로만 사용한다.
