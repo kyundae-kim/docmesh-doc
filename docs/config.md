@@ -18,6 +18,18 @@
 - secret은 source code나 문서의 실제 값으로 제공하지 않는다. 배포 플랫폼의 secret store 또는 권한이 제한된 환경변수로 주입한다.
 - `fastapi-core` 개발 fallback은 운영 설정으로 사용하지 않는다.
 
+### 1.1 추적성 설정 그룹
+
+공개 API와 설정을 역방향으로 추적하기 위해 다음 안정 그룹 ID를 사용한다. 개별 변수의 계약은 아래 표와 절이 소유한다.
+
+| 설정 그룹 ID | 범위 | 정의 위치 |
+| --- | --- | --- |
+| `CFG-DMS` | DMS backend 선택, strict validation, SDK health policy | §4.1, §5 |
+| `CFG-STORAGE` | 개별 `POSTGRES_*`, `MINIO_*` | §3, §3.1, §3.2, §5 |
+| `CFG-HTTP` | public prefix, OAuth2 URL, CORS, logging | §4.2, §5 |
+| `CFG-AUTH` | Keycloak 인증과 hard-delete role mapping | §4.3, §5 |
+| `CFG-READINESS` | 공통 service 선택, required/optional 정책과 timeout | §4.1, §4.2, §4.4, §5 |
+
 ## 2. 설정 로딩 및 우선순위
 
 `AppConfig`는 `fastapi-core` 설정 loader를 사용하지만 DMS SDK factory에는 `dict(os.environ)`이 직접 전달된다. 따라서 DMS 설정은 dotenv 파일을 두기만 해서는 읽히지 않으며 실행 프로세스 environment로 export하거나 배포 도구가 environment로 주입해야 한다. 현재 저장소에는 root `docker-compose.yml`이 없으므로 특정 Compose env-file 경로를 전제하지 않는다.
@@ -279,3 +291,21 @@ curl --fail --silent --show-error \
 | readiness 정책 | SRS-OPS-001 ~ SRS-OPS-005 |
 | API 공개 경로 | [API Reference](api.md) §1, §5 |
 | API 호출 예시 | [API 사용 예시](examples.md) |
+
+## 10. 공개 API 설정 추적성
+
+`직접`은 해당 설정 없이는 route의 위치·인증·동작 또는 준비 상태가 바뀌는 경우이고, `간접`은 애플리케이션 조립·logging·선택 service 정책을 통해 영향을 받는 경우다. 모든 application path에는 배포 시 `ROOT_PATH`가 공통 적용된다.
+
+| API ID | 직접 설정 그룹 | 주요 변수/정책 | 간접 설정 그룹 |
+| --- | --- | --- | --- |
+| `API-AUTH-001` | `CFG-AUTH`, `CFG-HTTP` | `KEYCLOAK_*`, `TOKEN_URL`, `ROOT_PATH` | `CFG-READINESS`, logging |
+| `API-AUTH-002` | `CFG-AUTH`, `CFG-HTTP` | `KEYCLOAK_*`, `ROOT_PATH` | `CFG-READINESS`, logging |
+| `API-DOC-001`, `API-DOC-002`, `API-DOC-003`, `API-DOC-004`, `API-DOC-005`, `API-DOC-006`, `API-DOC-007` | `CFG-DMS`, `CFG-STORAGE`, `CFG-AUTH`, `CFG-HTTP` | `DMS_METADATA_BACKEND`, `DMS_CONFIGURATION_STRICT`, `POSTGRES_*`, `MINIO_*`, `KEYCLOAK_*`, `ROOT_PATH` | `CFG-READINESS`, CORS, logging |
+| `API-DOC-007` 추가 정책 | `CFG-AUTH` | Keycloak role mapping에 `document:delete:hard` 부여 | hard-delete 승인·감사 정책은 애플리케이션 설정 밖의 운영 정책 |
+| `API-OPS-001` | `CFG-HTTP` | `ROOT_PATH` | logging |
+| `API-OPS-002` | `CFG-DMS`, `CFG-STORAGE`, `CFG-READINESS`, `CFG-HTTP` | `DOCMESH_HEALTHCHECK_ENABLED`, storage 연결, `DOCMESH_SERVICES`, `READINESS_*`, `ROOT_PATH` | logging |
+| `API-SYS-001`, `API-SYS-002`, `API-SYS-003`, `API-SYS-004` | `CFG-HTTP` | `ROOT_PATH`, `TOKEN_URL` | `CFG-AUTH`는 Swagger OAuth2 사용 시 필요; 외부 공개 여부는 reverse proxy 정책 |
+| `API-HOST-001` | 모든 그룹 | `AppConfig` parameter와 process environment 전체 | SDK를 직접 주입하면 DMS environment factory 조립만 우회 |
+| `API-HOST-002` | 모든 그룹 | process environment, `pyproject.toml` entrypoint | ASGI server worker/timeout 설정은 이 문서 범위 밖 |
+
+API ID의 method/path/계약은 [API Reference §2](api.md#2-endpoint-요약), 실행 가능한 소비 예시는 [API 사용 예시 §9](examples.md#9-공개-api-예시-추적성)를 참조한다. `include_auth_router=False`로 `API-HOST-001`을 호출하면 `API-AUTH-001`과 `API-AUTH-002`는 등록되지 않는다. 나머지 HTTP API와 문서 지원 endpoint는 유지된다.
