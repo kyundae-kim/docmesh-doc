@@ -64,6 +64,20 @@ def test_stream_is_closed_after_download():
     assert sdk.stream_closed is True
 
 
+def test_content_routes_delegate_readability_check_to_sdk_without_duplicate_metadata_lookup():
+    sdk = FakeSDK()
+
+    with client_for(sdk) as client:
+        content_response = client.get("/documents/doc-1/content")
+        download_response = client.get("/documents/doc-1/download")
+
+    assert content_response.status_code == 200
+    assert download_response.status_code == 200
+    assert sdk.metadata_calls == 0
+    assert sdk.content_calls == 1
+    assert sdk.content_stream_calls == 1
+
+
 def test_soft_deleted_documents_are_hidden_from_read_routes():
     sdk = FakeSDK()
     sdk.get_document_metadata = lambda document_id: replace(
@@ -71,6 +85,15 @@ def test_soft_deleted_documents_are_hidden_from_read_routes():
         status=dms.DocumentStatus.DELETED,
         deleted_at=NOW,
     )
+
+    def deleted_content(document_id, **_kwargs):
+        raise dms.DocumentDeletedError(
+            "document is deleted",
+            document_id=document_id,
+        )
+
+    sdk.get_document_content = deleted_content
+    sdk.get_document_content_stream = deleted_content
 
     with client_for(sdk) as client:
         responses = (

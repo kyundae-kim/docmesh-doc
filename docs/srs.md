@@ -13,7 +13,7 @@
 
 본 문서는 `dms-core` 문서 관리 SDK를 `fastapi-core` 기반 FastAPI 애플리케이션으로 서빙하는 DocMesh Document Service의 MVP 소프트웨어 요구사항을 정의한다.
 
-현재 `.env.example` 배포 template은 문서 본문에 MinIO, metadata에 PostgreSQL을 선택한다. 애플리케이션 계층은 backend를 강제하지 않고 `dms.create_sdk_from_environment(dict(os.environ))`에 위임한다.
+현재 `.env.example` 배포 template은 문서 본문에 MinIO, metadata에 PostgreSQL을 선택한다. 애플리케이션 계층은 backend를 강제하지 않고 process environment를 직접 읽는 `dms.create_sdk_from_environment()`에 위임한다.
 
 본 문서는 다음을 다룬다.
 
@@ -174,7 +174,7 @@ FastAPI application
 | SRS-API-002 | 업로드 route는 입력값을 `UploadDocumentStreamRequest`로 변환해 `sdk.upload_document_stream(...)`을 호출한다. |
 | SRS-API-003 | 본문이 비어 있거나 filename/content type이 trim 후 비어 있으면 저장소 호출 전에 validation 오류를 반환해야 한다. |
 | SRS-API-004 | 지정된 `document_id`가 이미 존재하면 duplicate 오류를 반환해야 한다. |
-| SRS-API-005 | `GET /documents/{document_id}`는 `sdk.get_document_metadata(...)`를 호출하고 `dms.public_metadata(...)` 경계를 거쳐 metadata를 직렬화해야 한다. |
+| SRS-API-005 | `GET /documents/{document_id}`는 공개 안전 metadata를 반환하는 `sdk.get_document_metadata(...)` 결과를 응답 allowlist schema로 직렬화해야 한다. |
 | SRS-API-006 | `GET /documents/{document_id}/content`는 `sdk.get_document_content(...)`를 호출하고 저장된 content type과 안전한 filename disposition을 유지해야 한다. |
 | SRS-API-007 | `GET /documents/{document_id}/download`는 `sdk.get_document_content_stream(...)` 결과를 `StreamingResponse`로 변환해야 한다. |
 | SRS-API-008 | streaming response는 `DocumentContentStream.iter_chunks()`를 사용하고, 완료·클라이언트 연결 종료·예외 경로 모두에서 `DocumentContentStream.close()`를 호출해야 한다. |
@@ -182,7 +182,7 @@ FastAPI application
 | SRS-API-010 | soft delete route는 `sdk.soft_delete_document(document_id)`를 호출해야 한다. |
 | SRS-API-011 | hard delete route는 권한 확인 후 `sdk.hard_delete_document(document_id)`를 호출해야 한다. |
 | SRS-API-012 | 모든 DMS route는 성공 응답에 request correlation ID를 header 또는 확정된 response envelope로 제공해야 한다. |
-| SRS-API-013 | `GET /documents`는 `sdk.list_documents(...)`를 호출하고 각 항목을 `dms.public_metadata(...)`로 변환해 내부 `storage_key`를 제외해야 한다. |
+| SRS-API-013 | `GET /documents`는 공개 안전 metadata를 반환하는 `sdk.list_documents(...)` 결과를 응답 allowlist schema로 직렬화해 내부 `storage_key`를 제외해야 한다. |
 
 ## 7. 정합성 및 오류 처리 요구사항
 

@@ -52,6 +52,9 @@ class FakeSDK:
         self.delete_call = None
         self.list_args = None
         self.stream_closed = False
+        self.metadata_calls = 0
+        self.content_calls = 0
+        self.content_stream_calls = 0
 
     def upload_document(self, request):
         self.upload_request = request
@@ -72,6 +75,7 @@ class FakeSDK:
         )
 
     def get_document_metadata(self, document_id):
+        self.metadata_calls += 1
         if document_id == "missing":
             raise dms.DocumentNotFoundError(document_id)
         return public_metadata(document_id)
@@ -81,6 +85,7 @@ class FakeSDK:
         return [public_metadata("doc-1"), public_metadata("doc-2")]
 
     def get_document_content(self, document_id):
+        self.content_calls += 1
         return dms.DocumentContent(
             document_id=document_id,
             content=b"pdf",
@@ -90,6 +95,7 @@ class FakeSDK:
         )
 
     def get_document_content_stream(self, document_id, *, chunk_size=65536):
+        self.content_stream_calls += 1
         return dms.DocumentContentStream(
             document_id=document_id,
             stream=BytesIO(b"pdf"),

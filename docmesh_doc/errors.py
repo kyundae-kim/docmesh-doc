@@ -17,6 +17,9 @@ ERRORS = {
     dms.DocumentNotFoundError: _error(
         404, "DOCUMENT_NOT_FOUND", "Document was not found."
     ),
+    dms.DocumentDeletedError: _error(
+        404, "DOCUMENT_NOT_FOUND", "Document was not found."
+    ),
     dms.DuplicateDocumentError: _error(
         409, "DOCUMENT_ALREADY_EXISTS", "Document already exists."
     ),

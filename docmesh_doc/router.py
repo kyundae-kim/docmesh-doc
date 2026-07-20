@@ -64,7 +64,6 @@ def get_document_metadata(document_id: str, sdk: DmsSdk, user: CurrentUser) -> D
 
 @router.get("/{document_id}/content")
 def get_document_content(document_id: str, sdk: DmsSdk, user: CurrentUser) -> Response:
-    require_readable_document(sdk, document_id)
     item = sdk.get_document_content(document_id)
     return Response(content=item.content, media_type=item.content_type, headers={
         "Content-Length": str(item.size),
@@ -79,7 +78,6 @@ def download_document(
     user: CurrentUser,
     chunk_size: Annotated[int, Query(ge=1)] = 65536,
 ) -> StreamingResponse:
-    require_readable_document(sdk, document_id)
     item = sdk.get_document_content_stream(document_id, chunk_size=chunk_size)
 
     def body():
