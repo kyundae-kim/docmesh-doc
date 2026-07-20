@@ -23,53 +23,6 @@
 
 웹 UI, OCR, 검색, 문서 버전/복구, 비동기 작업 큐, 메시지 event 계약은 MVP 범위 밖이다.
 
-## 2. 용어 및 참조 아키텍처
-
-| 용어 | 정의 |
-| --- | --- |
-| DMS SDK | `dms-core`의 `DefaultDocumentManagementSDK` 및 SDK factory가 제공하는 문서 도메인 기능 |
-| 애플리케이션 계층 | `fastapi-core.create_app(...)` 위에 DMS route, dependency, lifespan을 조립한 FastAPI 서비스 |
-| metadata | 문서 ID, 원본 파일명, content type, 크기, 상태, 저장 key, 생성·수정 시각, 작성자, checksum, 사용자 정의 속성 |
-| object | MinIO에 저장되는 문서 본문 |
-| soft delete | object를 삭제하고 metadata 상태를 `deleted`로 보존하는 삭제 방식 |
-| hard delete | object를 삭제하고 metadata 행을 제거하는 삭제 방식 |
-| readiness | 필수 외부 의존성의 준비 상태를 나타내는 HTTP 상태 신호 |
-
-```text
-HTTP Client
-    │ HTTPS / JSON / multipart or binary body
-    ▼
-FastAPI application
-    ├─ fastapi-core: app factory, common health, auth, config, readiness
-    ├─ DMS routes: request/response conversion, authorization, error mapping
-    └─ dms-core SDK: lifecycle, document operations, storage consistency
-          ├─ PostgreSQL: document metadata
-          └─ MinIO: document content
-```
-
-### 2.1 책임 경계
-
-| 계층 | 책임 | 금지 사항 |
-| --- | --- | --- |
-| DMS route | HTTP parsing, response serialization, authorization, HTTP error mapping, stream response 종료 처리 | route 내부에서 SDK 또는 저장소 client를 직접 생성 |
-| DMS SDK | 문서 lifecycle, metadata/object 정합성, storage protocol 호출, SDK health·close | HTTP request/response 또는 FastAPI exception 직접 처리 |
-| `fastapi-core` | FastAPI app factory, 공통 health/auth router, CORS, app state, service-client readiness | DMS 고유 HTTP resource와 SDK 오류 정책 결정 |
-| PostgreSQL | document metadata 영속화 | 문서 본문 저장 |
-| MinIO | 문서 본문 저장 및 streaming source 제공 | 업무 filename·uploader 같은 document metadata의 저장 |
-
-## 3. 제약 및 의존성
-
-| 항목 | 요구 제약 |
-| --- | --- |
-| Python | Python 3.11 이상 |
-| 앱 factory | `fastapi-core.create_app(...)` 사용 |
-| DMS SDK | root package `dms`에서 SDK factory, 모델, 오류 타입 import |
-| metadata store | 배포 template은 PostgreSQL 선택; 애플리케이션 계층은 DMS backend를 강제하지 않음 |
-| object store | 모든 환경에서 MinIO 필수 |
-| SDK 조립 | `create_sdk_from_environment(...)` 또는 PostgreSQL/MinIO 구현체를 전달하는 `create_sdk_from_components(...)` 사용 |
-| 저장소 접근 | SQLAlchemy ORM을 사용하며 SQLAlchemy Core 스타일을 사용하지 않음 |
-| secret | 환경변수 또는 배포 플랫폼의 secret 주입으로 제공하며 로그·응답에 원문을 노출하지 않음 |
-| package version | 배포 전 잠금된 `dms`, `fastapi-core`, `docmesh-py-core` public API를 통합 테스트로 검증 |
 
 ## 4. 시스템 구성 요구사항
 
@@ -313,11 +266,3 @@ DMS route 오류는 다음 최소 구조를 사용해야 한다. 최종 Pydantic
 | 오류 및 정합성 | SRS-ERR-001 ~ SRS-ERR-006 |
 | readiness 및 관측성 | SRS-OPS-001 ~ SRS-OPS-005, SRS-OBS-001 ~ SRS-OBS-005 |
 | 품질 및 테스트 | SRS-NFR-001 ~ SRS-NFR-008 |
-
-## 12. 현재 확인 결과와 남은 검증
-
-1. 고정된 DMS dependency의 PostgreSQL/MinIO 조립과 실제 upload/download/health 경로를 통합 테스트한다. HTTP hard delete는 test user에게 `document:delete:hard` role이 있을 때만 실행되고 없으면 skip된다.
-2. managed resource가 DMS SDK를 한 번 생성·재사용하고 정상 종료 시 close하며 close 실패를 처리하는 동작을 단위 테스트한다. SDK 생성 후 다른 startup 단계 실패 경로는 별도 검증하지 않는다.
-3. DMS SDK `check_health()`는 필수 `dms` managed resource check로 등록되어 readiness 실패 시 503을 반환한다.
-4. upload는 `multipart/form-data`, hard delete role은 `document:delete:hard`, deleted 문서의 일반 읽기는 404로 확정되어 있다.
-5. 현재 미검증 범위는 HTTP readiness 장애·복구, soft delete 통합 경로, 저장 실패 보상/정합성 장애 주입, iterator 예외/client disconnect close, OpenAPI 오류·binary schema다.
