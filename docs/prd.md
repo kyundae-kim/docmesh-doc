@@ -3,8 +3,6 @@
 | 항목 | 내용 |
 | --- | --- |
 | 제품명 | DocMesh Document Service |
-| 문서 상태 | Draft |
-| 버전 | 0.2 |
 | 최종 코드 대조일 | 2026-07-18 |
 | 대상 릴리스 | MVP |
 | 제품 한 줄 정의 | `dms-core`의 문서 관리 기능을 `fastapi-core` 기반 FastAPI 컴포넌트로 제공하는 HTTP Document Management Service |
