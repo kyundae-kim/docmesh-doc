@@ -4,7 +4,7 @@
 | --- | --- |
 | 제품명 | DocMesh Document Service |
 | 대상 릴리스 | MVP |
-| 최종 코드 대조일 | 2026-07-18 |
+| 최종 코드 대조일 | 2026-07-20 |
 | 제품 정의 | `dms-core` 문서 관리 기능을 `fastapi-core`로 조립해 제공하는 HTTP Document Management Service |
 
 ## 1. 목적
@@ -16,7 +16,7 @@ DocMesh Document Service의 목적은 업무 시스템이 파일 저장소와 �
 ### 1.1 제품 경계
 
 - **`dms-core`**는 문서 업로드·조회·다운로드·삭제·저장소 health를 수행한다.
-- **`fastapi-core`**는 애플리케이션 factory, 공통 health, 인증, 설정, readiness, lifecycle을 제공한다.
+- **`fastapi-core`**는 애플리케이션 factory, 공통 health, 선택적 인증 router, 설정, typed resource, readiness, lifecycle과 오류 rendering 확장점을 제공한다.
 - **DocMesh Document Service**는 두 컴포넌트를 조립하여 배포 가능한 HTTP 서비스로 제공한다.
 
 기본 배포 구성은 문서 본문에 MinIO, 문서 메타데이터에 PostgreSQL을 사용한다. 애플리케이션은 DMS backend 구현을 직접 선택하거나 생성하지 않고 DMS 환경 factory에 위임한다.
@@ -59,12 +59,12 @@ DocMesh Document Service의 목적은 업무 시스템이 파일 저장소와 �
 
 | ID | 요구사항 | 우선순위 | 수용 기준 |
 | --- | --- | --- | --- |
-| FR-APP-001 | 서비스는 `fastapi-core.create_app(...)`으로 FastAPI 애플리케이션을 생성해야 한다. | Must | 공통 health, 설정, resource state를 포함해 기동한다. |
-| FR-APP-002 | DMS SDK는 `ManagedResource` lifecycle에서 한 번 생성하고 종료 시 close해야 한다. | Must | 정상 종료와 close 실패 동작이 검증된다. |
-| FR-APP-003 | DMS route는 SDK 구현체를 직접 생성하지 않고 전용 dependency로 SDK를 획득해야 한다. | Must | route 테스트에서 dependency override가 가능하다. |
-| FR-APP-004 | 서비스는 liveness와 readiness endpoint를 제공해야 한다. | Must | liveness는 프로세스 생존을, readiness는 필수 의존성 준비 상태를 반환한다. |
+| FR-APP-001 | 서비스는 `fastapi-core.create_app(...)`으로 FastAPI 애플리케이션을 생성하고 제품 factory에서 인증 router 포함 여부와 제품 오류 renderer를 명시해야 한다. | Must | 공통 health와 typed resource를 포함해 기동하며 기본 제품 앱은 `/token`, `/user`를 포함한다. |
+| FR-APP-002 | DMS SDK는 `ManagedResource` lifecycle에서 한 번 생성하고 종료 시 역순 close해야 한다. | Must | 생성 중 실패한 resource의 rollback, 정상 종료, 모든 close 시도와 close 실패 전파가 검증된다. |
+| FR-APP-003 | DMS route는 SDK 구현체를 직접 생성하지 않고 typed `ResourceKey` dependency로 SDK를 획득해야 한다. | Must | 동일 key로 resource를 등록·주입하고 미준비 resource 접근은 503으로 응답한다. |
+| FR-APP-004 | 서비스는 liveness와 readiness endpoint를 제공해야 한다. | Must | liveness는 프로세스 생존을 반환하고, 필수 의존성 실패는 readiness 503, 선택 의존성만 실패하면 200 degraded를 반환한다. |
 | FR-SEC-001 | 모든 문서 작업 route는 인증된 사용자만 접근할 수 있어야 한다. | Must | 인증되지 않은 요청은 문서 작업을 수행하지 못한다. |
-| FR-SEC-002 | hard delete에는 일반 문서 작업보다 강화된 권한 검사를 적용해야 한다. | Must | 권한 없는 인증 사용자는 hard delete를 수행하지 못한다. |
+| FR-SEC-002 | hard delete에는 일반 문서 작업보다 강화된 권한 검사를 적용해야 한다. | Must | realm/client role 또는 OAuth scope에 `document:delete:hard`가 없는 인증 사용자는 hard delete를 수행하지 못한다. |
 
 ### 4.2 문서 lifecycle
 
@@ -72,11 +72,11 @@ DocMesh Document Service의 목적은 업무 시스템이 파일 저장소와 �
 | --- | --- | --- | --- |
 | FR-DOC-001 | 서비스는 파일 본문, filename, content type, 선택 metadata를 받아 문서를 생성해야 한다. | Must | 유효한 요청은 문서 ID와 생성 정보를 반환하고 이후 조회할 수 있다. |
 | FR-DOC-002 | 호출자가 ID를 지정하지 않으면 서비스 또는 SDK가 충돌 없는 document ID를 생성해야 한다. | Must | ID 생략 업로드가 새 document ID를 반환한다. |
-| FR-DOC-003 | 서비스는 ID로 활성 문서의 공개 metadata를 조회해야 한다. | Must | metadata와 상태를 반환하며 내부 저장소 식별자는 노출하지 않는다. |
-| FR-DOC-004 | 서비스는 문서 목록을 offset/limit과 선택 status filter로 조회해야 한다. | Must | pagination과 filter가 SDK에 전달되고 공개 metadata 배열을 반환한다. |
+| FR-DOC-003 | 서비스는 ID로 읽을 수 있는 문서의 공개 metadata를 조회해야 한다. | Must | 활성 metadata와 상태를 반환하며 내부 `storage_key`는 노출하지 않고 soft-deleted 단건 metadata는 not-found로 처리한다. |
+| FR-DOC-004 | 서비스는 문서 목록을 offset/limit과 선택 status filter로 조회해야 한다. | Must | 기본값은 offset 0, limit 100이며 status 미지정 시 SDK 목록 정책을 유지하고 공개 metadata 배열만 반환한다. |
 | FR-DOC-005 | 서비스는 문서 콘텐츠 전체 조회를 제공해야 한다. | Should | 작은 문서에서 저장된 content type과 안전한 filename disposition을 보존한다. |
 | FR-DOC-006 | 대용량 문서 다운로드는 streaming으로 제공해야 한다. | Must | 전체 본문을 애플리케이션 메모리에 적재하지 않고 chunk 단위로 전송한다. |
-| FR-DOC-007 | 서비스는 soft delete를 제공해야 한다. | Must | 본문을 삭제하고 metadata를 `deleted` 상태로 보존하며 일반 조회·다운로드를 차단한다. |
+| FR-DOC-007 | 서비스는 soft delete를 제공해야 한다. | Must | 본문을 삭제하고 metadata를 `deleted` 상태로 보존하며 단건 metadata·콘텐츠·다운로드를 차단한다. 상태 filter를 사용하는 목록은 삭제 상태를 조회할 수 있다. |
 | FR-DOC-008 | 권한 있는 사용자에게 hard delete를 제공해야 한다. | Must | object와 metadata가 제거되거나 식별 가능한 오류가 반환된다. |
 | FR-DOC-009 | filename, 작성자, 사용자 정의 metadata, checksum은 document metadata로 관리해야 한다. | Must | 업로드 시 제공·파생된 정보가 metadata 조회에서 확인된다. |
 | FR-DOC-010 | 원본 filename과 작성자 정보는 MinIO object metadata가 아닌 document metadata에 저장해야 한다. | Must | object metadata에 업무 metadata가 기록되지 않는다. |
@@ -85,14 +85,14 @@ DocMesh Document Service의 목적은 업무 시스템이 파일 저장소와 �
 
 | ID | 요구사항 | 우선순위 | 수용 기준 |
 | --- | --- | --- | --- |
-| FR-ERR-001 | validation, not found, duplicate, configuration, storage, consistency 오류를 표준 오류 응답으로 구분해야 한다. | Must | 오류 유형별 HTTP status, 오류 코드, 안전한 메시지가 API 계약에 정의된다. |
+| FR-ERR-001 | validation, not found, duplicate, configuration, storage, consistency 오류를 중앙 mapper와 제품 error renderer로 표준 오류 응답에 매핑해야 한다. | Must | `fastapi-core` 기본 Problem Detail에 의존하지 않고 오류 유형별 HTTP status, 오류 코드, 안전한 메시지와 correlation ID를 제품 envelope로 반환한다. |
 | FR-ERR-002 | 잘못된 입력은 저장소 작업 전에 거부해야 한다. | Must | 예: 0 이하 chunk size 또는 빈 파일 정보 요청이 validation 오류를 반환하고 문서를 생성하지 않는다. |
 | FR-ERR-003 | object 저장 후 metadata 저장에 실패하면 본문 정리를 시도해야 한다. | Must | 실패 주입 테스트가 cleanup 시도를 검증한다. |
 | FR-ERR-004 | cleanup 실패 또는 metadata·본문 불일치는 consistency 오류로 기록·응답해야 한다. | Must | 상관 ID로 오류를 추적할 수 있다. |
-| FR-ERR-005 | 존재하지 않거나 soft-deleted 문서는 동일한 외부 not-found 정책으로 처리해야 한다. | Must | 존재 여부를 불필요하게 노출하지 않는 일관된 응답이 검증된다. |
-| FR-OPS-001 | 배포 template은 PostgreSQL metadata store와 MinIO object store를 구성해야 한다. | Must | 필요한 `POSTGRES_*`, `MINIO_*`, `DMS_METADATA_BACKEND=postgresql` 설정이 제공된다. |
-| FR-OPS-002 | 필수 저장소 설정 누락 또는 장애는 기동 실패 또는 readiness 실패로 드러나야 한다. | Must | 필수 의존성 장애 시 readiness가 503을 반환한다. |
-| FR-OPS-003 | CORS, 인증 URL, root path, readiness 정책은 환경 설정으로 명시해야 한다. | Must | 배포 환경별 정책을 코드 변경 없이 적용할 수 있다. |
+| FR-ERR-005 | 존재하지 않거나 soft-deleted 문서의 단건 metadata·콘텐츠·다운로드는 동일한 외부 not-found 정책으로 처리해야 한다. | Must | 존재 여부를 불필요하게 노출하지 않는 일관된 응답이 검증되며 목록의 명시적 deleted filter는 이 정책과 구분된다. |
+| FR-OPS-001 | 배포 template은 PostgreSQL metadata store와 MinIO object store를 구성해야 한다. | Must | 필요한 개별 `POSTGRES_*`, `MINIO_*`, `DMS_METADATA_BACKEND=postgresql` 설정이 제공되고 지원하지 않는 `POSTGRES_DSN`은 거부된다. |
+| FR-OPS-002 | 필수 저장소 설정 누락 또는 장애는 lifecycle 단계에 따라 기동 실패 또는 readiness 실패로 드러나야 한다. | Must | DMS factory 실패는 기동을 중단하고, 실행 중 필수 DMS health 실패는 readiness 503을 반환한다. DMS SDK와 FastAPI lifecycle이 같은 startup health 환경변수를 서로 다른 기본값으로 해석하지 않도록 배포 설정에 값을 명시한다. |
+| FR-OPS-003 | CORS, 인증 URL, root path, startup health와 readiness 정책은 환경 설정으로 명시해야 한다. | Must | `TOKEN_URL`은 OpenAPI OAuth2 URL이고 실제 auth route는 `/token`임을 포함해 배포 환경별 정책을 코드 변경 없이 적용할 수 있다. |
 | FR-OPS-004 | secret과 연결 정보는 외부 secret 주입 또는 환경변수로 제공하고 로그·응답에 원문을 노출해서는 안 된다. | Must | credential, DSN, storage key, stack trace가 외부에 노출되지 않는다. |
 
 ## 5. 품질 및 릴리스 기준
