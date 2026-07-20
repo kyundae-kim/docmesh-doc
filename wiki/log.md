@@ -229,3 +229,59 @@
 - Body SHA-256: `7dba780a63eaf6341adf698d084dc6fbe2a67e2ab61fb3d68b5dc75048e69021`.
 - The v0.4.0 template differs from v0.3.0 by replacing `POSTGRES_DSN` with individual PostgreSQL host/port/database/user/password fields while retaining explicit PostgreSQL selection, required MinIO storage, disabled startup checks for placeholder endpoints, TLS guidance, and integration-test reuse. Installed `dms 0.4.0` diagnosed the complete template as valid PostgreSQL + MinIO configuration with health checks disabled and no missing keys or warnings.
 - Updated: `entities/dms-core.md`, `concepts/dms-core-configuration.md`, `concepts/fastapi-core-configuration.md`, `index.md`.
+
+## [2026-07-20] ingest | fastapi-core GitHub Wiki API Reference v0.5.0
+- Captured immutable source: `raw/articles/fastapi-core-wiki-api-reference-v0.5.0.md`.
+- Source URL: `https://raw.githubusercontent.com/wiki/kyundae-kim/fastapi-core/API-Reference-v0.5.0.md` (requested GitHub Wiki page: `https://github.com/kyundae-kim/fastapi-core/wiki/API-Reference-v0.5.0`).
+- Body SHA-256: `42f354633f8a81c2f41925e883433916c428a4b59a2a5fd8aab7d42d5c3d2c71`.
+- The 2026-07-19 source labels itself `fastapi-core 0.5.0` and documents the established root exports, runtime/resource/readiness/error state, typed NATS dependency, and HTTP contracts. Its notable migration candidate is `create_app(..., include_auth_router=False, ...)`; the declared and installed `fastapi-core 0.4.0` has the same inspected signature/root exports/state but defaults that parameter to `True`. The DMS adapter explicitly forwards its own `include_auth_router` value, so no current behavior was inferred from the newer documentation.
+- Updated: `entities/fastapi-core.md`, `concepts/fastapi-core-app-assembly.md`, `concepts/fastapi-core-usage-patterns.md`, `concepts/fastapi-core-messaging-integration.md`, `index.md`.
+
+## [2026-07-20] ingest | fastapi-core GitHub Wiki Configuration v0.5.0
+- Captured immutable source: `raw/articles/fastapi-core-wiki-configuration-v0.5.0.md`.
+- Source URL: `https://raw.githubusercontent.com/wiki/kyundae-kim/fastapi-core/Configuration-v0.5.0.md` (requested GitHub Wiki page: `https://github.com/kyundae-kim/fastapi-core/wiki/Configuration-v0.5.0`).
+- Body SHA-256: `a4753066bfd8524233cc165d30e13a9fa5656a3010d4e9da769bebe7a620bf02`.
+- The 2026-07-19 source labels itself `fastapi-core 0.5.0` and `docmesh-py-core 0.4.0`; it preserves the AppConfig/ServiceConfigs boundary, explicit dotenv loading, cached loaders, selected-service configuration, and service-free baseline while adding startup failure mode and retry settings. Installed dependencies are `fastapi-core 0.4.0` and `docmesh-py-core 0.3.0`: AppConfig confirms the existing configuration boundary and no automatic `.env` loading, but does not contain the three new startup fields. The v0.5.0 additions remain upgrade candidates, not current runtime behavior.
+- Updated: `entities/fastapi-core.md`, `concepts/fastapi-core-configuration.md`, `concepts/fastapi-core-app-assembly.md`.
+
+## [2026-07-20] ingest | fastapi-core GitHub Wiki Examples v0.5.0
+- Captured immutable source: `raw/articles/fastapi-core-wiki-examples-v0.5.0.md`.
+- Source URL: `https://raw.githubusercontent.com/wiki/kyundae-kim/fastapi-core/Examples-v0.5.0.md` (requested GitHub Wiki page: `https://github.com/kyundae-kim/fastapi-core/wiki/Examples-v0.5.0`).
+- Body SHA-256: `b66757d1ea565683008c2da5ca48dec653c0cea7624710137670ea2034b877b3`.
+- The 2026-07-19 v0.5.0 examples cover service-free assembly, cached settings loaders, typed service/resource dependencies, lifecycle/readiness, error rendering, auth/router boundaries, and testing helpers. Installed `fastapi-core 0.4.0` confirms the `create_app`, `ManagedResource`, `ResourceKey`, error mapper, and readiness registration signatures used by the DMS adapter, but `fastapi_core.testing` is absent. The testing helper examples are therefore upgrade candidates, not current dependencies.
+- Updated: `entities/fastapi-core.md`, `concepts/fastapi-core-usage-patterns.md`, `concepts/fastapi-core-app-assembly.md`.
+
+## [2026-07-20] ingest | fastapi-core environment template (Git tag v0.5.0)
+- Captured immutable source: `raw/articles/fastapi-core-env-example-v0.5.0.md`.
+- Source URL: `https://raw.githubusercontent.com/kyundae-kim/fastapi-core/v0.5.0/.env.example` (requested GitHub blob URL was converted to the raw content endpoint).
+- Body SHA-256: `79f8ca4101d28e2e7e296bc466c6b55d43d26a12dd101af89e0b7e265620cc63`.
+- The template retains explicit dotenv loading, service-free empty CSV baseline, CORS/readiness/logging policy, redacted credentials, and individual PostgreSQL connection fields. It also documents startup failure/retry keys that do not exist in installed `fastapi-core 0.4.0`; together with installed `docmesh-py-core 0.3.0`, that prevents treating the v0.5.0 template as an immediately deployable configuration for this project.
+- Updated: `entities/fastapi-core.md`, `concepts/fastapi-core-configuration.md`, `concepts/fastapi-core-app-assembly.md`.
+
+## [2026-07-20] ingest | dms-core GitHub Wiki API Reference v0.5.0
+- Captured immutable source: `raw/articles/dms-core-wiki-api-reference-v0.5.0.md`.
+- Source URL: `https://raw.githubusercontent.com/wiki/kyundae-kim/dms-core/API-Reference-v0.5.0.md` (requested GitHub Wiki page: `https://github.com/kyundae-kim/dms-core/wiki/API-Reference-v0.5.0`).
+- Body SHA-256: `fd34c99bc5d358026662d10522fd4bf0a04d2d9cd002de0340c2ad0c4b5f4f63` (distinct from the preserved v0.4.0 body hash).
+- The v0.5.0 reference documents `create_sdk_from_service_configs`, `format_environment_diagnosis`, public-safe metadata/list defaults, and an explicit internal metadata accessor. Installed `dms 0.4.0` confirms v0.4 stream/idempotency/cursor/recovery symbols but lacks those v0.5.0 additions and still returns `DocumentMetadata` from public lookup/list methods. The DMS adapter's storage-key allowlist remains necessary; the v0.5.0 source is an upgrade candidate rather than evidence of a current FastAPI/DMS assembly integration.
+- Updated: `entities/dms-core.md`, `concepts/dms-core-usage-patterns.md`, `concepts/dms-core-document-lifecycle.md`, `concepts/dms-core-configuration.md`, `concepts/fastapi-core-app-assembly.md`.
+
+## [2026-07-20] ingest | dms-core GitHub Wiki Configuration v0.5.0
+- Captured immutable source: `raw/articles/dms-core-wiki-configuration-v0.5.0.md`.
+- Source URL: `https://raw.githubusercontent.com/wiki/kyundae-kim/dms-core/Configuration-v0.5.0.md` (requested GitHub Wiki page: `https://github.com/kyundae-kim/dms-core/wiki/Configuration-v0.5.0`).
+- Body SHA-256: `f73060a146317b7938bbfa067aa80a49851bcca82f112c12c3ab6e60c211a92f` (distinct from the preserved v0.4.0 body hash).
+- The v0.5.0 configuration retains individual PostgreSQL fields, rejects `POSTGRES_DSN`, uses explicit backend/strict selection, and describes a `ServiceConfigs` factory plus safe diagnosis formatter. Installed `dms 0.4.0` confirms DSN-only is invalid and individual PostgreSQL fields are valid, but it lacks both new v0.5.0 symbols. Keep environment/component assembly and FastAPI/DMS configuration boundaries separate until a version-aligned upgrade is tested.
+- Updated: `entities/dms-core.md`, `concepts/dms-core-configuration.md`, `concepts/dms-core-usage-patterns.md`, `concepts/fastapi-core-configuration.md`.
+
+## [2026-07-20] ingest | dms-core GitHub Wiki Examples v0.5.0
+- Captured immutable source: `raw/articles/dms-core-wiki-examples-v0.5.0.md`.
+- Source URL: `https://raw.githubusercontent.com/wiki/kyundae-kim/dms-core/Examples-v0.5.0.md` (requested GitHub Wiki page: `https://github.com/kyundae-kim/dms-core/wiki/Examples-v0.5.0`).
+- Body SHA-256: `e79a382fe3c4ee60d5cdc7c78e601693547c3e1491a5b4c462e97b78e57ba8de` (distinct from the preserved v0.4.0 body hash).
+- The v0.5.0 examples cover explicit idempotency scope, known/unknown-size streaming, context-managed download, cursor traversal, explicit deletion, plan-based recovery, structured metadata, and diagnostics. Installed `dms 0.4.0` supports the core SDK workflow but differs at assembly/diagnosis: its environment factory requires an explicit mapping and it has no `format_environment_diagnosis`. Treat the argument-free environment/formatter examples as upgrade candidates.
+- Updated: `entities/dms-core.md`, `concepts/dms-core-usage-patterns.md`, `concepts/dms-core-configuration.md`.
+
+## [2026-07-20] ingest | dms-core environment template (Git tag v0.5.0)
+- Captured immutable source: `raw/articles/dms-core-env-example-v0.5.0.md`.
+- Source URL: `https://raw.githubusercontent.com/kyundae-kim/dms-core/v0.5.0/.env.example` (requested GitHub blob URL was converted to the raw content endpoint).
+- Body SHA-256: `43b3327a8da9ebd078a30d9f94af699f799e0023565b3d4017a713fbc13a423a` (distinct from the preserved v0.4.0 body hash).
+- The template preserves DMS SDK-only PostgreSQL/SQLite-plus-MinIO assembly, placeholder-backed disabled health checks, individual PostgreSQL fields, MinIO TLS, and shared integration-test variables. Its temporary environment overlay/restore claim accompanies the v0.5.0 argument-free factory; installed `dms 0.4.0` instead requires an explicit environment mapping. The v0.5.0 assembly behavior is therefore an upgrade candidate, while DMS storage and FastAPI application configuration remain separate.
+- Updated: `entities/dms-core.md`, `concepts/dms-core-configuration.md`, `concepts/fastapi-core-configuration.md`.

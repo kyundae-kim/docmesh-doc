@@ -1,10 +1,10 @@
 ---
 title: dms-core configuration model
 created: 2026-07-11
-updated: 2026-07-18
+updated: 2026-07-20
 type: concept
 tags: [dms-core, dms, configuration, storage, metadata, security, deployment]
-sources: [raw/articles/dms-core-api-v0.3.0.md, raw/articles/dms-core-wiki-api-reference-v0.4.0.md, raw/articles/dms-core-wiki-configuration-v0.4.0.md, raw/articles/dms-core-wiki-examples-v0.4.0.md, raw/articles/dms-core-config-v0.2.0.md, raw/articles/dms-core-config-v0.3.0.md, raw/articles/dms-core-env-example-v0.3.0.md, raw/articles/dms-core-env-example-v0.4.0.md, raw/articles/dms-core-examples-v0.2.0.md, raw/articles/dms-core-examples-v0.3.0.md, raw/articles/docmesh-py-core-config-v0.2.0.md]
+sources: [raw/articles/dms-core-api-v0.3.0.md, raw/articles/dms-core-wiki-api-reference-v0.4.0.md, raw/articles/dms-core-wiki-api-reference-v0.5.0.md, raw/articles/dms-core-wiki-configuration-v0.4.0.md, raw/articles/dms-core-wiki-configuration-v0.5.0.md, raw/articles/dms-core-wiki-examples-v0.4.0.md, raw/articles/dms-core-wiki-examples-v0.5.0.md, raw/articles/dms-core-config-v0.2.0.md, raw/articles/dms-core-config-v0.3.0.md, raw/articles/dms-core-env-example-v0.3.0.md, raw/articles/dms-core-env-example-v0.4.0.md, raw/articles/dms-core-env-example-v0.5.0.md, raw/articles/dms-core-examples-v0.2.0.md, raw/articles/dms-core-examples-v0.3.0.md, raw/articles/docmesh-py-core-config-v0.2.0.md]
 confidence: medium
 ---
 
@@ -28,6 +28,14 @@ v0.3.0 API의 `diagnose_environment(env)`는 연결·client 생성·SDK 조립 �
 
 v0.4.0 factory는 선택적 `recovery_audit_hook`을 환경/component 조립 모두에 추가하며, component 조립의 `max_file_size`는 known-size와 unknown-size stream upload에 공통 상한으로 적용된다. factory의 `metadata_max_serialized_bytes`와 `metadata_max_depth`는 기본 `DefaultMetadataPolicy`에만 적용되고 custom `metadata_validator`를 주입하면 자동 적용되지 않는다. `StructuredMetadataValidator`는 기본 `policy`를 내장해 parser/projector 결과를 다시 검증하지만, 다른 custom validator가 같은 보호를 유지하려면 자체 policy로 크기·깊이·민감 키 검사를 명시해야 한다. audit hook은 best-effort이므로 규제·보존 요구사항이 있는 배포에서는 별도의 durable sink와 실패 관측을 application layer에서 구성한다. ^[raw/articles/dms-core-wiki-api-reference-v0.4.0.md] ^[raw/articles/dms-core-wiki-configuration-v0.4.0.md] ^[raw/articles/dms-core-wiki-examples-v0.4.0.md]
 
+v0.5.0 API reference는 prevalidated `ServiceConfigs`를 받는 `create_sdk_from_service_configs`와 secret-free `format_environment_diagnosis`를 설정 entrypoint로 추가한다. 설치된 v0.4.0에는 두 symbol이 없으므로 현재 deployment는 environment/component factory와 existing diagnosis model을 사용한다. v0.5.0 source만으로 FastAPI service settings와 DMS SDK가 이미 직접 조립된다고 단정하지 않고, version-aligned upgrade에서 assembly path를 검증한다. ^[raw/articles/dms-core-wiki-api-reference-v0.5.0.md]
+
+v0.5.0 Wiki Configuration reference는 DSN을 unsupported key로 명시하고 individual `POSTGRES_*` 필드, MinIO bucket/credential, SQLite alternative, backend auto-selection/strict policy를 다시 규정한다. 설치된 v0.4.0 probe도 DSN-only configuration을 invalid로, individual PostgreSQL fields를 valid로 확인했다. source는 또한 prevalidated `ServiceConfigs` 기반 factory와 safe formatter를 문서화하지만 v0.4.0 runtime에는 없다. 따라서 현재 배포는 environment/component factory와 diagnosis object를 사용하며, v0.5.0 settings-bundle path는 upgrade 후 검증할 candidate다. ^[raw/articles/dms-core-wiki-configuration-v0.5.0.md]
+
+v0.5.0 Examples는 `diagnose_environment(dict(os.environ))` 뒤 argument-free `create_sdk_from_environment()`와 formatter를 사용한다. 현재 installed v0.4.0 factory는 mapping argument를 요구하고 formatter가 없으므로, process environment를 직접 읽는 v0.5.0 invocation을 현 dependency에 복사하지 않는다. secret-safe diagnostic logging 원칙은 유지하되, 현재는 diagnosis object의 fields만 사용한다. ^[raw/articles/dms-core-wiki-examples-v0.5.0.md]
+
+v0.5.0 `.env.example`은 DMS가 standalone API server가 아닌 SDK이며 PostgreSQL/SQLite metadata store 하나와 MinIO object store 하나가 항상 필요함을 다시 명시한다. Template은 development `DOCMESH_ENV`, placeholder endpoint에 따른 disabled health check, explicit PostgreSQL selection, individual PostgreSQL fields, MinIO TLS 및 shared integration-test variables를 제시한다. 또한 v0.5 assembly가 DMS/DocMesh variables를 임시 overlay한 뒤 복원하므로 조립 중 concurrent mutation을 금지한다고 설명한다. 설치된 v0.4.0은 mapping argument를 받는 factory이므로 이 overlay semantics는 current runtime 사실이 아니라 upgrade candidate다. ^[raw/articles/dms-core-env-example-v0.5.0.md]
+
 예제의 SQLite 사전 진단은 `DMS_METADATA_BACKEND=sqlite`, `SQLITE_PATH`와 네 개의 MinIO 필수 키를 같은 `env` mapping에 넣은 뒤 `report.valid`를 확인하고 SDK를 생성한다. 이 흐름은 credential을 로그에 기록하지 않은 채 CI/배포 준비 단계에서 configuration 오류를 분리하는 방법이다. ^[raw/articles/dms-core-examples-v0.3.0.md]
 
 ## Deployment guidance
@@ -46,10 +54,14 @@ v0.4.0 `.env.example`은 같은 PostgreSQL-default/MinIO-required/placeholder-he
 - `raw/articles/dms-core-config-v0.3.0.md`
 - `raw/articles/dms-core-env-example-v0.3.0.md`
 - `raw/articles/dms-core-env-example-v0.4.0.md`
+- `raw/articles/dms-core-env-example-v0.5.0.md`
 - `raw/articles/dms-core-api-v0.3.0.md`
 - `raw/articles/dms-core-wiki-api-reference-v0.4.0.md`
+- `raw/articles/dms-core-wiki-api-reference-v0.5.0.md`
 - `raw/articles/dms-core-wiki-configuration-v0.4.0.md`
+- `raw/articles/dms-core-wiki-configuration-v0.5.0.md`
 - `raw/articles/dms-core-wiki-examples-v0.4.0.md`
+- `raw/articles/dms-core-wiki-examples-v0.5.0.md`
 - `raw/articles/dms-core-examples-v0.2.0.md`
 - `raw/articles/dms-core-examples-v0.3.0.md`
 - `raw/articles/docmesh-py-core-config-v0.2.0.md`

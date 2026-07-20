@@ -1,10 +1,10 @@
 ---
 title: dms-core document lifecycle
 created: 2026-07-11
-updated: 2026-07-18
+updated: 2026-07-20
 type: concept
 tags: [dms, document, metadata, storage, workflow, dms-core]
-sources: [raw/articles/dms-core-api-v0.2.0.md, raw/articles/dms-core-api-v0.3.0.md, raw/articles/dms-core-wiki-api-reference-v0.4.0.md, raw/articles/dms-core-wiki-examples-v0.4.0.md, raw/articles/dms-core-examples-v0.2.0.md, raw/articles/dms-core-examples-v0.3.0.md]
+sources: [raw/articles/dms-core-api-v0.2.0.md, raw/articles/dms-core-api-v0.3.0.md, raw/articles/dms-core-wiki-api-reference-v0.4.0.md, raw/articles/dms-core-wiki-api-reference-v0.5.0.md, raw/articles/dms-core-wiki-examples-v0.4.0.md, raw/articles/dms-core-examples-v0.2.0.md, raw/articles/dms-core-examples-v0.3.0.md]
 confidence: medium
 ---
 
@@ -23,6 +23,8 @@ v0.4.0 예제는 soft/hard 삭제를 각각 `soft_delete_document(...)`와 `hard
 HTTP route와 request/response 변환은 [[fastapi-core]]의 application layer에 두고, SDK 생성·close 및 DMS 의존성 주입은 [[fastapi-core-app-assembly]]의 custom lifespan/state 경계에서 설계할 수 있다. 현재 수집 source는 `dms-core` 자체 API를 설명하므로 구체적인 FastAPI adapter는 이후 통합 source로 확인해야 한다.
 
 v0.4.0은 `storage_key`를 adapter/recovery용 내부 필드로 명시하고 `public_metadata(...)`와 `PublicDocumentMetadata`를 공개 응답 경계로 제공한다. FastAPI adapter는 내부 metadata를 직접 직렬화하지 말고 이 변환 또는 동일한 allowlist response model을 사용해야 한다. 현재 프로젝트의 response model은 `storage_key`를 제외하지만, SDK helper를 사용할지 자체 매핑을 유지할지는 application contract로 결정한다. ^[raw/articles/dms-core-wiki-api-reference-v0.4.0.md]
+
+v0.5.0 API reference는 public-safe metadata를 기본 `get_document_metadata`/`list_documents` 결과로, `storage_key`를 포함하는 결과를 명시적 internal accessor로 분리한다. 설치된 v0.4.0은 반대 반환 경계를 유지하므로, current HTTP adapter는 storage key를 명시적으로 제외해야 하며 v0.5.0 명칭만 보고 매핑을 제거하면 안 된다. ^[raw/articles/dms-core-wiki-api-reference-v0.5.0.md]
 
 SDK 생성에 필요한 MinIO·metadata store·startup health 설정은 [[dms-core-configuration]]에서 관리한다. lifecycle integration은 이 설정의 health/close 정책과 정합성을 유지해야 한다.
 
@@ -49,6 +51,7 @@ v0.4.0 예제는 dry-run result를 `to_plan()`으로 변환한 뒤 같은 actor�
 - `raw/articles/dms-core-api-v0.2.0.md`
 - `raw/articles/dms-core-api-v0.3.0.md`
 - `raw/articles/dms-core-wiki-api-reference-v0.4.0.md`
+- `raw/articles/dms-core-wiki-api-reference-v0.5.0.md`
 - `raw/articles/dms-core-wiki-examples-v0.4.0.md`
 - `raw/articles/dms-core-examples-v0.2.0.md`
 - `raw/articles/dms-core-examples-v0.3.0.md`

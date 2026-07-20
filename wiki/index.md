@@ -1,7 +1,7 @@
 # Wiki Index
 
 > DMS를 `dms-core` 로직 코어와 `fastapi-core` FastAPI 컴포넌트로 구성하여 배포하기 위한 지식 카탈로그.
-> Last updated: 2026-07-18 | Total pages: 12
+> Last updated: 2026-07-20 | Total pages: 12
 
 ## Entities
 <!-- Alphabetical within section -->

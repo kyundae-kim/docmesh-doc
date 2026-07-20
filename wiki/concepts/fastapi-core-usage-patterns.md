@@ -1,10 +1,10 @@
 ---
 title: fastapi-core usage patterns
 created: 2026-07-11
-updated: 2026-07-18
+updated: 2026-07-20
 type: concept
 tags: [fastapi, fastapi-core, api, deployment, testing, integration]
-sources: [raw/articles/fastapi-core-api-v0.1.6.md, raw/articles/fastapi-core-wiki-api-reference.md, raw/articles/fastapi-core-config-v0.1.6.md, raw/articles/fastapi-core-examples-v0.1.6.md, raw/articles/fastapi-core-examples-v0.2.0.md, raw/articles/fastapi-core-examples-v0.3.0.md, raw/articles/fastapi-core-wiki-examples.md, raw/articles/fastapi-core-messaging-v0.1.6.md]
+sources: [raw/articles/fastapi-core-api-v0.1.6.md, raw/articles/fastapi-core-wiki-api-reference.md, raw/articles/fastapi-core-wiki-api-reference-v0.5.0.md, raw/articles/fastapi-core-config-v0.1.6.md, raw/articles/fastapi-core-examples-v0.1.6.md, raw/articles/fastapi-core-examples-v0.2.0.md, raw/articles/fastapi-core-examples-v0.3.0.md, raw/articles/fastapi-core-wiki-examples.md, raw/articles/fastapi-core-wiki-examples-v0.5.0.md, raw/articles/fastapi-core-messaging-v0.1.6.md]
 confidence: medium
 ---
 
@@ -22,7 +22,11 @@ confidence: medium
 
 GitHub Wiki API reference는 `ResourceKey(name).dependency`와 `get_resource(name)`가 같은 registry에서 managed resource를 해석한다고 명시하고, custom error renderer와 prebuilt `runtime` 주입을 포함한 `create_app` signature를 기록한다. 다만 같은 `0.3.0` 기준을 표기한 tagged API snapshot은 `settings` 주입을 기록하므로, 프로젝트 코드는 runtime 확인 전 둘 중 하나의 injection path에 고정하지 않는다. ^[raw/articles/fastapi-core-wiki-api-reference.md]
 
+v0.5.0 API reference는 일반 app에 package root/dependency API를 우선하고 registry/runtime 직접 조립은 고급 API로 한정한다. 또한 auth router 기본값을 `False`로 문서화한다. 이 작업공간은 v0.4.0 runtime에서 같은 root export, runtime injection, resource/error extension과 state를 확인했지만 기본값은 `True`였으므로, `create_application(..., include_auth_router=...)`처럼 route 정책을 명시적으로 전달하는 현행 패턴을 유지한다. ^[raw/articles/fastapi-core-wiki-api-reference-v0.5.0.md]
+
 GitHub Wiki Examples snapshot은 서비스 없는 최소 app에 `AppConfig(enabled_services=[], required_services=[])`, `include_auth_router=False`, `get_config` dependency를 사용하고, runtime/settings/client dependency는 lifespan 안에서만 접근한다는 실행 패턴을 제시한다. managed resource에는 `ResourceKey[T].dependency`를, domain error에는 `ErrorMapping`/`ErrorRenderer`를 사용하며, router만 직접 include하는 방식은 runtime state·middleware·error handler가 필요 없을 때의 최소 조립으로 한정한다. ^[raw/articles/fastapi-core-wiki-examples.md]
+
+v0.5.0 Wiki Examples는 같은 서비스 없는 baseline, cache-clear가 필요한 environment loader, typed `ResourceKey`/`ManagedResource`, custom error renderer, readiness와 router-only assembly 경계를 current implementation 예제로 정리한다. 설치된 v0.4.0은 `create_app`, `ManagedResource`, `ResourceKey`, error/readiness registration의 signature를 제공하므로 현재 DMS adapter의 managed resource·error mapper 패턴과 맞는다. 하지만 v0.5.0 예제의 `fastapi_core.testing` helpers는 v0.4.0에 없으므로 `create_empty_runtime`과 contract assertions는 upgrade 전에는 채택하지 않는다. ^[raw/articles/fastapi-core-wiki-examples-v0.5.0.md]
 
 ## Deployable composition
 
@@ -40,15 +44,17 @@ domain SDK 같은 추가 자원은 `ManagedResource`로 등록하면 선언 순�
 
 ## Version note
 
-Git tag `v0.1.6`, `v0.2.0`, `v0.3.0`의 examples는 모두 문서 내부에서 `2026-07-03` 구현 반영본으로 표기한다. GitHub Wiki Examples도 `0.3.0` 기준을 표방하지만 body hash가 다르고, `ResourceKey`·error renderer·runtime-centric dependency/lifecycle 예제를 포함한다. Git ref나 문서 내부 버전만으로 설치 패키지 API를 확정할 수 없으므로, 예제 채택 전 대상 패키지와 테스트 스위트에서 현재 API를 확인해야 한다. 이 작업공간은 `fastapi-core`를 직접 import할 수 없어 Wiki examples는 upstream reference로만 기록한다. ^[raw/articles/fastapi-core-examples-v0.3.0.md] ^[raw/articles/fastapi-core-wiki-examples.md]
+Git tag `v0.1.6`, `v0.2.0`, `v0.3.0`의 examples는 모두 문서 내부에서 `2026-07-03` 구현 반영본으로 표기한다. GitHub Wiki Examples도 `0.3.0` 기준을 표방하지만 body hash가 다르고, `ResourceKey`·error renderer·runtime-centric dependency/lifecycle 예제를 포함한다. v0.5.0 Wiki Examples는 그 surface를 이어가면서 testing helpers를 추가한다. Git ref나 문서 내부 버전만으로 설치 패키지 API를 확정할 수 없으므로 예제 채택 전 대상 패키지와 테스트 스위트를 확인해야 한다. 현재 작업공간은 `fastapi-core 0.4.0`을 import해 core/resource/error signatures는 확인했지만 `fastapi_core.testing`은 import할 수 없었다. ^[raw/articles/fastapi-core-examples-v0.3.0.md] ^[raw/articles/fastapi-core-wiki-examples.md] ^[raw/articles/fastapi-core-wiki-examples-v0.5.0.md]
 
 ## Sources
 
 - `raw/articles/fastapi-core-api-v0.1.6.md`
 - `raw/articles/fastapi-core-wiki-api-reference.md`
+- `raw/articles/fastapi-core-wiki-api-reference-v0.5.0.md`
 - `raw/articles/fastapi-core-config-v0.1.6.md`
 - `raw/articles/fastapi-core-examples-v0.1.6.md`
 - `raw/articles/fastapi-core-examples-v0.2.0.md`
 - `raw/articles/fastapi-core-examples-v0.3.0.md`
 - `raw/articles/fastapi-core-wiki-examples.md`
+- `raw/articles/fastapi-core-wiki-examples-v0.5.0.md`
 - `raw/articles/fastapi-core-messaging-v0.1.6.md`
