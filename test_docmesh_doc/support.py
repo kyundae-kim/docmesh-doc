@@ -4,10 +4,10 @@ from datetime import UTC, datetime
 from io import BytesIO
 
 import dms
+from docmesh_py_core import AuthenticatedUser
 from fastapi.testclient import TestClient
 from fastapi_core.config import AppConfig
 from fastapi_core.dependencies import get_current_user
-from fastapi_core.schemas import UserInfo
 
 from docmesh_doc.application import create_application
 
@@ -125,7 +125,12 @@ class FakeSDK:
         self.closed = True
 
 
-def client_for(sdk: FakeSDK, *, roles: list[str] | None = None) -> TestClient:
+def client_for(
+    sdk: FakeSDK,
+    *,
+    roles: list[str] | None = None,
+    scopes: list[str] | None = None,
+) -> TestClient:
     app = create_application(
         sdk,
         config=AppConfig(
@@ -135,7 +140,15 @@ def client_for(sdk: FakeSDK, *, roles: list[str] | None = None) -> TestClient:
         ),
         include_auth_router=False,
     )
-    app.dependency_overrides[get_current_user] = lambda: UserInfo(
-        sub="user-1", username="alice", roles=roles or []
+    app.dependency_overrides[get_current_user] = lambda: AuthenticatedUser(
+        sub="user-1",
+        preferred_username="alice",
+        email=None,
+        given_name=None,
+        family_name=None,
+        name=None,
+        realm_roles=roles or [],
+        client_roles={},
+        claims={"scope": " ".join(scopes or [])},
     )
     return TestClient(app)

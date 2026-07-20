@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import Annotated
 
 import dms
-from fastapi import APIRouter, File, Form, HTTPException, Query, Response, UploadFile
+from fastapi import APIRouter, File, Form, Query, Response, UploadFile
 from fastapi.responses import StreamingResponse
 
-from docmesh_doc.dependencies import CurrentUser, DmsSdk
+from docmesh_doc.dependencies import CurrentUser, DmsSdk, require_hard_delete
 from docmesh_doc.document_http import (
     content_disposition,
     parse_metadata_form,
@@ -95,14 +95,14 @@ def download_document(
 
 
 @router.delete("/{document_id}", response_model=DeleteDocumentResponse)
-def delete_document(
+async def delete_document(
     document_id: str,
     sdk: DmsSdk,
     user: CurrentUser,
     hard: bool = False,
 ):
-    if hard and "document:delete:hard" not in user.roles:
-        raise HTTPException(status_code=403, detail="Permission denied.")
+    if hard:
+        await require_hard_delete(user)
     return (
         sdk.hard_delete_document(document_id)
         if hard

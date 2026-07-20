@@ -23,6 +23,15 @@ def test_hard_delete_calls_sdk_for_authorized_user():
     assert sdk.delete_call == ("hard", "doc-1")
 
 
+def test_hard_delete_accepts_fastapi_core_scope_permission():
+    sdk = FakeSDK()
+    with client_for(sdk, scopes=["document:delete:hard"]) as client:
+        response = client.delete("/documents/doc-1?hard=true")
+
+    assert response.status_code == 200
+    assert sdk.delete_call == ("hard", "doc-1")
+
+
 def test_soft_delete_calls_explicit_sdk_method():
     sdk = FakeSDK()
     with client_for(sdk) as client:

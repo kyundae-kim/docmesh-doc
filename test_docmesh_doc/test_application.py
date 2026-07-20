@@ -4,6 +4,7 @@ import dms
 import pytest
 from fastapi.testclient import TestClient
 from fastapi_core.config import AppConfig
+from fastapi_core.testing import assert_auth_router_contract, assert_health_contract
 
 from docmesh_doc.application import create_application
 from test_docmesh_doc.support import NOW, FakeSDK, client_for
@@ -52,6 +53,23 @@ def test_dms_sdk_is_owned_by_the_managed_resource_registry():
         assert not hasattr(app.state, "readiness_checks")
 
     assert sdk.closed is True
+
+
+@pytest.mark.parametrize("included", [False, True])
+def test_application_explicitly_controls_the_auth_router(included):
+    app = create_application(
+        FakeSDK(),
+        config=AppConfig(enabled_services=[], required_services=[]),
+        include_auth_router=included,
+    )
+
+    with TestClient(app) as client:
+        assert_auth_router_contract(client, included=included)
+
+
+def test_application_preserves_fastapi_core_health_contract():
+    with client_for(FakeSDK()) as client:
+        assert_health_contract(client)
 
 
 def test_lifespan_closes_sdk():
