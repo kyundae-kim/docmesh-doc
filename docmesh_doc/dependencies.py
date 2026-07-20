@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from typing import Annotated
 
 from dms import DefaultDocumentManagementSDK
@@ -13,8 +11,4 @@ DMS_RESOURCE = ResourceKey[DefaultDocumentManagementSDK]("dms")
 DmsSdk = Annotated[DefaultDocumentManagementSDK, Depends(DMS_RESOURCE.dependency)]
 CurrentUser = Annotated[AuthenticatedUser, Depends(get_current_user)]
 
-_require_hard_delete = require_permissions("document:delete:hard")
-
-
-async def require_hard_delete(user: AuthenticatedUser) -> None:
-    await _require_hard_delete(current_user=user)
+require_hard_delete = require_permissions("document:delete:hard")

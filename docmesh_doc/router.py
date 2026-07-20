@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from typing import Annotated
 
 import dms
@@ -35,17 +33,18 @@ def upload_document(
 ) -> DocumentMetadataResponse:
     extra_metadata = parse_metadata_form(metadata)
     filename, content_type, size = validate_upload_file(file)
-    request = dms.UploadDocumentStreamRequest(
-        stream=file.file,
-        size=size,
-        filename=filename,
-        content_type=content_type,
-        document_id=document_id or None,
-        metadata=extra_metadata,
-        created_by=user.sub,
-        checksum=checksum or None,
+    result = sdk.upload_document_stream(
+        dms.UploadDocumentStreamRequest(
+            stream=file.file,
+            size=size,
+            filename=filename,
+            content_type=content_type,
+            document_id=document_id or None,
+            metadata=extra_metadata,
+            created_by=user.sub,
+            checksum=checksum or None,
+        )
     )
-    result = sdk.upload_document_stream(request)
     response.headers["Location"] = f"/documents/{result.document_id}"
     return result.metadata
 
@@ -57,8 +56,7 @@ def list_documents(
     limit: Annotated[int, Query(ge=1)] = 100,
     status: dms.DocumentStatus | None = None,
 ) -> list[DocumentMetadataResponse]:
-    items = sdk.list_documents(offset=offset, limit=limit, status=status)
-    return items
+    return sdk.list_documents(offset=offset, limit=limit, status=status)
 
 
 @router.get("/{document_id}", response_model=DocumentMetadataResponse)
@@ -104,9 +102,6 @@ async def delete_document(
     hard: bool = False,
 ):
     if hard:
-        await require_hard_delete(user)
-    return (
-        sdk.hard_delete_document(document_id)
-        if hard
-        else sdk.soft_delete_document(document_id)
-    )
+        await require_hard_delete(current_user=user)
+    delete = sdk.hard_delete_document if hard else sdk.soft_delete_document
+    return delete(document_id)

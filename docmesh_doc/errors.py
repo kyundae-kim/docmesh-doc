@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import dms
 from fastapi import Request
 from fastapi.responses import JSONResponse
@@ -65,7 +63,6 @@ STATUS_CODES = {
 
 
 def render_error(request: Request, mapping: ErrorMapping) -> JSONResponse:
-    correlation_id = request.state.correlation_id
     return JSONResponse(
         status_code=mapping.status_code,
         content={
@@ -73,7 +70,7 @@ def render_error(request: Request, mapping: ErrorMapping) -> JSONResponse:
                 "code": mapping.code
                 or STATUS_CODES.get(mapping.status_code, "HTTP_ERROR"),
                 "message": mapping.detail,
-                "correlation_id": correlation_id,
+                "correlation_id": request.state.correlation_id,
             }
         },
         headers=mapping.headers,
