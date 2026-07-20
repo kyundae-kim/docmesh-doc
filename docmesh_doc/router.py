@@ -3,8 +3,9 @@ from __future__ import annotations
 from typing import Annotated
 
 import dms
-from fastapi import APIRouter, File, Form, Query, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Query, Response, UploadFile
 from fastapi.responses import StreamingResponse
+from fastapi_core.dependencies import get_current_user
 
 from docmesh_doc.dependencies import CurrentUser, DmsSdk, require_hard_delete
 from docmesh_doc.document_http import (
@@ -15,7 +16,11 @@ from docmesh_doc.document_http import (
 )
 from docmesh_doc.schemas import DeleteDocumentResponse, DocumentMetadataResponse
 
-router = APIRouter(prefix="/documents", tags=["documents"])
+router = APIRouter(
+    prefix="/documents",
+    tags=["documents"],
+    dependencies=[Depends(get_current_user)],
+)
 
 
 @router.post("", status_code=201, response_model=DocumentMetadataResponse)
@@ -48,7 +53,6 @@ def upload_document(
 @router.get("", response_model=list[DocumentMetadataResponse])
 def list_documents(
     sdk: DmsSdk,
-    user: CurrentUser,
     offset: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1)] = 100,
     status: dms.DocumentStatus | None = None,
@@ -58,12 +62,15 @@ def list_documents(
 
 
 @router.get("/{document_id}", response_model=DocumentMetadataResponse)
-def get_document_metadata(document_id: str, sdk: DmsSdk, user: CurrentUser) -> DocumentMetadataResponse:
+def get_document_metadata(
+    document_id: str,
+    sdk: DmsSdk,
+) -> DocumentMetadataResponse:
     return require_readable_document(sdk, document_id)
 
 
 @router.get("/{document_id}/content")
-def get_document_content(document_id: str, sdk: DmsSdk, user: CurrentUser) -> Response:
+def get_document_content(document_id: str, sdk: DmsSdk) -> Response:
     item = sdk.get_document_content(document_id)
     return Response(content=item.content, media_type=item.content_type, headers={
         "Content-Length": str(item.size),
@@ -75,16 +82,13 @@ def get_document_content(document_id: str, sdk: DmsSdk, user: CurrentUser) -> Re
 def download_document(
     document_id: str,
     sdk: DmsSdk,
-    user: CurrentUser,
     chunk_size: Annotated[int, Query(ge=1)] = 65536,
 ) -> StreamingResponse:
     item = sdk.get_document_content_stream(document_id, chunk_size=chunk_size)
 
     def body():
-        try:
+        with item:
             yield from item.iter_chunks()
-        finally:
-            item.close()
 
     return StreamingResponse(body(), media_type=item.content_type, headers={
         "Content-Length": str(item.size),
