@@ -3,193 +3,116 @@
 | 항목 | 내용 |
 | --- | --- |
 | 제품명 | DocMesh Document Service |
-| 최종 코드 대조일 | 2026-07-18 |
 | 대상 릴리스 | MVP |
-| 제품 한 줄 정의 | `dms-core`의 문서 관리 기능을 `fastapi-core` 기반 FastAPI 컴포넌트로 제공하는 HTTP Document Management Service |
+| 최종 코드 대조일 | 2026-07-18 |
+| 제품 정의 | `dms-core` 문서 관리 기능을 `fastapi-core`로 조립해 제공하는 HTTP Document Management Service |
 
-## 1. 배경과 문제 정의
+## 1. 목적
 
-서비스 및 업무 시스템은 파일 본문 저장, 문서 메타데이터 관리, 다운로드 스트리밍, 삭제 및 저장소 상태 확인을 각각 구현하는 대신 일관된 API로 사용해야 한다. 이를 개별 서비스가 구현하면 문서 본문과 메타데이터의 정합성, 대용량 전송, 삭제 정책, 외부 저장소 장애 처리 방식이 달라진다.
+DocMesh Document Service의 목적은 업무 시스템이 파일 저장소와 메타데이터 저장소의 구현 세부사항을 직접 다루지 않고, 일관되고 보호된 HTTP API로 문서를 관리하도록 하는 것이다.
 
-DocMesh Document Service는 다음의 역할 분리를 제품화한다.
+서비스는 문서 본문과 메타데이터의 정합성, 대용량 다운로드의 자원 관리, 삭제 정책, 의존 저장소 장애 식별을 공통 기능으로 제공한다. 이를 통해 각 소비 시스템이 동일한 문서 lifecycle과 운영 상태 신호를 사용하게 한다.
 
-- **`dms-core`**: 문서 업로드·조회·스트리밍 다운로드·soft/hard delete·storage health를 수행하는 문서 도메인 SDK
-- **`fastapi-core`**: 앱 factory, 공통 health, 인증 router, 설정, readiness, lifecycle을 제공하는 FastAPI 컴포넌트 계층
-- **DocMesh Document Service**: 위 두 컴포넌트를 조립해 소비 시스템에 안정적인 HTTP API를 제공하는 배포 가능 제품
+### 1.1 제품 경계
 
-현재 배포 template은 문서 본문에 MinIO, metadata에 PostgreSQL을 선택한다. 애플리케이션 계층은 backend를 강제하지 않고 DMS 환경 factory에 위임한다.
+- **`dms-core`**는 문서 업로드·조회·다운로드·삭제·저장소 health를 수행한다.
+- **`fastapi-core`**는 애플리케이션 factory, 공통 health, 인증, 설정, readiness, lifecycle을 제공한다.
+- **DocMesh Document Service**는 두 컴포넌트를 조립하여 배포 가능한 HTTP 서비스로 제공한다.
 
-## 2. 제품 비전 및 목표
+기본 배포 구성은 문서 본문에 MinIO, 문서 메타데이터에 PostgreSQL을 사용한다. 애플리케이션은 DMS backend 구현을 직접 선택하거나 생성하지 않고 DMS 환경 factory에 위임한다.
 
-### 2.1 비전
+## 2. 제품 목표
 
-애플리케이션 개발자가 저장소 구현 세부사항 없이 HTTP API를 통해 문서를 안전하게 생성·조회·다운로드·삭제할 수 있고, 운영자는 공통 health/readiness 신호로 서비스와 의존 저장소의 상태를 판단할 수 있게 한다.
-
-### 2.2 MVP 목표
-
-1. 문서 본문과 메타데이터를 하나의 문서 ID로 관리한다.
-2. 파일 업로드, 문서 목록·메타데이터 조회, 전체 콘텐츠 조회, 스트리밍 다운로드, soft delete, hard delete를 HTTP API로 제공한다.
-3. `fastapi-core.create_app(...)`를 공통 앱 진입점으로 사용하여 health, 설정, 인증, lifecycle을 일관되게 구성한다.
-4. SDK 생성과 종료를 FastAPI lifespan에 연결하여 서비스 종료 시 SDK와 stream 자원을 정리한다.
-5. MinIO와 metadata store의 실패를 readiness 및 표준 오류 응답으로 식별 가능하게 한다.
-6. 운영 환경에서 인증·권한·CORS·secret 주입을 명시적으로 설정한다.
-
-### 2.3 성공 지표
-
-| 지표 | MVP 목표 | 측정 방식 |
+| ID | 목표 | 성공 기준 |
 | --- | --- | --- |
-| 핵심 기능 검증률 | 정의된 MVP 수용 기준 100% 통과 | 자동화 API/통합 테스트 |
-| 문서 lifecycle 정합성 | 업로드 실패 후 metadata만 또는 object만 남는 미처리 상태 0건 | 실패 주입 통합 테스트 및 운영 점검 |
-| readiness 정확성 | 필수 의존성 장애 시 readiness가 503 반환 | 의존성 장애 통합 테스트 |
-| 다운로드 처리 | 대용량 다운로드가 streaming response로 전달 | 스트리밍 API 테스트 |
-| 자원 정리 | 요청 stream 및 shutdown 시 SDK close 누락 0건 | lifecycle/자원 정리 테스트 |
+| G-001 | 하나의 document ID로 본문과 메타데이터를 관리한다. | 업로드 성공 문서는 조회 가능한 metadata와 접근 가능한 본문을 가진다. |
+| G-002 | 문서 lifecycle의 필수 HTTP 작업을 제공한다. | 업로드, 목록·metadata·콘텐츠 조회, streaming download, soft/hard delete의 수용 기준을 통과한다. |
+| G-003 | 인증과 권한 정책으로 문서 작업을 보호한다. | 인증되지 않은 요청은 차단되고 hard delete는 별도 권한 검사를 통과해야 한다. |
+| G-004 | 저장소 장애와 구성 오류를 운영자가 식별할 수 있게 한다. | liveness/readiness와 표준 오류 응답이 의존성 상태와 오류 유형을 구분한다. |
+| G-005 | 대용량 전송과 서비스 종료에서 자원을 정리한다. | streaming 및 SDK lifecycle의 close 동작이 자동화 테스트로 검증된다. |
 
-## 3. 사용자 및 이해관계자
+## 3. 범위
 
-| 역할 | 주요 목적 | 대표 작업 |
-| --- | --- | --- |
-| API 소비 애플리케이션 | 업무 문서를 서비스에 연계 | 문서 업로드, metadata 조회, 다운로드, 삭제 |
-| 서비스 운영자 | 서비스 가용성 및 저장소 상태 관리 | liveness/readiness 확인, 설정·secret 주입, 장애 대응 |
-| 플랫폼/보안 담당자 | 안전한 노출과 접근 제어 | 인증 방식, 권한 정책, CORS, reverse proxy 경로 관리 |
-| 개발·QA 담당자 | API 품질 및 정합성 검증 | API 계약 테스트, 저장소 장애/정리 시나리오 검증 |
+### 3.1 포함 범위
 
-## 4. 제품 범위
+- HTTP 기반 파일 업로드와 document ID 생성 또는 호출자 지정 ID 지원
+- 문서 목록, 공개 metadata, 전체 콘텐츠, streaming download 조회
+- soft delete 및 권한 기반 hard delete
+- filename, 작성자, checksum, 사용자 정의 metadata 관리
+- PostgreSQL metadata store와 MinIO object store를 사용하는 배포 구성
+- liveness/readiness, 인증·권한, CORS, secret 주입, correlation ID 기반 오류 추적
 
-### 4.1 포함 범위
+### 3.2 제외 범위
 
-- HTTP 기반 문서 업로드
-- 문서 목록, 메타데이터와 콘텐츠 조회
-- streaming 방식의 다운로드
-- soft delete 및 hard delete
-- 문서 ID의 생성 또는 호출자 지정 ID 사용
-- 문서 메타데이터, 작성자, checksum 등 부가 정보 관리
-- liveness 및 readiness endpoint
-- 인증/권한 dependency를 적용할 수 있는 API 보호 구조
-- PostgreSQL + MinIO 기반 문서 저장 구성
-- SDK storage health와 앱 readiness를 함께 고려한 운영 상태 판단
-
-### 4.2 제외 범위 (MVP)
-
-- 웹 UI 및 최종 사용자 문서 탐색 화면
-- 문서 내용 전문 검색, 벡터 검색, OCR, 미리보기/변환
-- 문서 버전 관리와 동시 편집
-- 대용량 비동기 업로드 작업 큐
-- 문서 이벤트 broker publish/subscribe의 표준 계약
+- 웹 UI와 최종 사용자 문서 탐색
+- 전문·벡터 검색, OCR, 미리보기와 변환
+- 문서 버전 관리, 복구, 동시 편집
+- 대용량 비동기 업로드 큐
+- 문서 이벤트 broker의 publish/subscribe 계약
 - 테넌트별 저장소 분리, 보존 기간 자동화, 법적 보존 정책
 
-> NATS는 `fastapi-core`에서 선택 가능한 서비스 클라이언트일 수 있으나, `dms-core` 자체의 메시지 publish/subscribe 기능은 MVP 범위에 포함하지 않는다.
+> NATS는 `fastapi-core`의 선택적 서비스 클라이언트일 수 있으나, 문서 이벤트 API는 MVP 제품 범위에 포함하지 않는다.
 
-## 5. 핵심 사용자 흐름
+## 4. 제품 요구사항
 
-### 5.1 문서 업로드
-
-1. 소비 애플리케이션이 인증된 요청으로 파일 본문, filename, content type 및 선택 메타데이터를 전송한다.
-2. 서비스는 요청을 검증하고 `dms-core` 업로드 요청으로 변환한다.
-3. SDK는 object store에 본문을 저장한 뒤 metadata store에 문서 메타데이터를 저장한다.
-4. 저장에 성공하면 서비스는 문서 ID와 생성된 문서 정보를 반환한다.
-5. metadata 저장 실패 시 SDK는 저장한 본문 정리를 시도한다. 정리까지 실패하면 서비스는 정합성 오류로 기록·응답한다.
-
-### 5.2 메타데이터 조회 및 다운로드
-
-1. 소비 애플리케이션이 문서 ID로 metadata 또는 콘텐츠를 요청한다.
-2. 서비스는 삭제 상태와 존재 여부를 확인한다.
-3. metadata 조회는 문서 속성 및 상태를 반환한다.
-4. 다운로드는 콘텐츠를 streaming response로 전달하며, 응답 종료 또는 오류 시 stream을 정리한다.
-5. metadata는 존재하지만 본문이 없으면 서비스는 데이터 정합성 오류로 처리하고 운영자가 식별할 수 있게 기록한다.
-
-### 5.3 문서 삭제
-
-1. 소비 애플리케이션이 문서 ID와 삭제 방식(soft 또는 hard)을 지정한다.
-2. 서비스는 호출 권한 및 문서 상태를 검증한다.
-3. soft delete는 object를 삭제하고 metadata를 `deleted` 상태로 남기며, hard delete는 object와 metadata를 제거한다.
-4. 삭제 진행 중 상태는 `deleting`으로 관리하며, 저장소 작업 실패는 표준 오류 응답과 운영 로그로 남긴다.
-
-### 5.4 서비스 시작 및 상태 점검
-
-1. 애플리케이션은 `fastapi-core.create_app(...)`으로 조립된다.
-2. `ManagedResource(name="dms")` factory가 DMS SDK를 생성하고 설정에 따라 startup health check를 수행한다.
-3. SDK 인스턴스는 route dependency가 접근할 수 있는 application state 경계에 보관한다.
-4. 종료 시 SDK와 열린 외부 자원을 close한다.
-5. 운영 플랫폼은 liveness와 readiness endpoint로 프로세스 및 필수 의존성 상태를 판정한다.
-
-## 6. 기능 요구사항
-
-### 6.1 애플리케이션 조립 및 공통 API
+### 4.1 애플리케이션 및 보안
 
 | ID | 요구사항 | 우선순위 | 수용 기준 |
 | --- | --- | --- | --- |
-| FR-APP-001 | 서비스는 `fastapi-core.create_app(...)`을 기반으로 FastAPI 앱을 생성해야 한다. | Must | 앱이 공통 health router 및 설정/state를 포함해 기동된다. |
-| FR-APP-002 | DMS SDK는 `ManagedResource` lifespan에서 한 번 생성하고 종료 시 close해야 한다. | Must | 정상 종료와 close 실패 동작이 단위 테스트로 검증된다. SDK 생성 후 다른 startup 단계 실패 경로는 현재 별도 검증하지 않는다. |
-| FR-APP-003 | DMS route는 SDK 구현체를 직접 생성하지 않고 전용 FastAPI dependency를 통해 SDK를 획득해야 한다. | Must | route 단위 테스트에서 dependency override가 가능하다. |
-| FR-APP-004 | 서비스는 `GET /health/liveness`와 `GET /health/readiness`를 제공해야 한다. | Must | liveness는 프로세스 생존, readiness는 필수 의존성 상태를 반환한다. |
-| FR-APP-005 | 모든 문서 작업 route에 인증 dependency를 적용하고 hard delete에는 강화된 권한 dependency를 적용해야 한다. | Must | 인증되지 않거나 권한 없는 요청은 문서 작업을 수행할 수 없다. |
+| FR-APP-001 | 서비스는 `fastapi-core.create_app(...)`으로 FastAPI 애플리케이션을 생성해야 한다. | Must | 공통 health, 설정, resource state를 포함해 기동한다. |
+| FR-APP-002 | DMS SDK는 `ManagedResource` lifecycle에서 한 번 생성하고 종료 시 close해야 한다. | Must | 정상 종료와 close 실패 동작이 검증된다. |
+| FR-APP-003 | DMS route는 SDK 구현체를 직접 생성하지 않고 전용 dependency로 SDK를 획득해야 한다. | Must | route 테스트에서 dependency override가 가능하다. |
+| FR-APP-004 | 서비스는 liveness와 readiness endpoint를 제공해야 한다. | Must | liveness는 프로세스 생존을, readiness는 필수 의존성 준비 상태를 반환한다. |
+| FR-SEC-001 | 모든 문서 작업 route는 인증된 사용자만 접근할 수 있어야 한다. | Must | 인증되지 않은 요청은 문서 작업을 수행하지 못한다. |
+| FR-SEC-002 | hard delete에는 일반 문서 작업보다 강화된 권한 검사를 적용해야 한다. | Must | 권한 없는 인증 사용자는 hard delete를 수행하지 못한다. |
 
-### 6.2 문서 API
-
-세부 URI, request/response 스키마는 소프트웨어 요구사항 정의서 및 API Reference에서 확정한다. MVP는 아래 행위를 반드시 제공한다.
-
-| ID | 요구사항 | 우선순위 | 수용 기준 |
-| --- | --- | --- | --- |
-| FR-DOC-001 | 파일 본문, filename, content type 및 선택 metadata를 받아 문서를 생성해야 한다. | Must | 유효한 요청은 문서 ID, 상태, 생성 정보를 반환하고 이후 조회 가능하다. |
-| FR-DOC-002 | 호출자가 document ID를 지정하지 않으면 서비스 또는 SDK가 식별자를 생성해야 한다. | Must | ID 생략 업로드가 충돌 없는 문서 ID를 반환한다. |
-| FR-DOC-003 | 문서 metadata를 ID로 조회해야 한다. | Must | 존재하는 활성 문서는 metadata와 상태를 반환한다. |
-| FR-DOC-004 | 문서 콘텐츠 전체 조회를 제공해야 한다. | Should | 작은 문서에 대해 content type을 보존해 콘텐츠를 반환한다. |
-| FR-DOC-005 | 대용량 문서 다운로드는 streaming 방식으로 제공해야 한다. | Must | 전체 콘텐츠를 메모리에 적재하지 않고 chunk 단위로 전송한다. |
-| FR-DOC-006 | soft delete를 제공해야 한다. | Must | 삭제 문서는 `deleted` 상태가 되며 일반 조회/다운로드 정책에 따라 차단된다. |
-| FR-DOC-007 | 권한 있는 호출자에게 hard delete를 제공해야 한다. | Must | object와 metadata 삭제가 완료되거나 실패가 식별 가능한 오류로 반환된다. |
-| FR-DOC-008 | filename, uploader/created_by, 사용자 정의 metadata, checksum을 문서 metadata로 관리해야 한다. | Must | 업로드 시 제공한 정보가 metadata 조회 결과에서 확인된다. |
-| FR-DOC-009 | 업로드된 원본 filename과 uploader 정보는 MinIO object metadata가 아니라 document metadata에 저장해야 한다. | Must | object metadata에 해당 업무 정보가 기록되지 않고 document metadata에서 조회된다. |
-| FR-DOC-010 | 문서 목록을 offset/limit으로 조회하고 상태로 필터링할 수 있어야 한다. | Must | 목록 응답이 pagination과 상태 filter를 SDK에 전달하고 내부 `storage_key`를 노출하지 않는다. |
-
-### 6.3 오류 및 정합성
+### 4.2 문서 lifecycle
 
 | ID | 요구사항 | 우선순위 | 수용 기준 |
 | --- | --- | --- | --- |
-| FR-ERR-001 | validation, not found, duplicate, configuration, storage, consistency 오류를 구분된 표준 오류 응답으로 반환해야 한다. | Must | 오류 유형별 HTTP status, 오류 코드, 안전한 메시지가 API 계약에 정의된다. |
-| FR-ERR-002 | 요청 검증 실패(예: 잘못된 chunk size)는 저장소 작업 전에 거부해야 한다. | Must | 잘못된 요청이 validation 오류를 반환하고 문서를 생성하지 않는다. |
-| FR-ERR-003 | object 저장 후 metadata 저장 실패 시 본문 정리를 시도해야 한다. | Must | 실패 주입 테스트에서 cleanup 시도가 검증된다. |
-| FR-ERR-004 | cleanup도 실패하거나 metadata와 본문 상태가 불일치하면 consistency 오류로 기록해야 한다. | Must | 오류 응답·구조화 로그·운영 알림의 상관 ID로 장애를 추적할 수 있다. |
-| FR-ERR-005 | 존재하지 않는 문서와 삭제된 문서의 외부 노출 정책을 API 계약에 명시해야 한다. | Must | 비인가 정보 노출 없이 일관된 응답이 테스트된다. |
+| FR-DOC-001 | 서비스는 파일 본문, filename, content type, 선택 metadata를 받아 문서를 생성해야 한다. | Must | 유효한 요청은 문서 ID와 생성 정보를 반환하고 이후 조회할 수 있다. |
+| FR-DOC-002 | 호출자가 ID를 지정하지 않으면 서비스 또는 SDK가 충돌 없는 document ID를 생성해야 한다. | Must | ID 생략 업로드가 새 document ID를 반환한다. |
+| FR-DOC-003 | 서비스는 ID로 활성 문서의 공개 metadata를 조회해야 한다. | Must | metadata와 상태를 반환하며 내부 저장소 식별자는 노출하지 않는다. |
+| FR-DOC-004 | 서비스는 문서 목록을 offset/limit과 선택 status filter로 조회해야 한다. | Must | pagination과 filter가 SDK에 전달되고 공개 metadata 배열을 반환한다. |
+| FR-DOC-005 | 서비스는 문서 콘텐츠 전체 조회를 제공해야 한다. | Should | 작은 문서에서 저장된 content type과 안전한 filename disposition을 보존한다. |
+| FR-DOC-006 | 대용량 문서 다운로드는 streaming으로 제공해야 한다. | Must | 전체 본문을 애플리케이션 메모리에 적재하지 않고 chunk 단위로 전송한다. |
+| FR-DOC-007 | 서비스는 soft delete를 제공해야 한다. | Must | 본문을 삭제하고 metadata를 `deleted` 상태로 보존하며 일반 조회·다운로드를 차단한다. |
+| FR-DOC-008 | 권한 있는 사용자에게 hard delete를 제공해야 한다. | Must | object와 metadata가 제거되거나 식별 가능한 오류가 반환된다. |
+| FR-DOC-009 | filename, 작성자, 사용자 정의 metadata, checksum은 document metadata로 관리해야 한다. | Must | 업로드 시 제공·파생된 정보가 metadata 조회에서 확인된다. |
+| FR-DOC-010 | 원본 filename과 작성자 정보는 MinIO object metadata가 아닌 document metadata에 저장해야 한다. | Must | object metadata에 업무 metadata가 기록되지 않는다. |
 
-### 6.4 운영 및 설정
+### 4.3 오류, 정합성 및 운영
 
 | ID | 요구사항 | 우선순위 | 수용 기준 |
 | --- | --- | --- | --- |
-| FR-OPS-001 | 현재 배포 template은 PostgreSQL을 metadata store, MinIO를 object store로 선택해야 한다. | Must | `DMS_METADATA_BACKEND=postgresql`과 개별 `POSTGRES_*`, `MINIO_*`가 환경에 제공된다. 애플리케이션 코드는 다른 DMS backend를 거부하지 않는다. |
-| FR-OPS-003 | MinIO bucket 또는 metadata store 설정이 누락되면 서비스는 정상 준비 상태가 되면 안 된다. | Must | 구성 오류가 기동 실패 또는 readiness 실패로 드러난다. |
-| FR-OPS-004 | `ROOT_PATH`, `TOKEN_URL`, CORS, 활성 서비스, 필수 readiness 서비스를 환경 설정으로 명시할 수 있어야 한다. | Must | reverse proxy 및 배포별 URL/health 정책이 코드 변경 없이 적용된다. |
-| FR-OPS-005 | 운영 secret과 DSN은 외부 secret 주입 또는 명시적 환경변수로 제공해야 하며 로그에 원문을 남기면 안 된다. | Must | 설정/로그 점검에서 credential 노출이 없다. |
-| FR-OPS-006 | 필수 서비스 장애는 readiness 503, 선택 서비스 장애는 degraded 상태로 구분해야 한다. | Must | required service와 optional service 장애 테스트가 각각 기대 상태를 반환한다. |
+| FR-ERR-001 | validation, not found, duplicate, configuration, storage, consistency 오류를 표준 오류 응답으로 구분해야 한다. | Must | 오류 유형별 HTTP status, 오류 코드, 안전한 메시지가 API 계약에 정의된다. |
+| FR-ERR-002 | 잘못된 입력은 저장소 작업 전에 거부해야 한다. | Must | 예: 0 이하 chunk size 또는 빈 파일 정보 요청이 validation 오류를 반환하고 문서를 생성하지 않는다. |
+| FR-ERR-003 | object 저장 후 metadata 저장에 실패하면 본문 정리를 시도해야 한다. | Must | 실패 주입 테스트가 cleanup 시도를 검증한다. |
+| FR-ERR-004 | cleanup 실패 또는 metadata·본문 불일치는 consistency 오류로 기록·응답해야 한다. | Must | 상관 ID로 오류를 추적할 수 있다. |
+| FR-ERR-005 | 존재하지 않거나 soft-deleted 문서는 동일한 외부 not-found 정책으로 처리해야 한다. | Must | 존재 여부를 불필요하게 노출하지 않는 일관된 응답이 검증된다. |
+| FR-OPS-001 | 배포 template은 PostgreSQL metadata store와 MinIO object store를 구성해야 한다. | Must | 필요한 `POSTGRES_*`, `MINIO_*`, `DMS_METADATA_BACKEND=postgresql` 설정이 제공된다. |
+| FR-OPS-002 | 필수 저장소 설정 누락 또는 장애는 기동 실패 또는 readiness 실패로 드러나야 한다. | Must | 필수 의존성 장애 시 readiness가 503을 반환한다. |
+| FR-OPS-003 | CORS, 인증 URL, root path, readiness 정책은 환경 설정으로 명시해야 한다. | Must | 배포 환경별 정책을 코드 변경 없이 적용할 수 있다. |
+| FR-OPS-004 | secret과 연결 정보는 외부 secret 주입 또는 환경변수로 제공하고 로그·응답에 원문을 노출해서는 안 된다. | Must | credential, DSN, storage key, stack trace가 외부에 노출되지 않는다. |
 
-## 7. 비기능 요구사항
+## 5. 품질 및 릴리스 기준
 
-| 영역 | 요구사항 |
+| 영역 | 릴리스 기준 |
 | --- | --- |
-| 보안 | 모든 문서 작업은 인증 검사를 거쳐야 하며 hard delete에는 강화된 권한 검사를 적용한다. 운영 CORS는 허용 origin을 명시하며 wildcard origin과 credential 조합을 사용하지 않는다. |
-| 데이터 정합성 | 업로드는 본문 저장 후 metadata 저장 순서를 따르며, 실패 보상과 consistency 오류 추적을 제공한다. |
-| 성능/자원 | 대용량 다운로드는 streaming으로 제공하고, stream과 SDK는 예외·종료 경로를 포함해 반드시 close한다. |
-| 가용성 | liveness와 readiness를 분리한다. readiness는 DMS 필수 의존성 상태를 반영한다. |
-| 관측성 | `fastapi-core` middleware가 correlation ID를 응답과 오류 envelope에 제공한다. 현재 서비스 route에는 문서 ID·작업·결과·latency를 모두 기록하는 전용 구조화 request log가 없다. |
-| 호환성 | Python 3.11 이상 및 저장소에 고정된 `dms`, `fastapi-core`, `docmesh-py-core` 의존성 버전과 호환되어야 한다. |
-| 테스트 | unit test는 request 변환·오류 매핑·dependency를, integration test는 PostgreSQL·MinIO·lifecycle·health를 검증한다. |
+| 데이터 정합성 | 업로드·삭제의 성공 및 부분 실패 경로가 검증되고, 미처리 object 또는 metadata 상태를 consistency 오류로 식별한다. |
+| 자원 관리 | streaming 완료·예외·연결 종료와 application shutdown에서 stream 및 SDK close를 검증한다. |
+| 가용성 | liveness와 readiness를 분리하고 PostgreSQL·MinIO 장애가 readiness에 반영됨을 검증한다. |
+| 보안 | 인증, hard delete 권한, 안전한 오류 응답, 운영 CORS 정책을 API 계약 테스트로 검증한다. |
+| 호환성 | Python 3.11 이상 및 저장소에 고정된 `dms`, `fastapi-core`, `docmesh-py-core` 조합에서 테스트를 통과한다. |
 
-## 8. API 및 데이터 정책
+## 6. 추적성
 
-### 8.1 API 설계 원칙
+세부 기술 요구사항은 [소프트웨어 요구사항 정의서](srs.md)에서 정의한다.
 
-- API는 HTTP resource 중심으로 문서 생성, 목록·metadata 조회, 콘텐츠 다운로드, 삭제를 제공한다.
-- upload는 `multipart/form-data`를 사용한다. filename과 content type은 `UploadFile`에서 읽고 별도 form field로 받지 않는다.
-- 다운로드는 저장된 content type과 안전한 `Content-Disposition` 정책을 적용한다.
-- metadata response에는 최소한 document ID, filename, content type, 크기, 상태, 생성/수정 시각, created_by, checksum, 사용자 metadata를 포함한다.
-- API 오류 응답에는 기계 판독 가능한 오류 코드와 요청 상관 ID를 포함한다. 내부 stack trace, credential, 저장소 endpoint 상세는 외부 응답에 노출하지 않는다.
-
-### 8.2 데이터 수명주기 정책
-
-| 상태 | 의미 | 허용 작업 |
-| --- | --- | --- |
-| `uploaded` | object 저장 후 metadata lifecycle이 진행 중인 SDK 상태 | 목록 status filter에서 사용 가능 |
-| `available` | 본문과 metadata가 정상적으로 사용 가능한 문서 | metadata 조회, 다운로드, 삭제 |
-| `deleting` | 삭제 작업이 진행 중인 문서 | 재시도/조회 정책은 API 계약에서 제한적으로 정의 |
-| `deleted` | soft delete된 문서 | 일반 다운로드·조회 차단, 복구는 MVP 범위 밖 |
-| `failed` | SDK 작업이 실패한 문서 | 목록 status filter에서 사용 가능; 일반 읽기 차단은 현재 `deleted` 상태에만 명시 적용 |
-| hard deleted | object와 metadata가 제거된 문서 | 일반 API로 조회 불가 |
+| PRD 영역 | SRS 요구사항 |
+| --- | --- |
+| 애플리케이션 및 보안 | SRS-ARC, SRS-SEC |
+| 문서 lifecycle | SRS-DOM, SRS-API |
+| 오류 및 정합성 | SRS-ERR |
+| 저장소·설정·운영 | SRS-STO, SRS-OPS, SRS-CFG |
+| 품질 및 검증 | SRS-NFR |
