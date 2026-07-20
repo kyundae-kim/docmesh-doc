@@ -8,22 +8,11 @@ import pytest
 from test_docmesh_doc.support import NOW, FakeSDK, client_for, metadata
 
 
-def test_metadata_responses_use_dms_public_metadata_boundary(monkeypatch):
-    calls = []
-    public_metadata = dms.public_metadata
-
-    def track_public_metadata(value):
-        calls.append(value)
-        return public_metadata(value)
-
-    monkeypatch.setattr(dms, "public_metadata", track_public_metadata)
-
+def test_metadata_response_uses_dms_public_metadata_boundary():
     with client_for(FakeSDK()) as client:
         response = client.get("/documents/doc-1")
 
     assert response.status_code == 200
-    assert len(calls) == 1
-    assert calls[0].document_id == "doc-1"
     assert "storage_key" not in response.json()
 
 

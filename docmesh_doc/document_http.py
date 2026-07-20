@@ -34,7 +34,7 @@ def validate_upload_file(file: UploadFile) -> tuple[str, str, int]:
 def require_readable_document(
     sdk: dms.DefaultDocumentManagementSDK,
     document_id: str,
-) -> dms.DocumentMetadata:
+) -> dms.PublicDocumentMetadata:
     item = sdk.get_document_metadata(document_id)
     if item.status is dms.DocumentStatus.DELETED:
         raise dms.DocumentNotFoundError(document_id)

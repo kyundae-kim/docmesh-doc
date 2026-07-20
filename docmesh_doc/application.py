@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-import os
-
 import dms
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi_core import ManagedResource, create_app, register_error_mapper
 from fastapi_core.config import AppConfig
 
+from docmesh_doc.dependencies import DMS_RESOURCE
 from docmesh_doc.errors import (
     map_dms_error,
     map_validation_error,
@@ -27,11 +26,9 @@ def create_application(
         include_auth_router=include_auth_router,
         resources=(
             ManagedResource(
-                name="dms",
+                name=DMS_RESOURCE,
                 factory=lambda _application: (
-                    sdk
-                    if sdk is not None
-                    else dms.create_sdk_from_environment(dict(os.environ))
+                    sdk if sdk is not None else dms.create_sdk_from_environment()
                 ),
                 healthcheck=lambda current: current.check_health().ok,
                 required=True,

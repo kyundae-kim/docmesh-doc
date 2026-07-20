@@ -42,7 +42,7 @@ def upload_document(
     )
     result = sdk.upload_document_stream(request)
     response.headers["Location"] = f"/documents/{result.document_id}"
-    return dms.public_metadata(result)
+    return result.metadata
 
 
 @router.get("", response_model=list[DocumentMetadataResponse])
@@ -54,12 +54,12 @@ def list_documents(
     status: dms.DocumentStatus | None = None,
 ) -> list[DocumentMetadataResponse]:
     items = sdk.list_documents(offset=offset, limit=limit, status=status)
-    return [dms.public_metadata(item) for item in items]
+    return items
 
 
 @router.get("/{document_id}", response_model=DocumentMetadataResponse)
 def get_document_metadata(document_id: str, sdk: DmsSdk, user: CurrentUser) -> DocumentMetadataResponse:
-    return dms.public_metadata(require_readable_document(sdk, document_id))
+    return require_readable_document(sdk, document_id)
 
 
 @router.get("/{document_id}/content")

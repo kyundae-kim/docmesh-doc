@@ -30,6 +30,20 @@ def metadata(document_id: str = "doc-1") -> dms.DocumentMetadata:
     )
 
 
+def public_metadata(document_id: str = "doc-1") -> dms.PublicDocumentMetadata:
+    return dms.PublicDocumentMetadata(
+        document_id=document_id,
+        original_filename="contract.pdf",
+        content_type="application/pdf",
+        file_size=3,
+        status=dms.DocumentStatus.AVAILABLE,
+        created_at=NOW,
+        updated_at=NOW,
+        created_by="user-1",
+        extra_metadata={"category": "contract"},
+    )
+
+
 class FakeSDK:
     def __init__(self) -> None:
         self.closed = False
@@ -41,10 +55,9 @@ class FakeSDK:
 
     def upload_document(self, request):
         self.upload_request = request
-        item = metadata(request.document_id or "generated-id")
+        item = public_metadata(request.document_id or "generated-id")
         return dms.UploadDocumentResult(
             document_id=item.document_id,
-            storage_key=item.storage_key,
             metadata=item,
         )
 
@@ -52,21 +65,20 @@ class FakeSDK:
         self.upload_stream_request = request
         content = request.stream.read()
         assert len(content) == request.size
-        item = metadata(request.document_id or "generated-id")
+        item = public_metadata(request.document_id or "generated-id")
         return dms.UploadDocumentResult(
             document_id=item.document_id,
-            storage_key=item.storage_key,
             metadata=item,
         )
 
     def get_document_metadata(self, document_id):
         if document_id == "missing":
             raise dms.DocumentNotFoundError(document_id)
-        return metadata(document_id)
+        return public_metadata(document_id)
 
     def list_documents(self, *, offset=0, limit=100, status=None):
         self.list_args = (offset, limit, status)
-        return [metadata("doc-1"), metadata("doc-2")]
+        return [public_metadata("doc-1"), public_metadata("doc-2")]
 
     def get_document_content(self, document_id):
         return dms.DocumentContent(

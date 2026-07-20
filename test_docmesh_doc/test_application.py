@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import os
-
 import dms
 import pytest
 from fastapi.testclient import TestClient
@@ -11,16 +9,16 @@ from docmesh_doc.application import create_application
 from test_docmesh_doc.support import NOW, FakeSDK, client_for
 
 
-def test_application_creates_dms_sdk_from_process_environment_at_startup(monkeypatch):
+def test_application_delegates_process_environment_loading_to_dms(monkeypatch):
     sdk = FakeSDK()
-    captured_environment = None
+    create_calls = 0
     monkeypatch.setenv("DMS_METADATA_BACKEND", "postgresql")
     monkeypatch.setenv("DMS_CONFIGURATION_STRICT", "true")
     monkeypatch.delenv("POSTGRES_DSN", raising=False)
 
-    def create_sdk(environment):
-        nonlocal captured_environment
-        captured_environment = environment
+    def create_sdk():
+        nonlocal create_calls
+        create_calls += 1
         return sdk
 
     monkeypatch.setattr(
@@ -37,8 +35,7 @@ def test_application_creates_dms_sdk_from_process_environment_at_startup(monkeyp
     with TestClient(app):
         assert app.state.resource_registry.require("dms") is sdk
 
-    assert captured_environment == dict(os.environ)
-    assert captured_environment is not os.environ
+    assert create_calls == 1
 
 
 def test_dms_sdk_is_owned_by_the_managed_resource_registry():
@@ -102,7 +99,7 @@ def test_readiness_returns_503_when_dms_sdk_is_unhealthy():
 
 
 def test_sdk_environment_failure_aborts_application_startup(monkeypatch):
-    def failing_create_dms_sdk(_environment):
+    def failing_create_dms_sdk():
         raise RuntimeError("SDK startup failed")
 
     monkeypatch.setattr(dms, "create_sdk_from_environment", failing_create_dms_sdk)

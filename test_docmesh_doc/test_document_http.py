@@ -118,17 +118,12 @@ def test_require_readable_document_returns_visible_metadata_and_hides_deleted():
 
 
 @pytest.mark.parametrize("route", ["upload", "list", "single"])
-def test_all_metadata_routes_apply_public_projection(monkeypatch, route):
-    original_public_metadata = dms.public_metadata
-    calls = []
-
-    def project(item):
-        calls.append(item)
-        return replace(
-            original_public_metadata(item), extra_metadata={"projected": route}
-        )
-
-    monkeypatch.setattr(dms, "public_metadata", project)
+def test_metadata_routes_use_sdk_public_metadata_contract(monkeypatch, route):
+    monkeypatch.setattr(
+        dms,
+        "public_metadata",
+        lambda _item: pytest.fail("route must use the SDK's public result directly"),
+    )
     with client_for(FakeSDK()) as client:
         if route == "upload":
             response = client.post(
@@ -143,6 +138,5 @@ def test_all_metadata_routes_apply_public_projection(monkeypatch, route):
     assert response.status_code in (200, 201)
     payload = response.json()
     items = payload if isinstance(payload, list) else [payload]
-    assert len(calls) == len(items)
-    assert all(item["metadata"] == {"projected": route} for item in items)
+    assert all(item["metadata"] == {"category": "contract"} for item in items)
     assert all("storage_key" not in item for item in items)
