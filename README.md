@@ -6,7 +6,7 @@ DocMesh Document Service는 문서 본문과 metadata를 일관된 HTTP API로 �
 
 - `multipart/form-data` 기반 문서 업로드
 - 문서 목록 및 metadata 조회
-- 전체 콘텐츠 조회와 chunk 기반 streaming download
+- inline 콘텐츠 조회와 attachment download의 chunk 기반 streaming
 - object를 제거하고 metadata를 보존하는 soft delete
 - 권한이 있는 사용자를 위한 hard delete
 - OAuth2 bearer 인증과 Keycloak 사용자/role 연동
@@ -297,5 +297,4 @@ wiki/                    # upstream package 조사와 근거 자료
 
 ## 현재 알려진 제약
 
-- 전체 콘텐츠 API는 bytes를 한 번에 메모리에 적재하므로 큰 문서는 streaming download API를 사용해야 합니다.
 - MinIO health check는 bucket별 읽기·쓰기·삭제 권한까지 보장하지 않으므로 배포 전 별도 확인이 필요합니다.

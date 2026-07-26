@@ -58,6 +58,18 @@ def test_invalid_chunk_size_is_normalized_to_400():
     assert response.json()["error"]["code"] == "VALIDATION_ERROR"
 
 
+def test_oversized_chunk_is_rejected_before_sdk_call():
+    sdk = FakeSDK()
+    with client_for(sdk) as client:
+        response = client.get(
+            "/documents/doc-1/download?chunk_size=8388609"
+        )
+
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "VALIDATION_ERROR"
+    assert sdk.content_stream_calls == 0
+
+
 def test_stream_is_closed_after_download():
     sdk = FakeSDK()
     with client_for(sdk) as client:
@@ -66,6 +78,19 @@ def test_stream_is_closed_after_download():
     assert response.status_code == 200
     assert response.content == b"pdf"
     assert response.headers["Content-Disposition"].startswith("attachment;")
+    assert sdk.stream_closed is True
+
+
+def test_inline_content_is_streamed_and_closed():
+    sdk = FakeSDK()
+    with client_for(sdk) as client:
+        response = client.get("/documents/doc-1/content")
+
+    assert response.status_code == 200
+    assert response.content == b"pdf"
+    assert response.headers["Content-Disposition"].startswith("inline;")
+    assert sdk.content_calls == 0
+    assert sdk.content_stream_calls == 1
     assert sdk.stream_closed is True
 
 
@@ -79,8 +104,8 @@ def test_content_routes_delegate_readability_check_to_sdk_without_duplicate_meta
     assert content_response.status_code == 200
     assert download_response.status_code == 200
     assert sdk.metadata_calls == 0
-    assert sdk.content_calls == 1
-    assert sdk.content_stream_calls == 1
+    assert sdk.content_calls == 0
+    assert sdk.content_stream_calls == 2
 
 
 def test_soft_deleted_documents_are_hidden_from_read_routes():

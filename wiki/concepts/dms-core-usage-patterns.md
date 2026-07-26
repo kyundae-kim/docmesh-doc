@@ -36,6 +36,8 @@ v0.6.0 API는 bytes·동기·비동기 upload에 동일한 metadata 검증과 �
 
 v0.6.0 Examples는 service-config assembly에서 `check_on_startup=True`를 명시하고, 입력 stream이 호출자 소유임을 확인하며, public metadata와 internal/recovery metadata를 분리한다. 설치된 `dms 0.6.0`에서 service-config factory, formatter, sync/async stream, `recommended_http_error(...)`와 cursor-default 목록을 확인했다. adapter는 caller-owned upload stream과 context-managed sync download, public allowlist page를 유지한다. ^[raw/articles/dms-core-wiki-examples-v0.6.0.md]
 
+현재 adapter는 inline content와 attachment download 모두 `get_document_content_stream()`을 사용하고 하나의 context-managed response 경계에서 chunk를 전달한다. caller가 지정하는 read buffer는 1 byte~8 MiB로 제한해 전체 object 적재와 비정상적으로 큰 단일 read를 피한다. 통합 테스트는 실제 PostgreSQL·MinIO 문서를 fixture cleanup으로 제거하며 marker selection과 root-path-aware `Location`을 검증한다. 적용 범위와 후속 후보는 [[dms-application-optimization]]에 기록한다. ^[raw/articles/dms-core-wiki-examples-v0.6.0.md]
+
 ## Assembly choices
 
 일반 애플리케이션은 `create_sdk_from_environment(...)`를 사용하고, 테스트나 custom infrastructure 조립에는 `create_sdk_from_components(...)`를 사용한다. PostgreSQL/SQLite metadata store 모두 MinIO object store가 필요하며, 최소 환경변수와 startup health policy는 [[dms-core-configuration]]에서 관리한다. ^[raw/articles/dms-core-config-v0.2.0.md]

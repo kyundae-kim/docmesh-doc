@@ -74,8 +74,8 @@ DocMesh Document Service의 목적은 업무 시스템이 파일 저장소와 �
 | FR-DOC-002 | 호출자가 ID를 지정하지 않으면 서비스 또는 SDK가 충돌 없는 document ID를 생성해야 한다. | Must | ID 생략 업로드가 새 document ID를 반환한다. |
 | FR-DOC-003 | 서비스는 ID로 읽을 수 있는 문서의 공개 metadata를 조회해야 한다. | Must | 활성 metadata와 상태를 반환하며 내부 `storage_key`는 노출하지 않고 soft-deleted 단건 metadata는 not-found로 처리한다. |
 | FR-DOC-004 | 서비스는 문서 목록을 불투명 cursor, limit과 선택 status filter로 조회해야 한다. | Must | 첫 요청의 cursor는 생략하고 limit 기본값은 100이며, 응답은 공개 metadata `items`, `next_cursor`, `has_more`를 반환한다. 다음 page는 같은 limit과 status를 유지한다. |
-| FR-DOC-005 | 서비스는 문서 콘텐츠 전체 조회를 제공해야 한다. | Should | 작은 문서에서 저장된 content type과 안전한 filename disposition을 보존한다. |
-| FR-DOC-006 | 대용량 문서 다운로드는 streaming으로 제공해야 한다. | Must | 전체 본문을 애플리케이션 메모리에 적재하지 않고 chunk 단위로 전송한다. |
+| FR-DOC-005 | 서비스는 문서 콘텐츠 전체 조회를 제공해야 한다. | Should | 저장된 content type과 안전한 inline filename disposition을 유지하면서 chunk 단위로 전송한다. |
+| FR-DOC-006 | 대용량 문서 다운로드는 streaming으로 제공해야 한다. | Must | inline 조회와 attachment download 모두 전체 본문을 애플리케이션 메모리에 적재하지 않고 chunk 단위로 전송한다. |
 | FR-DOC-007 | 서비스는 soft delete를 제공해야 한다. | Must | 본문을 삭제하고 metadata를 `deleted` 상태로 보존하며 단건 metadata·콘텐츠·다운로드를 차단한다. 상태 filter를 사용하는 목록은 삭제 상태를 조회할 수 있다. |
 | FR-DOC-008 | 권한 있는 사용자에게 hard delete를 제공해야 한다. | Must | object와 metadata가 제거되거나 식별 가능한 오류가 반환된다. |
 | FR-DOC-009 | filename, 작성자, 사용자 정의 metadata, checksum은 document metadata로 관리해야 한다. | Must | 업로드 시 제공·파생된 정보가 metadata 조회에서 확인된다. |

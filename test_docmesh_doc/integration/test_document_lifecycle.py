@@ -9,6 +9,7 @@ from fastapi_core.schemas import UserInfo
 
 
 PAYLOAD = b"DocMesh integration test payload"
+pytestmark = pytest.mark.integration
 
 
 def upload(client: TestClient, document_id: str):
@@ -35,7 +36,10 @@ def test_upload_persists_metadata_and_content_in_postgres_and_minio(
     response = upload(client, document_id)
 
     assert response.status_code == 201
-    assert response.headers["Location"] == f"/documents/{document_id}"
+    root_path = client.app.root_path.rstrip("/")
+    assert response.headers["Location"] == (
+        f"{root_path}/documents/{document_id}"
+    )
     assert response.headers["X-Correlation-ID"] == f"correlation-{document_id}"
     assert response.json()["document_id"] == document_id
     assert response.json()["created_by"] == user.sub
@@ -49,9 +53,6 @@ def test_upload_persists_metadata_and_content_in_postgres_and_minio(
     assert metadata.extra_metadata == {"suite": "integration"}
     assert content.content == PAYLOAD
     assert content.content_type == "text/plain"
-
-    sdk.hard_delete_document(document_id)
-
 
 def test_metadata_lookup_and_streaming_download_use_real_stores(
     integration_client: tuple[
@@ -83,9 +84,6 @@ def test_metadata_lookup_and_streaming_download_use_real_stores(
     assert download_response.content == PAYLOAD
     assert download_response.headers["Content-Type"].startswith("text/plain")
     assert download_response.headers["Content-Disposition"].startswith("attachment;")
-
-    sdk.hard_delete_document(document_id)
-
 
 def test_hard_delete_removes_postgres_metadata_and_minio_object(
     integration_client: tuple[

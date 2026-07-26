@@ -355,3 +355,10 @@
 - Verification: `59 passed, 1 skipped`; the upstream Starlette `httpx2` migration warning remains.
 - Created: `queries/fastapi-core-application-optimization.md`.
 - Updated: `concepts/fastapi-core-app-assembly.md`, `concepts/fastapi-core-usage-patterns.md`, `index.md`, `log.md`.
+
+## [2026-07-26] query | dms application optimization
+- Retained the verified v0.6 public metadata, cursor page, explicit delete, managed SDK lifecycle, and synchronous stream boundaries.
+- Streamed inline content and attachment downloads through one context-managed response, capped caller chunk size at 8 MiB, and repaired integration marker/root-path/cleanup behavior.
+- Verification: `61 passed, 1 skipped`; integration selection was `3 passed, 1 skipped, 58 deselected`. The upstream Starlette `httpx2` migration warning remains.
+- Created: `queries/dms-application-optimization.md`.
+- Updated: `concepts/dms-core-usage-patterns.md`, `concepts/dms-core-document-lifecycle.md`, `index.md`, `log.md`.

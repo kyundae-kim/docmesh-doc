@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Literal
 
 import dms
 from fastapi import APIRouter, Depends, File, Form, Query, Request, Response, UploadFile
@@ -19,6 +19,24 @@ from docmesh_doc.schemas import (
     DocumentPageResponse,
     ErrorResponse,
 )
+
+MAX_DOWNLOAD_CHUNK_SIZE = 8 * 1024 * 1024
+
+
+def _stream_document(
+    item: dms.DocumentContentStream,
+    *,
+    disposition: Literal["inline", "attachment"],
+) -> StreamingResponse:
+    def body():
+        with item:
+            yield from item.iter_chunks()
+
+    return StreamingResponse(body(), media_type=item.content_type, headers={
+        "Content-Length": str(item.size),
+        "Content-Disposition": content_disposition(disposition, item.filename),
+    })
+
 
 router = APIRouter(
     prefix="/documents",
@@ -81,30 +99,22 @@ def get_document_metadata(
 
 
 @router.get("/{document_id}/content")
-def get_document_content(document_id: str, sdk: DmsSdk) -> Response:
-    item = sdk.get_document_content(document_id)
-    return Response(content=item.content, media_type=item.content_type, headers={
-        "Content-Length": str(item.size),
-        "Content-Disposition": content_disposition("inline", item.filename),
-    })
+def get_document_content(document_id: str, sdk: DmsSdk) -> StreamingResponse:
+    item = sdk.get_document_content_stream(document_id)
+    return _stream_document(item, disposition="inline")
 
 
 @router.get("/{document_id}/download")
 def download_document(
     document_id: str,
     sdk: DmsSdk,
-    chunk_size: Annotated[int, Query(ge=1)] = 65536,
+    chunk_size: Annotated[
+        int,
+        Query(ge=1, le=MAX_DOWNLOAD_CHUNK_SIZE),
+    ] = 65536,
 ) -> StreamingResponse:
     item = sdk.get_document_content_stream(document_id, chunk_size=chunk_size)
-
-    def body():
-        with item:
-            yield from item.iter_chunks()
-
-    return StreamingResponse(body(), media_type=item.content_type, headers={
-        "Content-Length": str(item.size),
-        "Content-Disposition": content_disposition("attachment", item.filename),
-    })
+    return _stream_document(item, disposition="attachment")
 
 
 @router.delete("/{document_id}", response_model=DeleteDocumentResponse)
