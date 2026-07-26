@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import replace
-
 import dms
 import pytest
 from starlette.requests import ClientDisconnect
 
 from docmesh_doc.router import MAX_DOWNLOAD_CHUNK_SIZE, _stream_document
-from test_docmesh_doc.support import NOW, FakeSDK, client_for, metadata
+from test_docmesh_doc.support import FakeSDK, client_for
 
 
 def test_metadata_response_uses_dms_public_metadata_boundary():
@@ -141,11 +139,6 @@ def test_content_routes_delegate_readability_check_to_sdk_without_duplicate_meta
 
 def test_soft_deleted_documents_are_hidden_from_read_routes():
     sdk = FakeSDK()
-    sdk.get_document_metadata = lambda document_id: replace(
-        metadata(document_id),
-        status=dms.DocumentStatus.DELETED,
-        deleted_at=NOW,
-    )
 
     def deleted_content(document_id, **_kwargs):
         raise dms.DocumentDeletedError(
@@ -153,6 +146,7 @@ def test_soft_deleted_documents_are_hidden_from_read_routes():
             document_id=document_id,
         )
 
+    sdk.get_document_metadata = deleted_content
     sdk.get_document_content = deleted_content
     sdk.get_document_content_stream = deleted_content
 

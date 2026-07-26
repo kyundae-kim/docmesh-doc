@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import replace
 from io import BytesIO
 from typing import Literal, get_type_hints
 
@@ -11,8 +10,6 @@ from starlette.datastructures import Headers
 
 from docmesh_doc.document_http import (
     content_disposition,
-    parse_metadata_form,
-    require_readable_document,
     validate_upload_file,
 )
 from docmesh_doc.schemas import DocumentMetadataResponse
@@ -32,20 +29,6 @@ def _upload_file(
         filename=filename,
         headers=Headers({"content-type": content_type}),
     )
-
-
-def test_parse_metadata_form_accepts_json_object():
-    assert parse_metadata_form('{"category": "contract", "revision": 2}') == {
-        "category": "contract",
-        "revision": 2,
-    }
-
-
-@pytest.mark.parametrize("value", ["{", "[]", '"text"', "1", "true", "null"])
-def test_parse_metadata_form_rejects_invalid_json_and_non_objects(value):
-    with pytest.raises(dms.ValidationError, match="metadata must be a JSON object"):
-        parse_metadata_form(value)
-
 
 def test_validate_upload_file_trims_fields_uses_reported_size_and_rewinds_stream():
     file = _upload_file(b"pdf", size=3)
@@ -104,18 +87,6 @@ def test_content_disposition_rfc5987_encodes_unicode_apostrophes_and_unsafe_char
 
 def test_content_disposition_kind_has_literal_type():
     assert get_type_hints(content_disposition)["kind"] == Literal["inline", "attachment"]
-
-
-def test_require_readable_document_returns_visible_metadata_and_hides_deleted():
-    sdk = FakeSDK()
-    assert require_readable_document(sdk, "doc-1").document_id == "doc-1"
-
-    sdk.get_document_metadata = lambda document_id: replace(
-        metadata(document_id), status=dms.DocumentStatus.DELETED
-    )
-    with pytest.raises(dms.DocumentNotFoundError):
-        require_readable_document(sdk, "doc-1")
-
 
 @pytest.mark.parametrize("route", ["upload", "list", "single"])
 def test_metadata_routes_use_sdk_public_metadata_contract(monkeypatch, route):

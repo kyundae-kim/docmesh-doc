@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dms
+import pytest
 
 from test_docmesh_doc.support import FakeSDK, client_for
 
@@ -72,13 +73,14 @@ def test_upload_uses_authenticated_subject_not_caller_created_by():
     assert sdk.upload_stream_request.created_by == "user-1"
 
 
-def test_upload_validation_happens_before_sdk_call():
+@pytest.mark.parametrize("metadata", ["{", "[]", '"text"', "1", "true", "null"])
+def test_upload_validation_happens_before_sdk_call(metadata):
     sdk = FakeSDK()
     with client_for(sdk) as client:
         response = client.post(
             "/documents",
             files={"file": ("contract.pdf", b"pdf", "application/pdf")},
-            data={"metadata": "[]"},
+            data={"metadata": metadata},
         )
 
     assert response.status_code == 400

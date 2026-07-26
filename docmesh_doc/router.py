@@ -1,17 +1,15 @@
-from collections.abc import Iterable
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 import dms
 from fastapi import APIRouter, Depends, File, Form, Query, Request, Response, UploadFile
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import StreamingResponse
 from fastapi_core.dependencies import get_current_user
+from pydantic import Json
 
 from docmesh_doc.dependencies import CurrentUser, DmsSdk, require_hard_delete
 from docmesh_doc.document_http import (
     content_disposition,
-    parse_metadata_form,
-    require_readable_document,
     validate_upload_file,
 )
 from docmesh_doc.schemas import (
@@ -29,12 +27,13 @@ class DocumentStreamingResponse(StreamingResponse):
     def __init__(
         self,
         item: dms.DocumentContentStream,
-        content: Iterable[bytes],
         *,
         media_type: str,
         headers: dict[str, str],
     ) -> None:
-        super().__init__(content=content, media_type=media_type, headers=headers)
+        super().__init__(
+            content=item.iter_chunks(), media_type=media_type, headers=headers
+        )
         self.item = item
 
     async def __call__(self, scope, receive, send) -> None:
@@ -49,13 +48,8 @@ def _stream_document(
     *,
     disposition: Literal["inline", "attachment"],
 ) -> StreamingResponse:
-    def body():
-        with item:
-            yield from item.iter_chunks()
-
     return DocumentStreamingResponse(
         item,
-        content=body(),
         media_type=item.content_type,
         headers={
             "Content-Length": str(item.size),
@@ -83,10 +77,9 @@ def upload_document(
     user: CurrentUser,
     file: Annotated[UploadFile, File()],
     document_id: Annotated[str | None, Form()] = None,
-    metadata: Annotated[str, Form()] = "{}",
+    metadata: Annotated[Json[dict[str, Any]], Form()] = "{}",
     checksum: Annotated[str | None, Form()] = None,
 ) -> DocumentMetadataResponse:
-    extra_metadata = parse_metadata_form(metadata)
     filename, content_type, size = validate_upload_file(file)
     result = sdk.upload_document_stream(
         dms.UploadDocumentStreamRequest(
@@ -95,7 +88,7 @@ def upload_document(
             filename=filename,
             content_type=content_type,
             document_id=document_id or None,
-            metadata=extra_metadata,
+            metadata=metadata,
             created_by=user.sub,
             checksum=checksum or None,
         )
@@ -121,7 +114,7 @@ def get_document_metadata(
     document_id: str,
     sdk: DmsSdk,
 ) -> DocumentMetadataResponse:
-    return require_readable_document(sdk, document_id)
+    return sdk.get_document_metadata(document_id)
 
 
 @router.get("/{document_id}/content")
