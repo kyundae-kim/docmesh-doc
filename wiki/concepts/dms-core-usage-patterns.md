@@ -32,9 +32,9 @@ v0.5.0 API reference는 새 integration에서 `create_sdk_from_service_configs(c
 
 v0.5.0 Examples는 explicit idempotency scope, known/unknown-size streaming, context-managed download, cursor filter preservation, explicit soft delete와 dry-run plan execution을 하나의 public-root workflow로 보인다. 이 핵심 SDK methods는 installed v0.4.0에서 확인되지만, example의 argument-free environment factory와 `format_environment_diagnosis`는 없다. 현재 code는 explicit environment mapping/diagnosis object를 사용하고, v0.5.0 assembly/formatter flow는 version-aligned upgrade 뒤에만 채택한다. ^[raw/articles/dms-core-wiki-examples-v0.5.0.md]
 
-v0.6.0 API는 bytes·동기·비동기 upload에 동일한 metadata 검증과 명시적 idempotency scope를 요구하고, async 다운로드 stream은 완료·오류·취소 시 자원을 정리한다고 설명한다. 또한 새 기본 목록 contract는 offset이 아닌 cursor이며 다음 호출에서 status와 limit을 보존해야 한다. 설치된 `dms 0.5.0`에는 async request/stream methods가 없고 `list_documents(offset=..., ...)`가 남아 있으므로, 현재 adapter는 이 신규 표면을 호출하지 말고 upgrade 후 async cleanup과 cursor migration을 별도 테스트해야 한다. ^[raw/articles/dms-core-wiki-api-reference-v0.6.0.md]
+v0.6.0 API는 bytes·동기·비동기 upload에 동일한 metadata 검증과 명시적 idempotency scope를 요구하고, async 다운로드 stream은 완료·오류·취소 시 자원을 정리한다고 설명한다. 설치된 `dms 0.6.0`에서 async stream method와 cursor-default `list_documents`를 확인했다. 현재 adapter는 동기 stream lifecycle을 유지하면서 목록을 `DocumentPage` 응답으로 전환했고, 다음 호출에서 status와 limit을 보존하도록 HTTP 계약을 문서화했다. ^[raw/articles/dms-core-wiki-api-reference-v0.6.0.md]
 
-v0.6.0 Examples는 service-config assembly에서 `check_on_startup=True`를 명시하고, 입력 stream이 호출자 소유임을 확인하며, public metadata와 internal/recovery metadata를 분리한다. 현재 `dms 0.5.0`은 service-config factory, formatter, 동기 upload 및 `list_documents_page`를 제공하므로 이 동기 workflow의 경계는 적용할 수 있다. 그러나 예제의 async upload/download, `recommended_http_error(...)`, `list_documents(cursor=...)` 호출은 installed runtime에 없으므로 그대로 복사하지 않는다. ^[raw/articles/dms-core-wiki-examples-v0.6.0.md]
+v0.6.0 Examples는 service-config assembly에서 `check_on_startup=True`를 명시하고, 입력 stream이 호출자 소유임을 확인하며, public metadata와 internal/recovery metadata를 분리한다. 설치된 `dms 0.6.0`에서 service-config factory, formatter, sync/async stream, `recommended_http_error(...)`와 cursor-default 목록을 확인했다. adapter는 caller-owned upload stream과 context-managed sync download, public allowlist page를 유지한다. ^[raw/articles/dms-core-wiki-examples-v0.6.0.md]
 
 ## Assembly choices
 

@@ -341,3 +341,10 @@
 - Body SHA-256: `bd5afa926e3b9dff6bc75a37a83248b07a1eaf5c2dde7755af7ad6188bbf6df8`, distinct from the preserved v0.5.0 template body.
 - The template remains process-environment-only and service-free by default, adds active CORS/access-log/common-environment keys, and requires a complete settings block only after selecting its service. Installed `fastapi-core 0.5.0` supports startup failure/retry keys but lacks the v0.6 access-log fields, so the template is an upgrade candidate rather than a current deployment template.
 - Updated: `entities/fastapi-core.md`, `concepts/fastapi-core-configuration.md`, `concepts/fastapi-core-app-assembly.md`. Reviewed `index.md`; its date and page count were already current and unchanged.
+
+## [2026-07-26] update | fastapi-core and dms-core v0.6.0 consumer reconciliation
+- Verified installed `fastapi-core 0.6.0` and `dms 0.6.0` against their v0.6.0 Wiki source sets and the consuming adapter.
+- Confirmed module-aware `create_app`, module/OpenAPI contract helpers, isolated test environment, cursor-default `list_documents`, async stream APIs, and `recommended_http_error` at runtime.
+- Updated the adapter to module-first assembly, cursor-page HTTP responses, explicit soft/hard delete, and safe v0.6 error-status projection while retaining the product error envelope and synchronous stream lifecycle.
+- Verification: `56 passed, 1 skipped`; one upstream Starlette warning remains because `fastapi.testclient` imports deprecated `httpx` compatibility instead of `httpx2`.
+- Updated: `entities/fastapi-core.md`, `entities/dms-core.md`, `concepts/fastapi-core-app-assembly.md`, `concepts/fastapi-core-configuration.md`, `concepts/fastapi-core-usage-patterns.md`, `concepts/dms-core-usage-patterns.md`, `concepts/dms-core-document-lifecycle.md`, `index.md`.

@@ -1,7 +1,9 @@
+from typing import Any
+
 import dms
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
-from fastapi_core import ManagedResource, create_app, register_error_mapper
+from fastapi_core import DomainModule, ErrorMapperSpec, ManagedResource, create_app
 from fastapi_core.config import AppConfig
 
 from docmesh_doc.dependencies import DMS_RESOURCE
@@ -18,10 +20,11 @@ def create_application(
     *,
     config: AppConfig | None = None,
     include_auth_router: bool = True,
+    auth_provider: Any | None = None,
 ) -> FastAPI:
-    application = create_app(
-        config=config,
-        include_auth_router=include_auth_router,
+    documents = DomainModule(
+        name="documents",
+        routers=(router,),
         resources=(
             ManagedResource(
                 name=DMS_RESOURCE,
@@ -32,10 +35,15 @@ def create_application(
                 required=True,
             ),
         ),
-        error_renderer=render_error,
+        error_mappers=(
+            ErrorMapperSpec(dms.DmsError, map_dms_error),
+            ErrorMapperSpec(RequestValidationError, map_validation_error),
+        ),
     )
-
-    register_error_mapper(application, dms.DmsError, map_dms_error)
-    register_error_mapper(application, RequestValidationError, map_validation_error)
-    application.include_router(router)
-    return application
+    return create_app(
+        config=config,
+        include_auth_router=include_auth_router,
+        modules=(documents,),
+        error_renderer=render_error,
+        auth_provider=auth_provider,
+    )

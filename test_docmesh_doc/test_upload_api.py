@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import dms
+
 from test_docmesh_doc.support import FakeSDK, client_for
 
 
@@ -69,3 +71,19 @@ def test_upload_validation_happens_before_sdk_call():
 
     assert response.status_code == 400
     assert sdk.upload_stream_request is None
+
+
+def test_upload_maps_v060_payload_limit_error_to_413():
+    class SizeLimitedSDK(FakeSDK):
+        def upload_document_stream(self, request):
+            raise dms.PayloadTooLargeError("secret backend limit 7 exceeded")
+
+    with client_for(SizeLimitedSDK()) as client:
+        response = client.post(
+            "/documents",
+            files={"file": ("large.pdf", b"pdf", "application/pdf")},
+        )
+
+    assert response.status_code == 413
+    assert response.json()["error"]["code"] == "DOCUMENT_TOO_LARGE"
+    assert "secret backend limit" not in response.text

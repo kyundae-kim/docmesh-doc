@@ -26,9 +26,9 @@ v0.4.0은 `storage_key`를 adapter/recovery용 내부 필드로 명시하고 `pu
 
 v0.5.0 API reference는 public-safe metadata를 기본 `get_document_metadata`/`list_documents` 결과로, `storage_key`를 포함하는 결과를 명시적 internal accessor로 분리한다. 설치된 v0.4.0은 반대 반환 경계를 유지하므로, current HTTP adapter는 storage key를 명시적으로 제외해야 하며 v0.5.0 명칭만 보고 매핑을 제거하면 안 된다. ^[raw/articles/dms-core-wiki-api-reference-v0.5.0.md]
 
-v0.6.0 API도 일반 single/list 조회에서 `DELETING`·`DELETED`를 숨기고 internal metadata와 recovery 결과만 관리 경계로 남긴다. `recommended_http_error(...)`는 DMS 오류의 stable code/category/retryability를 host 전송 계층용 응답으로 투영하는 권고일 뿐 예외에 HTTP 의미를 부여하지 않는다. 설치된 `dms 0.5.0`에는 이 helper가 없으므로, 현재 [[fastapi-core-app-assembly]] adapter의 error mapping과 storage-key allowlist를 유지하고 helper 채택은 version-aligned upgrade 후에 검증한다. ^[raw/articles/dms-core-wiki-api-reference-v0.6.0.md]
+v0.6.0 API도 일반 single/list 조회에서 `DELETING`·`DELETED`를 숨기고 internal metadata와 recovery 결과만 관리 경계로 남긴다. 설치된 `dms 0.6.0`의 `recommended_http_error(...)`는 stable code/category/retryability를 host 전송 계층용 응답으로 투영하지만 예외에 HTTP 의미를 부여하지 않는다. [[fastapi-core-app-assembly]] adapter는 제품 envelope와 storage-key allowlist를 유지하면서 권고 status 중 413/425를 반영한다. ^[raw/articles/dms-core-wiki-api-reference-v0.6.0.md]
 
-v0.6.0 Examples는 logical deletion이 일반 조회/list에서 숨겨지고 body 요청에는 `DocumentDeletedError`가 난다는 workflow, dry-run recovery plan을 재검사 후 실행하는 흐름, 그리고 sync/async content stream의 context-managed close를 제시한다. installed `dms 0.5.0`은 sync lifecycle과 recovery plan API를 지원하지만 async content stream은 없으므로, 현재 host는 sync stream close와 existing recovery audit path를 유지한다. ^[raw/articles/dms-core-wiki-examples-v0.6.0.md]
+v0.6.0 Examples는 logical deletion이 일반 조회/list에서 숨겨지고 body 요청에는 `DocumentDeletedError`가 난다는 workflow, dry-run recovery plan을 재검사 후 실행하는 흐름, 그리고 sync/async content stream의 context-managed close를 제시한다. installed `dms 0.6.0`은 두 stream surface를 제공하며 현재 host는 검증된 sync stream close와 existing recovery audit path를 유지한다. async route 채택 시 완료·오류·취소 cleanup test가 추가로 필요하다. ^[raw/articles/dms-core-wiki-examples-v0.6.0.md]
 
 SDK 생성에 필요한 MinIO·metadata store·startup health 설정은 [[dms-core-configuration]]에서 관리한다. lifecycle integration은 이 설정의 health/close 정책과 정합성을 유지해야 한다.
 

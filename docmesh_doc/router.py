@@ -12,7 +12,11 @@ from docmesh_doc.document_http import (
     require_readable_document,
     validate_upload_file,
 )
-from docmesh_doc.schemas import DeleteDocumentResponse, DocumentMetadataResponse
+from docmesh_doc.schemas import (
+    DeleteDocumentResponse,
+    DocumentMetadataResponse,
+    DocumentPageResponse,
+)
 
 router = APIRouter(
     prefix="/documents",
@@ -49,14 +53,14 @@ def upload_document(
     return result.metadata
 
 
-@router.get("", response_model=list[DocumentMetadataResponse])
+@router.get("", response_model=DocumentPageResponse)
 def list_documents(
     sdk: DmsSdk,
-    offset: Annotated[int, Query(ge=0)] = 0,
-    limit: Annotated[int, Query(ge=1)] = 100,
+    cursor: str | None = None,
+    limit: Annotated[int, Query(ge=1, le=1000)] = 100,
     status: dms.DocumentStatus | None = None,
-) -> list[DocumentMetadataResponse]:
-    return sdk.list_documents(offset=offset, limit=limit, status=status)
+) -> dms.DocumentPage:
+    return sdk.list_documents(cursor=cursor, limit=limit, status=status)
 
 
 @router.get("/{document_id}", response_model=DocumentMetadataResponse)

@@ -20,20 +20,25 @@ def test_list_documents_passes_pagination_and_status_to_sdk():
     sdk = FakeSDK()
     with client_for(sdk) as client:
         response = client.get(
-            "/documents?offset=10&limit=20&status=available",
+            "/documents?cursor=current-page&limit=20&status=available",
             headers={"X-Correlation-ID": "list-request-1"},
         )
 
     assert response.status_code == 200
     assert response.headers["X-Correlation-ID"] == "list-request-1"
-    assert [item["document_id"] for item in response.json()] == ["doc-1", "doc-2"]
-    assert all("storage_key" not in item for item in response.json())
-    assert sdk.list_args == (10, 20, dms.DocumentStatus.AVAILABLE)
+    assert [item["document_id"] for item in response.json()["items"]] == [
+        "doc-1",
+        "doc-2",
+    ]
+    assert all("storage_key" not in item for item in response.json()["items"])
+    assert response.json()["next_cursor"] == "next-page"
+    assert response.json()["has_more"] is True
+    assert sdk.list_args == ("current-page", 20, dms.DocumentStatus.AVAILABLE)
 
 
 @pytest.mark.parametrize(
     "query",
-    ["offset=-1", "limit=0", "status=unknown"],
+    ["limit=0", "limit=1001", "status=unknown"],
 )
 def test_list_documents_rejects_invalid_query_parameters(query):
     sdk = FakeSDK()

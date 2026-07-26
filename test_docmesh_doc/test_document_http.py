@@ -137,6 +137,6 @@ def test_metadata_routes_use_sdk_public_metadata_contract(monkeypatch, route):
 
     assert response.status_code in (200, 201)
     payload = response.json()
-    items = payload if isinstance(payload, list) else [payload]
+    items = payload["items"] if route == "list" else [payload]
     assert all(item["metadata"] == {"category": "contract"} for item in items)
     assert all("storage_key" not in item for item in items)

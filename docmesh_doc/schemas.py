@@ -20,6 +20,14 @@ class DocumentMetadataResponse(BaseModel):
     metadata: dict[str, Any] = Field(validation_alias="extra_metadata")
 
 
+class DocumentPageResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    items: list[DocumentMetadataResponse]
+    next_cursor: str | None
+    has_more: bool
+
+
 class DeleteDocumentResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

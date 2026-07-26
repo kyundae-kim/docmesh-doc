@@ -71,8 +71,12 @@ def test_metadata_lookup_and_streaming_download_use_real_stores(
     )
 
     assert list_response.status_code == 200
-    assert document_id in {item["document_id"] for item in list_response.json()}
-    assert all("storage_key" not in item for item in list_response.json())
+    assert document_id in {
+        item["document_id"] for item in list_response.json()["items"]
+    }
+    assert all(
+        "storage_key" not in item for item in list_response.json()["items"]
+    )
     assert metadata_response.status_code == 200
     assert metadata_response.json()["status"] == "available"
     assert download_response.status_code == 200

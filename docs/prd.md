@@ -4,7 +4,7 @@
 | --- | --- |
 | 제품명 | DocMesh Document Service |
 | 대상 릴리스 | MVP |
-| 최종 코드 대조일 | 2026-07-20 |
+| 최종 코드 대조일 | 2026-07-26 |
 | 제품 정의 | `dms-core` 문서 관리 기능을 `fastapi-core`로 조립해 제공하는 HTTP Document Management Service |
 
 ## 1. 목적
@@ -73,7 +73,7 @@ DocMesh Document Service의 목적은 업무 시스템이 파일 저장소와 �
 | FR-DOC-001 | 서비스는 파일 본문, filename, content type, 선택 metadata를 받아 문서를 생성해야 한다. | Must | 유효한 요청은 문서 ID와 생성 정보를 반환하고 이후 조회할 수 있다. |
 | FR-DOC-002 | 호출자가 ID를 지정하지 않으면 서비스 또는 SDK가 충돌 없는 document ID를 생성해야 한다. | Must | ID 생략 업로드가 새 document ID를 반환한다. |
 | FR-DOC-003 | 서비스는 ID로 읽을 수 있는 문서의 공개 metadata를 조회해야 한다. | Must | 활성 metadata와 상태를 반환하며 내부 `storage_key`는 노출하지 않고 soft-deleted 단건 metadata는 not-found로 처리한다. |
-| FR-DOC-004 | 서비스는 문서 목록을 offset/limit과 선택 status filter로 조회해야 한다. | Must | 기본값은 offset 0, limit 100이며 status 미지정 시 SDK 목록 정책을 유지하고 공개 metadata 배열만 반환한다. |
+| FR-DOC-004 | 서비스는 문서 목록을 불투명 cursor, limit과 선택 status filter로 조회해야 한다. | Must | 첫 요청의 cursor는 생략하고 limit 기본값은 100이며, 응답은 공개 metadata `items`, `next_cursor`, `has_more`를 반환한다. 다음 page는 같은 limit과 status를 유지한다. |
 | FR-DOC-005 | 서비스는 문서 콘텐츠 전체 조회를 제공해야 한다. | Should | 작은 문서에서 저장된 content type과 안전한 filename disposition을 보존한다. |
 | FR-DOC-006 | 대용량 문서 다운로드는 streaming으로 제공해야 한다. | Must | 전체 본문을 애플리케이션 메모리에 적재하지 않고 chunk 단위로 전송한다. |
 | FR-DOC-007 | 서비스는 soft delete를 제공해야 한다. | Must | 본문을 삭제하고 metadata를 `deleted` 상태로 보존하며 단건 metadata·콘텐츠·다운로드를 차단한다. 상태 filter를 사용하는 목록은 삭제 상태를 조회할 수 있다. |

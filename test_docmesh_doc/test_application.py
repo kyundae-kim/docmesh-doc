@@ -4,7 +4,11 @@ import dms
 import pytest
 from fastapi.testclient import TestClient
 from fastapi_core.config import AppConfig
-from fastapi_core.testing import assert_auth_router_contract, assert_health_contract
+from fastapi_core.testing import (
+    assert_auth_router_contract,
+    assert_health_contract,
+    assert_module_contract,
+)
 
 from docmesh_doc.application import create_application
 from test_docmesh_doc.support import NOW, FakeSDK, client_for
@@ -61,10 +65,23 @@ def test_application_explicitly_controls_the_auth_router(included):
         FakeSDK(),
         config=AppConfig(enabled_services=[], required_services=[]),
         include_auth_router=included,
+        auth_provider=object() if included else None,
     )
 
     with TestClient(app) as client:
         assert_auth_router_contract(client, included=included)
+
+
+def test_application_installs_the_document_domain_module():
+    app = create_application(
+        FakeSDK(),
+        config=AppConfig(enabled_services=[], required_services=[]),
+        include_auth_router=False,
+    )
+
+    assert len(app.state.domain_modules) == 1
+    assert app.state.domain_modules[0].name == "documents"
+    assert_module_contract(app, app.state.domain_modules[0])
 
 
 def test_application_preserves_fastapi_core_health_contract():

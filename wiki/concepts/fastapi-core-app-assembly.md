@@ -20,9 +20,9 @@ GitHub Wiki snapshot은 `app.state.settings`와 `app.state.service_clients`도 �
 
 v0.5.0 Wiki API reference도 같은 state 모델과 `create_app(config, runtime, lifespan, include_auth_router, resources, error_renderer)` 조립 경계를 기록하며 auth router opt-in의 기본값은 `False`다. 설치된 v0.5.0은 이 public signature/state를 제공한다. `docmesh_doc.create_application`은 자신의 기본값 `True`를 `create_app`에 명시 전달하므로 auth route 포함 정책을 adapter가 결정한다. ^[raw/articles/fastapi-core-wiki-api-reference-v0.5.0.md]
 
-v0.6.0 API reference는 `routers`, `modules`, `error_mappers`, `auth_provider`를 `create_app`의 명시적 조립 입력으로 추가하고 `DomainModule`이 router·dependency·resource·readiness·error mapper를 한 이름 아래 묶는다고 문서화한다. `fastapi-core 0.5.0` 설치본의 signature에는 이 입력이 없으므로, 현재 DMS adapter는 기존 managed-resource/error-mapper 조립을 유지한다. 업그레이드 시에는 module 이름과 route/path/operation ID 충돌 rejection을 포함한 contract test를 추가해야 한다. ^[raw/articles/fastapi-core-wiki-api-reference-v0.6.0.md]
+v0.6.0 API reference는 `routers`, `modules`, `error_mappers`, `auth_provider`를 `create_app`의 명시적 조립 입력으로 추가하고 `DomainModule`이 router·dependency·resource·readiness·error mapper를 한 이름 아래 묶는다고 문서화한다. 설치된 `fastapi-core 0.6.0`에서 이 signature를 확인했고 DMS adapter는 `documents` module에 router, required DMS resource와 DMS/validation error mapper를 함께 등록한다. module contract와 auth-provider 주입 경계도 테스트한다. ^[raw/articles/fastapi-core-wiki-api-reference-v0.6.0.md]
 
-v0.6.0 Examples는 framework가 runtime/resource를 사용자 lifespan보다 먼저 시작하고 종료 시 사용자 lifespan → resource → runtime 순으로 정리한다고 보인다. 현재 adapter가 사용하는 package-owned `create_app(resources=...)` lifecycle와 일치하는 설계 경계지만, v0.6.0 module/routers arguments는 설치된 v0.5.0에 없으므로 별도 조립 방식으로 전환하지 않는다. ^[raw/articles/fastapi-core-wiki-examples-v0.6.0.md]
+v0.6.0 Examples는 framework가 runtime/resource를 사용자 lifespan보다 먼저 시작하고 종료 시 사용자 lifespan → resource → runtime 순으로 정리한다고 보인다. 현재 adapter는 package-owned module resource lifecycle로 이 순서를 유지하며 정상 close, startup factory 실패와 shutdown close 실패 테스트를 통과한다. ^[raw/articles/fastapi-core-wiki-examples-v0.6.0.md]
 
 `v0.3.0` config 문서는 `create_app()`이 `load_app_config()` 뒤에 application logging을 초기화하고, lifespan startup에서 selected service runtime을 조립한다고 설명한다. `token_url`은 앱마다 별도의 `OAuth2PasswordBearer`와 OpenAPI password flow에 저장되므로, 한 프로세스에서 서로 다른 token URL로 여러 앱을 조립해도 기존 앱의 OpenAPI 계약을 바꾸지 않는다. ^[raw/articles/fastapi-core-config-v0.3.0.md]
 
@@ -58,11 +58,11 @@ DMS v0.4.0의 내부 `storage_key`는 HTTP 공개 계약이 아니므로 route �
 
 DMS v0.5.0 Wiki API reference는 public metadata를 기본 조회/list 결과로 만들고 internal metadata를 별도 accessor에 한정하는 migration을 문서화한다. 현재 설치된 DMS v0.4.0은 아직 internal metadata를 반환하므로, adapter의 allowlist response model을 유지한다. `create_sdk_from_service_configs`도 v0.5.0 source에만 있으므로 FastAPI runtime/service settings와 DMS storage assembly를 직접 연결했다고 가정하지 않는다. ^[raw/articles/dms-core-wiki-api-reference-v0.5.0.md]
 
-DMS v0.6.0 API reference는 `recommended_http_error(...)`로 안정적인 DMS 오류 속성을 HTTP status/body로 투영하는 host-side 권고를 추가하지만, 설치된 `dms 0.5.0`에는 helper가 없다. 따라서 [[dms-core-document-lifecycle]]의 현재 error mapper를 유지하고, future upgrade에서는 helper의 status/body와 기존 FastAPI error renderer가 동일한 공개 오류·비밀 마스킹 contract를 지키는지 route test로 확인해야 한다. ^[raw/articles/dms-core-wiki-api-reference-v0.6.0.md]
+DMS v0.6.0 API reference의 `recommended_http_error(...)`는 설치된 `dms 0.6.0`에서 확인되었다. 제품은 기존 error envelope/code를 유지하므로 helper body를 그대로 반환하지 않고 같은 권고 status를 adapter mapper에 반영한다. payload-size 413과 안전한 고정 메시지는 route test로 검증했고, 진행 중 멱등 요청은 425로 맞췄다. ^[raw/articles/dms-core-wiki-api-reference-v0.6.0.md]
 
-DMS v0.6.0 Examples는 `recommended_http_error(...)`가 host transport convenience이며 DMS exception 자체에 HTTP status를 추가하지 않는다고 명확히 한다. 설치된 `dms 0.5.0`에는 helper가 없으므로 current FastAPI error renderer를 유지하고, upgrade 시에는 413 payload-size와 retryable idempotency-in-progress를 포함한 route contract test로 새 mapping을 검증한다. ^[raw/articles/dms-core-wiki-examples-v0.6.0.md]
+DMS v0.6.0 Examples는 `recommended_http_error(...)`가 host transport convenience이며 DMS exception 자체에 HTTP status를 추가하지 않는다고 명확히 한다. 현재 FastAPI error renderer는 제품 envelope를 유지하고 413 payload-size의 safe mapping을 route test로 검증한다. retryable idempotency-in-progress는 권고 status 425로 매핑한다. ^[raw/articles/dms-core-wiki-examples-v0.6.0.md]
 
-v0.4.0 예제가 권장하는 HTTP-facing 흐름은 `public_metadata()`, cursor의 `has_more`/`next_cursor`, 명시적 soft/hard 삭제다. 현재 project adapter는 allowlist response model로 `storage_key`를 제외하지만 목록은 offset 방식이고 삭제는 호환 `delete_document(...)`를 사용한다. 이는 오류가 아니라 지원되는 legacy surface이며, cursor 또는 명시 삭제 endpoint로 이동할 때 [[dms-core-usage-patterns]]의 계약을 유지한다. ^[raw/articles/dms-core-wiki-examples-v0.4.0.md]
+v0.4.0부터 권장된 HTTP-facing 흐름은 `public_metadata()`, cursor의 `has_more`/`next_cursor`, 명시적 soft/hard 삭제다. 현재 project adapter는 allowlist page response로 `storage_key`를 제외하고 `cursor`, `limit`, `status`를 v0.6.0 기본 `list_documents`에 전달하며 명시적 soft/hard delete method를 사용한다. ^[raw/articles/dms-core-wiki-examples-v0.4.0.md] ^[raw/articles/dms-core-wiki-api-reference-v0.6.0.md]
 
 ## Open questions
 

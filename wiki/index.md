@@ -7,7 +7,7 @@
 <!-- Alphabetical within section -->
 - [[dms-core]] — bounded stream 업로드·멱등 작업·cursor 목록·명시 삭제·안전 복구를 제공하는 Python DMS SDK.
 - [[docmesh-py-core]] — 설정·service client·health 집계·Keycloak/NATS 통합을 제공하는 `fastapi-core`의 공통 업스트림 의존성.
-- [[fastapi-core]] — DMS FastAPI 서비스의 앱 조립·라우터·dependency 공개 표면.
+- [[fastapi-core]] — DMS FastAPI 서비스의 module 조립·라우터·dependency·contract-test 공개 표면.
 
 ## Concepts
 - [[dms-core-configuration]] — DMS SDK의 tagged template, backend 선택, 개별 PostgreSQL 필드, MinIO, metadata policy와 startup health 설정 경계.

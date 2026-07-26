@@ -4,7 +4,7 @@
 | --- | --- |
 | 제품명 | DocMesh Document Service |
 | 대상 릴리스 | MVP |
-| 최종 코드 대조일 | 2026-07-20 |
+| 최종 코드 대조일 | 2026-07-26 |
 | 상위 문서 | [제품 요구사항 정의서](prd.md) |
 
 ## 1. 목적
@@ -28,8 +28,8 @@
 
 | ID | 요구사항 |
 | --- | --- |
-| SRS-ARC-001 | 애플리케이션은 `fastapi_core.create_app(config=..., resources=..., error_renderer=..., include_auth_router=...)`으로 생성해야 한다. `fastapi-core` v0.5.0의 auth router 기본값은 `False`지만 제품 `create_application()`은 기본 제품 앱에 `/token`, `/user`를 포함하도록 `True`를 명시해야 한다. |
-| SRS-ARC-002 | DMS route는 공통 health route와 충돌하지 않는 별도 router로 등록해야 한다. |
+| SRS-ARC-001 | 애플리케이션은 `fastapi_core.create_app(config=..., modules=..., error_renderer=..., include_auth_router=...)`으로 생성해야 한다. `fastapi-core` v0.6.0의 auth router 기본값은 `False`지만 제품 `create_application()`은 기본 제품 앱에 `/token`, `/user`를 포함하도록 `True`를 명시해야 한다. 인증 runtime을 조립하지 않는 테스트·embedding 환경은 명시적 `auth_provider`를 주입해야 한다. |
+| SRS-ARC-002 | DMS route, managed resource, DMS·validation error mapper는 이름이 `documents`인 `DomainModule`로 묶고 공통 health route와 충돌하지 않아야 한다. |
 | SRS-ARC-003 | `ResourceKey[DefaultDocumentManagementSDK]("dms")`를 선언하고 같은 key를 `ManagedResource.name`과 route의 `Depends(key.dependency)`에 사용해야 한다. resource가 준비되지 않은 요청은 503으로 응답해야 한다. |
 | SRS-ARC-004 | route, dependency, background callback은 `DefaultDocumentManagementSDK` 또는 저장소 client를 직접 생성해서는 안 된다. SDK는 DMS의 공개 environment, service-config 또는 component factory 중 제품이 선택한 factory로 생성해야 한다. |
 | SRS-ARC-005 | SDK factory 실패는 애플리케이션 startup을 중단해야 한다. required managed-resource startup health check는 `DOCMESH_HEALTHCHECK_ENABLED=true`일 때 실행하며, 비활성화되어도 같은 check를 runtime readiness registry에는 등록해야 한다. |
@@ -40,7 +40,7 @@
 
 | ID | 요구사항 |
 | --- | --- |
-| SRS-STO-001 | PostgreSQL template은 `POSTGRES_HOST`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`와 선택 `POSTGRES_PORT`로 metadata store를 구성해야 한다. `POSTGRES_DSN`은 dms-core v0.5.0에서 단독·병용 모두 지원하지 않으며 발견 시 조립 전에 거부해야 한다. |
+| SRS-STO-001 | PostgreSQL template은 `POSTGRES_HOST`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`와 선택 `POSTGRES_PORT`로 metadata store를 구성해야 한다. `POSTGRES_DSN`은 dms-core v0.6.0에서 단독·병용 모두 지원하지 않으며 발견 시 조립 전에 거부해야 한다. |
 | SRS-STO-002 | PostgreSQL backend 선택 시 필수 연결 필드가 없거나 연결을 구성할 수 없으면 SDK 조립 또는 health 단계가 실패해야 한다. |
 | SRS-STO-003 | 서비스는 `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_BUCKET`으로 object store를 구성해야 한다. |
 | SRS-STO-004 | 제품 DMS 조립 계층은 `MINIO_BUCKET`을 필수로 검증해야 하며, bucket이 없거나 client를 구성할 수 없으면 DMS resource factory를 실패시켜야 한다. fastapi-core 서비스 설정에서의 필드 optional 여부와 제품 저장소 요구사항을 혼동해서는 안 된다. |
@@ -82,7 +82,7 @@ HTTP 공개 metadata에는 최소 `document_id`, `original_filename`, `content_t
 | 논리 기능 | HTTP method 및 URI | 성공 응답 |
 | --- | --- | --- |
 | 문서 생성 | `POST /documents` | `201 Created` + public metadata |
-| 문서 목록 조회 | `GET /documents` | `200 OK` + public metadata 배열 |
+| 문서 목록 조회 | `GET /documents` | `200 OK` + cursor page (`items`, `next_cursor`, `has_more`) |
 | metadata 조회 | `GET /documents/{document_id}` | `200 OK` + public metadata |
 | 전체 콘텐츠 조회 | `GET /documents/{document_id}/content` | `200 OK` + bytes |
 | streaming download | `GET /documents/{document_id}/download` | `200 OK` + streaming body |
@@ -94,7 +94,7 @@ HTTP 공개 metadata에는 최소 `document_id`, `original_filename`, `content_t
 | SRS-API-001 | `POST /documents`는 `multipart/form-data`로 `file`과 선택 `document_id`, `metadata`, `checksum`을 받고 filename과 content type은 `UploadFile`에서 읽어야 한다. |
 | SRS-API-002 | 업로드 route는 입력을 `UploadDocumentStreamRequest`로 변환해 `sdk.upload_document_stream(...)`을 호출하고 `Location` header와 public metadata를 반환해야 한다. |
 | SRS-API-003 | 빈 본문, trim 후 빈 filename/content type, 0 이하 chunk size 같은 잘못된 입력은 저장소 작업 전에 validation 오류로 반환해야 한다. |
-| SRS-API-004 | `GET /documents`는 `offset=0`, `limit=100`을 기본으로 하고 각각 0 이상, 1 이상으로 검증한 뒤 선택 status filter와 함께 SDK `list_documents(...)`에 전달해야 한다. HTTP API는 dms-core의 cursor API를 노출하지 않으며 공개 metadata만 반환해야 한다. |
+| SRS-API-004 | `GET /documents`는 선택 `cursor`, 기본 `limit=100`, 선택 status filter를 SDK `list_documents(cursor=..., limit=..., status=...)`에 전달해야 한다. limit은 1~1000이며 cursor는 불투명하게 취급한다. 응답은 공개 metadata `items`, `next_cursor`, `has_more`를 포함하고 다음 page 요청은 cursor에 결합된 limit과 status를 유지해야 한다. |
 | SRS-API-005 | `GET /documents/{document_id}`는 공개 안전 metadata 결과를 response allowlist schema로 직렬화해야 한다. |
 | SRS-API-006 | `GET /documents/{document_id}/content`는 저장된 content type과 안전한 inline `Content-Disposition`을 유지해야 한다. |
 | SRS-API-007 | `GET /documents/{document_id}/download`는 `DocumentContentStream.iter_chunks()`를 `StreamingResponse`로 전달하고 attachment `Content-Disposition`을 설정해야 한다. |
@@ -118,7 +118,7 @@ HTTP 공개 metadata에는 최소 `document_id`, `original_filename`, `content_t
 
 | ID | 요구사항 |
 | --- | --- |
-| SRS-ERR-001 | validation, document not found 또는 deleted, duplicate, configuration, storage, consistency 오류는 `register_error_mapper(...)`로 안정된 HTTP status와 기계 판독 가능한 code에 매핑하고, `create_app(error_renderer=...)`에 전달한 제품 renderer로 아래 envelope를 생성해야 한다. fastapi-core 기본 Problem Detail renderer에 의존해서는 안 된다. |
+| SRS-ERR-001 | validation, payload too large, document not found 또는 deleted, duplicate, configuration, storage, consistency 오류는 `DomainModule.error_mappers`의 `ErrorMapperSpec`으로 안정된 HTTP status와 기계 판독 가능한 code에 매핑하고, `create_app(error_renderer=...)`에 전달한 제품 renderer로 아래 envelope를 생성해야 한다. 크기 초과는 413, 진행 중인 멱등 요청은 425를 사용하며 fastapi-core 기본 Problem Detail renderer에 의존해서는 안 된다. |
 | SRS-ERR-002 | 정의되지 않은 예외는 제품 handler/renderer에서 내부 구현 정보를 노출하지 않고 `INTERNAL_ERROR`로 반환해야 한다. |
 | SRS-ERR-003 | object 저장 후 metadata 저장이 실패하면 SDK cleanup을 방해해서는 안 되며 cleanup 실패의 `ConsistencyError`는 별도 오류 code와 error-level log로 기록해야 한다. |
 | SRS-ERR-004 | response body와 로그에는 문서 본문, access token, secret, password, 전체 DSN, `storage_key`, 내부 stack trace를 포함해서는 안 된다. |

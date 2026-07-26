@@ -29,7 +29,7 @@ DocMesh Document Service
               └─ MinIO: document content
 ```
 
-애플리케이션은 `docmesh_doc.application.create_application()`에서 조립됩니다. DMS SDK는 managed resource로 생성되어 전체 lifespan 동안 재사용되며, 애플리케이션 종료 시 함께 닫힙니다. 기본 ASGI entrypoint는 `docmesh_doc.main:app`입니다.
+애플리케이션은 `docmesh_doc.application.create_application()`에서 조립됩니다. 문서 router, DMS managed resource와 오류 mapper는 `fastapi-core` v0.6.0의 `DomainModule`로 함께 등록됩니다. DMS SDK는 전체 lifespan 동안 재사용되며 애플리케이션 종료 시 함께 닫힙니다. 기본 ASGI entrypoint는 `docmesh_doc.main:app`입니다.
 
 ## 요구 사항
 
@@ -74,7 +74,7 @@ uv run --no-project python -m fastapi run \
   --port 8000
 ```
 
-URL 마지막의 `dms-core-v0.4.0`은 설치할 Git ref입니다. 재현 가능한 운영 배포에서는 이동 가능한 branch보다 release tag 또는 commit SHA를 사용하는 것이 좋습니다.
+현재 프로젝트는 `fastapi-core`와 `dms-core`의 `v0.6.0` Git tag를 사용합니다. 재현 가능한 운영 배포에서는 이동 가능한 branch보다 release tag 또는 commit SHA를 사용하는 것이 좋습니다.
 
 ## 설정
 
@@ -176,6 +176,8 @@ Compose 파일은 document service와 PostgreSQL만 생성합니다. MinIO·Keyc
 | Hard delete | `DELETE` | `/documents/{document_id}?hard=true` |
 | Liveness | `GET` | `/health/liveness` |
 | Readiness | `GET` | `/health/readiness` |
+
+문서 목록은 dms-core v0.6.0의 cursor page 계약을 사용합니다. 첫 요청에서는 `cursor`를 생략하고, 후속 요청에서는 이전 응답의 `next_cursor`를 동일한 `limit`·`status`와 함께 전달합니다. 응답은 `items`, `next_cursor`, `has_more`를 포함하며 `items`에는 내부 `storage_key`가 노출되지 않습니다.
 
 ### 상태 확인
 

@@ -24,9 +24,9 @@ GitHub Wiki API reference는 `ResourceKey(name).dependency`와 `get_resource(nam
 
 v0.5.0 API reference는 일반 app에 package root/dependency API를 우선하고 registry/runtime 직접 조립은 고급 API로 한정한다. 설치된 v0.5.0은 auth router 기본값 `False`를 포함한 같은 root export, runtime injection, resource/error extension과 state를 제공한다. `create_application(..., include_auth_router=...)`처럼 route 정책을 명시적으로 전달하는 현행 패턴을 유지한다. ^[raw/articles/fastapi-core-wiki-api-reference-v0.5.0.md]
 
-v0.6.0 reference는 module 단위 조립과 `fastapi_core.testing`의 health/auth/module/OpenAPI assertion을 권장 공개 surface에 포함한다. 문서의 `create_app` 확장 인자와 module API는 설치된 v0.5.0 signature에 없으므로, 현 adapter에는 적용하지 않는다. 다음 package upgrade에서는 새 helper가 실제 export되는지 확인한 뒤 DMS resource·auth-router·OpenAPI contract를 검증하는 test로 채택한다. ^[raw/articles/fastapi-core-wiki-api-reference-v0.6.0.md]
+v0.6.0 reference는 module 단위 조립과 `fastapi_core.testing`의 health/auth/module/OpenAPI assertion을 권장 공개 surface에 포함한다. 설치된 v0.6.0에서 확장 signature와 helper export를 확인했으며 현 adapter는 DMS resource/router/error mapper를 `documents` module로 묶고 health·auth·module contract를 검증한다. ^[raw/articles/fastapi-core-wiki-api-reference-v0.6.0.md]
 
-v0.6.0 Examples는 `DomainModule`에 router·readiness·error mapper를 묶고, `create_app(routers=...)`에 기본 health/auth router를 중복 전달하지 않는 패턴을 보인다. 또한 resource의 create/check/close 순서를 contract helper로 검증한다. 이들은 v0.6.0 upgrade 뒤에 유용한 regression-test 후보지만, 현재 v0.5.0 adapter에는 module과 OpenAPI assertion이 없으므로 기존 explicit assembly와 project test suite를 유지한다. ^[raw/articles/fastapi-core-wiki-examples-v0.6.0.md]
+v0.6.0 Examples는 `DomainModule`에 router·readiness·error mapper를 묶고, `create_app(routers=...)`에 기본 health/auth router를 중복 전달하지 않는 패턴을 보인다. 현재 adapter는 module의 resource lifecycle과 mapper 설치를 package helper로 검증하고 기존 startup/close 실패 테스트도 유지한다. ^[raw/articles/fastapi-core-wiki-examples-v0.6.0.md]
 
 GitHub Wiki Examples snapshot은 서비스 없는 최소 app에 `AppConfig(enabled_services=[], required_services=[])`, `include_auth_router=False`, `get_config` dependency를 사용하고, runtime/settings/client dependency는 lifespan 안에서만 접근한다는 실행 패턴을 제시한다. managed resource에는 `ResourceKey[T].dependency`를, domain error에는 `ErrorMapping`/`ErrorRenderer`를 사용하며, router만 직접 include하는 방식은 runtime state·middleware·error handler가 필요 없을 때의 최소 조립으로 한정한다. ^[raw/articles/fastapi-core-wiki-examples.md]
 
@@ -48,7 +48,7 @@ domain SDK 같은 추가 자원은 `ManagedResource`로 등록하면 선언 순�
 
 ## Version note
 
-Git tag `v0.1.6`, `v0.2.0`, `v0.3.0`의 examples는 모두 문서 내부에서 `2026-07-03` 구현 반영본으로 표기한다. GitHub Wiki Examples도 `0.3.0` 기준을 표방하지만 body hash가 다르고, `ResourceKey`·error renderer·runtime-centric dependency/lifecycle 예제를 포함한다. v0.5.0 Wiki Examples는 그 surface를 이어가면서 testing helpers를 추가한다. Git ref나 문서 내부 버전만으로 설치 패키지 API를 확정할 수 없으므로 예제 채택 전 대상 패키지와 테스트 스위트를 확인해야 한다. 현재 작업공간은 `fastapi-core 0.5.0`을 import해 기존 root signature를 확인했지만, v0.6.0의 module 조립 signature와 확장 contract helpers는 설치본 signature에 없다. ^[raw/articles/fastapi-core-examples-v0.3.0.md] ^[raw/articles/fastapi-core-wiki-examples.md] ^[raw/articles/fastapi-core-wiki-api-reference-v0.6.0.md]
+Git tag `v0.1.6`, `v0.2.0`, `v0.3.0`의 examples는 모두 문서 내부에서 `2026-07-03` 구현 반영본으로 표기한다. GitHub Wiki Examples도 `0.3.0` 기준을 표방하지만 body hash가 다르고, `ResourceKey`·error renderer·runtime-centric dependency/lifecycle 예제를 포함한다. Git ref나 문서 내부 버전만으로 설치 패키지 API를 확정할 수 없으므로 예제 채택 전 대상 패키지와 테스트 스위트를 확인해야 한다. 현재 작업공간은 `fastapi-core 0.6.0`을 import해 module 조립 signature와 확장 contract helpers를 확인했다. ^[raw/articles/fastapi-core-examples-v0.3.0.md] ^[raw/articles/fastapi-core-wiki-examples.md] ^[raw/articles/fastapi-core-wiki-api-reference-v0.6.0.md]
 
 ## Sources
 

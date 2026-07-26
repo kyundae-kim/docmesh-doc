@@ -16,7 +16,7 @@ GitHub Wiki Configuration snapshot도 같은 두 계층과 `ServiceRuntime` 조�
 
 2026-07-19 v0.5.0 Wiki Configuration reference는 이 두 계층을 `fastapi-core 0.5.0`과 `docmesh-py-core 0.4.0`의 current implementation으로 제시하고, `.env.example`은 자동 로드되지 않으며 loader cache는 테스트에서 명시적으로 clear해야 한다고 기록한다. 설치된 `fastapi-core 0.5.0`은 `AppConfig`/loader 경계와 startup failure mode·retry fields를 제공하고 프로젝트는 `docmesh-py-core 0.4.0`을 선언한다. 배포 값은 runtime policy와 함께 검증한다. ^[raw/articles/fastapi-core-wiki-configuration-v0.5.0.md]
 
-v0.6.0 API reference도 `AppConfig`와 `load_app_config()`를 intended configuration entrypoint로 두고 loader 결과가 1개로 cache되며 환경 변경 test 뒤 `cache_clear()`가 필요하다고 기록한다. 이는 현재 v0.5.0 loader surface와 연결되지만, v0.6.0 configuration field의 변경을 증명하지는 않는다. ^[raw/articles/fastapi-core-wiki-api-reference-v0.6.0.md]
+v0.6.0 API reference도 `AppConfig`와 `load_app_config()`를 intended configuration entrypoint로 두고 loader 결과가 1개로 cache되며 환경 변경 test 뒤 `cache_clear()`가 필요하다고 기록한다. 설치된 v0.6.0 loader와 expanded access-log field를 runtime에서 확인했다. ^[raw/articles/fastapi-core-wiki-api-reference-v0.6.0.md]
 
 요청된 v0.6.0 Configuration endpoint는 수집 시 v0.6.0 API Reference와 body-only SHA-256 및 바이트가 동일했다. 따라서 immutable raw capture는 보존하되 configuration-specific 사실을 중복 추가하지 않았으며, mutable Wiki endpoint가 이후 변할 수 있으므로 다음 수집에서 다시 비교한다. ^[raw/articles/fastapi-core-wiki-api-reference-v0.6.0.md] ^[raw/articles/fastapi-core-wiki-configuration-v0.6.0.md]
 
@@ -34,7 +34,7 @@ Git tag `v0.4.0`의 `.env.example`은 자동 loading을 하지 않고, dotenv를
 
 Git tag `v0.5.0` `.env.example`은 같은 명시적 dotenv loading과 서비스 없는 baseline을 유지하면서 readiness timeout, CORS, logging, 서비스별 secret placeholder를 한 template에 정리한다. PostgreSQL에는 DSN이 아닌 개별 접속 필드만 제시하고, 필요한 credential-dependent service를 활성화할 때 credential도 함께 주입하라고 명시한다. 설치된 v0.5.0 `AppConfig`에는 `DOCMESH_STARTUP_FAILURE_MODE`, attempts, retry-delay가 있지만 template의 설정을 deployment에 채택하기 전에는 DocMesh runtime과 함께 검증한다. ^[raw/articles/fastapi-core-env-example-v0.5.0.md]
 
-Git tag `v0.6.0` `.env.example`도 process environment만 읽고 파일을 자동 로드하지 않는다고 명시한다. active line은 empty enabled/required service, `CORS_ORIGINS=*`와 `CORS_CREDENTIALS=false`, startup fail/retry defaults를 service-free baseline으로 둔다. 서비스 block은 선택 목록을 먼저 채운 뒤에만 완성해 주입해야 하며 real secret은 version control 밖에 둔다. 설치된 v0.5.0은 startup fields를 제공하지만 template의 access-log keys는 `AppConfig` field에 없으므로, v0.6.0 template 전체는 current deployment template이 아니라 upgrade candidate다. ^[raw/articles/fastapi-core-env-example-v0.6.0.md]
+Git tag `v0.6.0` `.env.example`도 process environment만 읽고 파일을 자동 로드하지 않는다고 명시한다. active line은 empty enabled/required service, `CORS_ORIGINS=*`와 `CORS_CREDENTIALS=false`, startup fail/retry defaults를 service-free baseline으로 둔다. 서비스 block은 선택 목록을 먼저 채운 뒤에만 완성해 주입해야 하며 real secret은 version control 밖에 둔다. 설치된 v0.6.0은 startup 및 access-log field를 제공하므로 template의 application surface와 일치한다. ^[raw/articles/fastapi-core-env-example-v0.6.0.md]
 
 `v0.2.0` 설정 문서는 PostgreSQL을 `ServiceConfigs`가 다루는 외부 시스템, development/test fallback, 그리고 전용 dependency 범위에 포함한다. 이는 PostgreSQL 지원이 `fastapi-core` 자체의 문서 저장 API를 뜻하는 것은 아니며, [[docmesh-py-core]]가 제공하는 설정·client wrapper를 [[fastapi-core-app-assembly]]가 선택 서비스와 readiness에 연결하는 application-layer 통합이다. ^[raw/articles/fastapi-core-config-v0.2.0.md]
 
@@ -58,7 +58,7 @@ DMS v0.4.0의 `diagnose_environment()`는 DMS storage 선택뿐 아니라 설치
 
 DMS v0.5.0 Configuration reference도 DMS 환경 진단/SDK 조립과 FastAPI `AppConfig` 검증을 별개 경계로 둔다. prevalidated `ServiceConfigs` factory는 v0.5.0 contract이지만 설치된 DMS v0.4.0에는 없으므로, current app은 DMS `diagnose_environment()` 및 its environment/component factory를 FastAPI startup/readiness policy와 혼동하지 않는다. ^[raw/articles/dms-core-wiki-configuration-v0.5.0.md]
 
-DMS v0.6.0 Configuration reference도 DMS가 `ServiceConfigs` 묶음에서 문서 metadata store와 MinIO만 조립하며, FastAPI `AppConfig`·CORS·router·required-service policy를 소유하지 않는다고 구분한다. 현재 설치된 `dms 0.5.0`에는 service-config factory와 diagnosis formatter가 있지만, v0.6.0의 `HealthcheckPolicy` mapping 및 secret-safe HTTP helper는 runtime에 없다. 따라서 DMS storage diagnosis와 FastAPI application/readiness 검증은 계속 별도로 수행한다. ^[raw/articles/dms-core-wiki-configuration-v0.6.0.md]
+DMS v0.6.0 Configuration reference도 DMS가 `ServiceConfigs` 묶음에서 문서 metadata store와 MinIO만 조립하며, FastAPI `AppConfig`·CORS·router·required-service policy를 소유하지 않는다고 구분한다. 설치된 `dms 0.6.0`에서 service-config factory, diagnosis formatter와 secret-safe HTTP helper를 확인했지만, DMS storage diagnosis와 FastAPI application/readiness 검증은 계속 별도로 수행한다. ^[raw/articles/dms-core-wiki-configuration-v0.6.0.md]
 
 DMS v0.4.0 environment template에는 `ROOT_PATH`, `TOKEN_URL`, CORS, `DOCMESH_SERVICES`, `READINESS_REQUIRED_SERVICES`가 없으며 storage assembly 변수만 담긴다. 따라서 이 파일을 FastAPI deployment template으로 사용하지 말고, [[dms-core-configuration]]의 SDK 설정과 FastAPI v0.4.0 template의 application 설정을 배포 계층에서 명시적으로 결합한다. ^[raw/articles/dms-core-env-example-v0.4.0.md]
 

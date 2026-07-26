@@ -80,9 +80,13 @@ class FakeSDK:
             raise dms.DocumentNotFoundError(document_id)
         return public_metadata(document_id)
 
-    def list_documents(self, *, offset=0, limit=100, status=None):
-        self.list_args = (offset, limit, status)
-        return [public_metadata("doc-1"), public_metadata("doc-2")]
+    def list_documents(self, *, cursor=None, limit=100, status=None):
+        self.list_args = (cursor, limit, status)
+        return dms.DocumentPage(
+            items=[public_metadata("doc-1"), public_metadata("doc-2")],
+            next_cursor="next-page",
+            has_more=True,
+        )
 
     def get_document_content(self, document_id):
         self.content_calls += 1
