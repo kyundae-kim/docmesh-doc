@@ -1,7 +1,7 @@
 # Wiki Index
 
 > DMS를 `dms-core` 로직 코어와 `fastapi-core` FastAPI 컴포넌트로 구성하여 배포하기 위한 지식 카탈로그.
-> Last updated: 2026-07-26 | Total pages: 12
+> Last updated: 2026-07-26 | Total pages: 13
 
 ## Entities
 <!-- Alphabetical within section -->
@@ -23,3 +23,4 @@
 ## Comparisons
 
 ## Queries
+- [[fastapi-core-application-optimization]] — v0.6 module 조립을 유지하면서 root path, OpenAPI 오류 계약과 contract test를 정합화한 적용 검토.

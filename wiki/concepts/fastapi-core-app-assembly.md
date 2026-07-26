@@ -24,6 +24,8 @@ v0.6.0 API reference는 `routers`, `modules`, `error_mappers`, `auth_provider`�
 
 v0.6.0 Examples는 framework가 runtime/resource를 사용자 lifespan보다 먼저 시작하고 종료 시 사용자 lifespan → resource → runtime 순으로 정리한다고 보인다. 현재 adapter는 package-owned module resource lifecycle로 이 순서를 유지하며 정상 close, startup factory 실패와 shutdown close 실패 테스트를 통과한다. ^[raw/articles/fastapi-core-wiki-examples-v0.6.0.md]
 
+소비 애플리케이션은 route reverse lookup으로 업로드 `Location`을 생성해 `AppConfig.root_path`를 보존하고, document module router에 제품 오류 envelope의 OpenAPI response를 선언한다. `assert_openapi_contract`는 document path·method·OAuth2 scheme·operation-ID 및 schema reference를 검증하며, 별도 assertion은 runtime의 400 validation 계약과 생성 문서가 일치하고 기본 422가 남지 않음을 확인한다. 세부 검토는 [[fastapi-core-application-optimization]]에 기록한다. ^[raw/articles/fastapi-core-wiki-examples-v0.6.0.md]
+
 `v0.3.0` config 문서는 `create_app()`이 `load_app_config()` 뒤에 application logging을 초기화하고, lifespan startup에서 selected service runtime을 조립한다고 설명한다. `token_url`은 앱마다 별도의 `OAuth2PasswordBearer`와 OpenAPI password flow에 저장되므로, 한 프로세스에서 서로 다른 token URL로 여러 앱을 조립해도 기존 앱의 OpenAPI 계약을 바꾸지 않는다. ^[raw/articles/fastapi-core-config-v0.3.0.md]
 
 GitHub Wiki Configuration snapshot은 runtime 조립 경로를 `AppConfig` 로딩 → runtime plan → non-mutating environment overlay → `assemble_runtime()` → `app.state.service_runtime`/readiness 등록 → shutdown close로 설명한다. `create_app(runtime=...)`은 이 서비스 조립만 우회하고 CORS, logging, readiness AppConfig 정책은 보존한다. 하지만 overlay가 개발 fallback을 추가하는지 여부는 tagged v0.3.0 config snapshot과 상충하므로, DMS 배포는 explicit configuration을 제공해야 한다. ^[raw/articles/fastapi-core-wiki-configuration.md]

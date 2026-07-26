@@ -35,3 +35,13 @@ class DeleteDocumentResponse(BaseModel):
     deleted: bool
     hard_deleted: bool
     status: str
+
+
+class ErrorDetailResponse(BaseModel):
+    code: str
+    message: str
+    correlation_id: str
+
+
+class ErrorResponse(BaseModel):
+    error: ErrorDetailResponse

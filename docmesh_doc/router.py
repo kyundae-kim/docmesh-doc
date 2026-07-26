@@ -1,7 +1,8 @@
 from typing import Annotated
 
 import dms
-from fastapi import APIRouter, Depends, File, Form, Query, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Query, Request, Response, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import StreamingResponse
 from fastapi_core.dependencies import get_current_user
 
@@ -16,17 +17,23 @@ from docmesh_doc.schemas import (
     DeleteDocumentResponse,
     DocumentMetadataResponse,
     DocumentPageResponse,
+    ErrorResponse,
 )
 
 router = APIRouter(
     prefix="/documents",
     tags=["documents"],
     dependencies=[Depends(get_current_user)],
+    responses={
+        400: {"model": ErrorResponse, "description": "Invalid request"},
+        "default": {"model": ErrorResponse, "description": "Request failed"},
+    },
 )
 
 
 @router.post("", status_code=201, response_model=DocumentMetadataResponse)
 def upload_document(
+    request: Request,
     response: Response,
     sdk: DmsSdk,
     user: CurrentUser,
@@ -49,7 +56,9 @@ def upload_document(
             checksum=checksum or None,
         )
     )
-    response.headers["Location"] = f"/documents/{result.document_id}"
+    response.headers["Location"] = request.url_for(
+        "get_document_metadata", document_id=result.document_id
+    ).path
     return result.metadata
 
 
@@ -108,4 +117,4 @@ async def delete_document(
     if hard:
         await require_hard_delete(current_user=user)
     delete = sdk.hard_delete_document if hard else sdk.soft_delete_document
-    return delete(document_id)
+    return await run_in_threadpool(delete, document_id)

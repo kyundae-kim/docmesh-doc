@@ -140,10 +140,12 @@ def client_for(
     *,
     roles: list[str] | None = None,
     scopes: list[str] | None = None,
+    root_path: str = "",
 ) -> TestClient:
     app = create_application(
         sdk,
         config=AppConfig(
+            root_path=root_path,
             startup_healthcheck=False,
             enabled_services=[],
             required_services=[],

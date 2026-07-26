@@ -348,3 +348,10 @@
 - Updated the adapter to module-first assembly, cursor-page HTTP responses, explicit soft/hard delete, and safe v0.6 error-status projection while retaining the product error envelope and synchronous stream lifecycle.
 - Verification: `56 passed, 1 skipped`; one upstream Starlette warning remains because `fastapi.testclient` imports deprecated `httpx` compatibility instead of `httpx2`.
 - Updated: `entities/fastapi-core.md`, `entities/dms-core.md`, `concepts/fastapi-core-app-assembly.md`, `concepts/fastapi-core-configuration.md`, `concepts/fastapi-core-usage-patterns.md`, `concepts/dms-core-usage-patterns.md`, `concepts/dms-core-document-lifecycle.md`, `index.md`.
+
+## [2026-07-26] query | fastapi-core application optimization
+- Retained the verified v0.6 module-first resource, readiness, auth, and lifecycle boundaries; no large assembly refactor was needed.
+- Applied root-path-aware upload `Location`, product error response models without the stale default 422 contract, `assert_openapi_contract` coverage, and thread-pooled sync delete I/O.
+- Verification: `59 passed, 1 skipped`; the upstream Starlette `httpx2` migration warning remains.
+- Created: `queries/fastapi-core-application-optimization.md`.
+- Updated: `concepts/fastapi-core-app-assembly.md`, `concepts/fastapi-core-usage-patterns.md`, `index.md`, `log.md`.

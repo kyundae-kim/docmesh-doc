@@ -8,6 +8,7 @@ from fastapi_core.testing import (
     assert_auth_router_contract,
     assert_health_contract,
     assert_module_contract,
+    assert_openapi_contract,
 )
 
 from docmesh_doc.application import create_application
@@ -87,6 +88,35 @@ def test_application_installs_the_document_domain_module():
 def test_application_preserves_fastapi_core_health_contract():
     with client_for(FakeSDK()) as client:
         assert_health_contract(client)
+
+
+def test_application_openapi_matches_document_contract():
+    app = create_application(
+        FakeSDK(),
+        config=AppConfig(enabled_services=[], required_services=[]),
+        include_auth_router=False,
+    )
+
+    assert_openapi_contract(
+        app,
+        expected_paths={
+            "/documents": {"get", "post"},
+            "/documents/{document_id}": {"get", "delete"},
+            "/documents/{document_id}/content": {"get"},
+            "/documents/{document_id}/download": {"get"},
+        },
+        expected_security_schemes={"OAuth2PasswordBearer"},
+    )
+
+    for path, path_item in app.openapi()["paths"].items():
+        if not path.startswith("/documents"):
+            continue
+        for method, operation in path_item.items():
+            if method not in {"get", "post", "delete"}:
+                continue
+            assert "400" in operation["responses"]
+            assert "default" in operation["responses"]
+            assert "422" not in operation["responses"]
 
 
 def test_lifespan_closes_sdk():

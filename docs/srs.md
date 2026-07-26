@@ -92,14 +92,14 @@ HTTP 공개 metadata에는 최소 `document_id`, `original_filename`, `content_t
 | ID | 요구사항 |
 | --- | --- |
 | SRS-API-001 | `POST /documents`는 `multipart/form-data`로 `file`과 선택 `document_id`, `metadata`, `checksum`을 받고 filename과 content type은 `UploadFile`에서 읽어야 한다. |
-| SRS-API-002 | 업로드 route는 입력을 `UploadDocumentStreamRequest`로 변환해 `sdk.upload_document_stream(...)`을 호출하고 `Location` header와 public metadata를 반환해야 한다. |
+| SRS-API-002 | 업로드 route는 입력을 `UploadDocumentStreamRequest`로 변환해 `sdk.upload_document_stream(...)`을 호출하고 `ROOT_PATH`를 반영한 `Location` header와 public metadata를 반환해야 한다. |
 | SRS-API-003 | 빈 본문, trim 후 빈 filename/content type, 0 이하 chunk size 같은 잘못된 입력은 저장소 작업 전에 validation 오류로 반환해야 한다. |
 | SRS-API-004 | `GET /documents`는 선택 `cursor`, 기본 `limit=100`, 선택 status filter를 SDK `list_documents(cursor=..., limit=..., status=...)`에 전달해야 한다. limit은 1~1000이며 cursor는 불투명하게 취급한다. 응답은 공개 metadata `items`, `next_cursor`, `has_more`를 포함하고 다음 page 요청은 cursor에 결합된 limit과 status를 유지해야 한다. |
 | SRS-API-005 | `GET /documents/{document_id}`는 공개 안전 metadata 결과를 response allowlist schema로 직렬화해야 한다. |
 | SRS-API-006 | `GET /documents/{document_id}/content`는 저장된 content type과 안전한 inline `Content-Disposition`을 유지해야 한다. |
 | SRS-API-007 | `GET /documents/{document_id}/download`는 `DocumentContentStream.iter_chunks()`를 `StreamingResponse`로 전달하고 attachment `Content-Disposition`을 설정해야 한다. |
 | SRS-API-008 | streaming response는 완료, 예외, 클라이언트 연결 종료의 모든 경로에서 `DocumentContentStream.close()`를 호출해야 한다. |
-| SRS-API-009 | soft delete route는 `sdk.soft_delete_document(document_id)`를, hard delete route는 권한 검사 후 `sdk.hard_delete_document(document_id)`를 호출해야 한다. 응답은 `document_id`, `deleted`, `hard_deleted`, `status`만 공개해야 한다. |
+| SRS-API-009 | soft delete route는 `sdk.soft_delete_document(document_id)`를, hard delete route는 권한 검사 후 `sdk.hard_delete_document(document_id)`를 호출해야 한다. async route는 동기 SDK 삭제 I/O를 thread pool에서 실행해 event loop를 차단하지 않아야 한다. 응답은 `document_id`, `deleted`, `hard_deleted`, `status`만 공개해야 한다. |
 | SRS-API-010 | 모든 HTTP 응답은 `X-Correlation-ID` header를 제공해야 하며 제품 오류 envelope는 같은 correlation ID를 포함해야 한다. 유효한 입력 ID는 보존하고 형식이 잘못된 입력 ID는 안전한 새 ID로 교체해야 한다. |
 
 ### 3.6 오류, health 및 관측성

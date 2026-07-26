@@ -297,7 +297,5 @@ wiki/                    # upstream package 조사와 근거 자료
 
 ## 현재 알려진 제약
 
-- 업로드 성공 response의 `Location` header는 현재 `ROOT_PATH`를 포함하지 않고 `/documents/{document_id}` 형식으로 생성됩니다.
-- 런타임 request validation은 `400 VALIDATION_ERROR`로 정규화되지만 생성 OpenAPI에는 FastAPI 기본 422 response가 남아 있습니다.
 - 전체 콘텐츠 API는 bytes를 한 번에 메모리에 적재하므로 큰 문서는 streaming download API를 사용해야 합니다.
 - MinIO health check는 bucket별 읽기·쓰기·삭제 권한까지 보장하지 않으므로 배포 전 별도 확인이 필요합니다.

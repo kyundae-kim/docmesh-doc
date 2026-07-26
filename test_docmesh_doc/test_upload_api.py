@@ -33,6 +33,18 @@ def test_upload_streams_multipart_to_sdk_request_and_hides_storage_key():
     assert sdk.upload_stream_request.metadata == {"category": "contract"}
 
 
+def test_upload_location_includes_configured_root_path():
+    with client_for(FakeSDK(), root_path="/dms") as client:
+        response = client.post(
+            "/documents",
+            files={"file": ("contract.pdf", b"pdf", "application/pdf")},
+            data={"document_id": "doc-1"},
+        )
+
+    assert response.status_code == 201
+    assert response.headers["Location"] == "/dms/documents/doc-1"
+
+
 def test_upload_normalizes_empty_optional_fields():
     sdk = FakeSDK()
     with client_for(sdk) as client:
