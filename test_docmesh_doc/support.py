@@ -10,6 +10,7 @@ from fastapi_core.config import AppConfig
 from fastapi_core.dependencies import get_current_user
 
 from docmesh_doc.application import create_application
+from docmesh_doc.router import DEFAULT_DOWNLOAD_CHUNK_SIZE
 
 
 NOW = datetime(2026, 7, 11, tzinfo=UTC)
@@ -98,7 +99,12 @@ class FakeSDK:
             size=3,
         )
 
-    def get_document_content_stream(self, document_id, *, chunk_size=65536):
+    def get_document_content_stream(
+        self,
+        document_id,
+        *,
+        chunk_size=DEFAULT_DOWNLOAD_CHUNK_SIZE,
+    ):
         self.content_stream_calls += 1
         return dms.DocumentContentStream(
             document_id=document_id,

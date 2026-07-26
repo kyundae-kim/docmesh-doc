@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Any
 
+import dms
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -11,7 +12,7 @@ class DocumentMetadataResponse(BaseModel):
     original_filename: str
     content_type: str
     file_size: int
-    status: str
+    status: dms.DocumentStatus
     created_at: datetime
     updated_at: datetime
     deleted_at: datetime | None
@@ -34,7 +35,7 @@ class DeleteDocumentResponse(BaseModel):
     document_id: str
     deleted: bool
     hard_deleted: bool
-    status: str
+    status: dms.DocumentStatus
 
 
 class ErrorDetailResponse(BaseModel):

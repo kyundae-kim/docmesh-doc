@@ -7,6 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 from fastapi_core.schemas import UserInfo
 
+from docmesh_doc.dependencies import HARD_DELETE_PERMISSION
 
 PAYLOAD = b"DocMesh integration test payload"
 pytestmark = pytest.mark.integration
@@ -92,9 +93,9 @@ def test_hard_delete_removes_postgres_metadata_and_minio_object(
     document_id: str,
 ):
     client, sdk, user = integration_client
-    if "document:delete:hard" not in user.roles:
+    if HARD_DELETE_PERMISSION not in user.roles:
         pytest.skip(
-            "integration Keycloak user does not have document:delete:hard role"
+            f"integration Keycloak user does not have {HARD_DELETE_PERMISSION} role"
         )
     assert upload(client, document_id).status_code == 201
 

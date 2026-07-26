@@ -11,4 +11,5 @@ DMS_RESOURCE = ResourceKey[DefaultDocumentManagementSDK]("dms")
 DmsSdk = Annotated[DefaultDocumentManagementSDK, Depends(DMS_RESOURCE.dependency)]
 CurrentUser = Annotated[AuthenticatedUser, Depends(get_current_user)]
 
-require_hard_delete = require_permissions("document:delete:hard")
+HARD_DELETE_PERMISSION = "document:delete:hard"
+require_hard_delete = require_permissions(HARD_DELETE_PERMISSION)

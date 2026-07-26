@@ -4,7 +4,9 @@ from dataclasses import replace
 
 import dms
 import pytest
+from starlette.requests import ClientDisconnect
 
+from docmesh_doc.router import MAX_DOWNLOAD_CHUNK_SIZE, _stream_document
 from test_docmesh_doc.support import NOW, FakeSDK, client_for, metadata
 
 
@@ -62,7 +64,8 @@ def test_oversized_chunk_is_rejected_before_sdk_call():
     sdk = FakeSDK()
     with client_for(sdk) as client:
         response = client.get(
-            "/documents/doc-1/download?chunk_size=8388609"
+            "/documents/doc-1/download",
+            params={"chunk_size": MAX_DOWNLOAD_CHUNK_SIZE + 1},
         )
 
     assert response.status_code == 400
@@ -78,6 +81,34 @@ def test_stream_is_closed_after_download():
     assert response.status_code == 200
     assert response.content == b"pdf"
     assert response.headers["Content-Disposition"].startswith("attachment;")
+    assert sdk.stream_closed is True
+
+
+async def test_stream_is_closed_when_client_disconnects():
+    sdk = FakeSDK()
+    item = sdk.get_document_content_stream("doc-1")
+    response = _stream_document(item, disposition="attachment")
+
+    async def receive():
+        return {"type": "http.disconnect"}
+
+    async def send(message):
+        if message["type"] == "http.response.body":
+            raise OSError("client disconnected")
+
+    with pytest.raises(ClientDisconnect):
+        await response(
+            {
+                "type": "http",
+                "method": "GET",
+                "path": "/documents/doc-1/download",
+                "headers": [],
+                "asgi": {"spec_version": "2.4"},
+            },
+            receive,
+            send,
+        )
+
     assert sdk.stream_closed is True
 
 

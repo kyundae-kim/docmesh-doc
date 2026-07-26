@@ -4,6 +4,7 @@ import threading
 
 import docmesh_doc.router as document_router
 
+from docmesh_doc.dependencies import HARD_DELETE_PERMISSION
 from test_docmesh_doc.support import FakeSDK, client_for
 
 
@@ -19,7 +20,7 @@ def test_hard_delete_requires_permission_before_sdk_call():
 
 def test_hard_delete_calls_sdk_for_authorized_user():
     sdk = FakeSDK()
-    with client_for(sdk, roles=["document:delete:hard"]) as client:
+    with client_for(sdk, roles=[HARD_DELETE_PERMISSION]) as client:
         response = client.delete("/documents/doc-1?hard=true")
 
     assert response.status_code == 200
@@ -29,7 +30,7 @@ def test_hard_delete_calls_sdk_for_authorized_user():
 
 def test_hard_delete_accepts_fastapi_core_scope_permission():
     sdk = FakeSDK()
-    with client_for(sdk, scopes=["document:delete:hard"]) as client:
+    with client_for(sdk, scopes=[HARD_DELETE_PERMISSION]) as client:
         response = client.delete("/documents/doc-1?hard=true")
 
     assert response.status_code == 200

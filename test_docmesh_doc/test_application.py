@@ -12,6 +12,7 @@ from fastapi_core.testing import (
 )
 
 from docmesh_doc.application import create_application
+from docmesh_doc.dependencies import DMS_RESOURCE
 from test_docmesh_doc.support import NOW, FakeSDK, client_for
 
 
@@ -39,7 +40,7 @@ def test_application_delegates_process_environment_loading_to_dms(monkeypatch):
     )
 
     with TestClient(app):
-        assert app.state.resource_registry.require("dms") is sdk
+        assert app.state.resource_registry.require(DMS_RESOURCE.name) is sdk
 
     assert create_calls == 1
 
@@ -53,7 +54,7 @@ def test_dms_sdk_is_owned_by_the_managed_resource_registry():
     )
 
     with TestClient(app):
-        assert app.state.resource_registry.require("dms") is sdk
+        assert app.state.resource_registry.require(DMS_RESOURCE.name) is sdk
         assert not hasattr(app.state, "dms_sdk")
         assert not hasattr(app.state, "readiness_checks")
 

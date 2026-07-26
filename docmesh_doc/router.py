@@ -1,3 +1,4 @@
+from collections.abc import Iterable
 from typing import Annotated, Literal
 
 import dms
@@ -20,7 +21,27 @@ from docmesh_doc.schemas import (
     ErrorResponse,
 )
 
+DEFAULT_DOWNLOAD_CHUNK_SIZE = 64 * 1024
 MAX_DOWNLOAD_CHUNK_SIZE = 8 * 1024 * 1024
+
+
+class DocumentStreamingResponse(StreamingResponse):
+    def __init__(
+        self,
+        item: dms.DocumentContentStream,
+        content: Iterable[bytes],
+        *,
+        media_type: str,
+        headers: dict[str, str],
+    ) -> None:
+        super().__init__(content=content, media_type=media_type, headers=headers)
+        self.item = item
+
+    async def __call__(self, scope, receive, send) -> None:
+        try:
+            await super().__call__(scope, receive, send)
+        finally:
+            await run_in_threadpool(self.item.close)
 
 
 def _stream_document(
@@ -32,10 +53,15 @@ def _stream_document(
         with item:
             yield from item.iter_chunks()
 
-    return StreamingResponse(body(), media_type=item.content_type, headers={
-        "Content-Length": str(item.size),
-        "Content-Disposition": content_disposition(disposition, item.filename),
-    })
+    return DocumentStreamingResponse(
+        item,
+        content=body(),
+        media_type=item.content_type,
+        headers={
+            "Content-Length": str(item.size),
+            "Content-Disposition": content_disposition(disposition, item.filename),
+        },
+    )
 
 
 router = APIRouter(
@@ -111,7 +137,7 @@ def download_document(
     chunk_size: Annotated[
         int,
         Query(ge=1, le=MAX_DOWNLOAD_CHUNK_SIZE),
-    ] = 65536,
+    ] = DEFAULT_DOWNLOAD_CHUNK_SIZE,
 ) -> StreamingResponse:
     item = sdk.get_document_content_stream(document_id, chunk_size=chunk_size)
     return _stream_document(item, disposition="attachment")

@@ -14,6 +14,7 @@ from minio import Minio
 from sqlalchemy import URL, create_engine, text
 
 from docmesh_doc.application import create_application
+from docmesh_doc.dependencies import DMS_RESOURCE
 
 
 _REQUIRED_ENV = (
@@ -128,4 +129,4 @@ def integration_client(
 
         user = _wait_for_authenticated_user(client)
 
-        yield client, app.state.resource_registry.require("dms"), user
+        yield client, app.state.resource_registry.require(DMS_RESOURCE.name), user
