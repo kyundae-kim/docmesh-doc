@@ -285,3 +285,31 @@
 - Body SHA-256: `43b3327a8da9ebd078a30d9f94af699f799e0023565b3d4017a713fbc13a423a` (distinct from the preserved v0.4.0 body hash).
 - The template preserves DMS SDK-only PostgreSQL/SQLite-plus-MinIO assembly, placeholder-backed disabled health checks, individual PostgreSQL fields, MinIO TLS, and shared integration-test variables. Its temporary environment overlay/restore claim accompanies the v0.5.0 argument-free factory; installed `dms 0.4.0` instead requires an explicit environment mapping. The v0.5.0 assembly behavior is therefore an upgrade candidate, while DMS storage and FastAPI application configuration remain separate.
 - Updated: `entities/dms-core.md`, `concepts/dms-core-configuration.md`, `concepts/fastapi-core-configuration.md`.
+
+## [2026-07-26] ingest | docmesh-py-core GitHub Wiki API Reference v0.5.0
+- Captured immutable source: `raw/articles/docmesh-py-core-wiki-api-reference-v0.5.0.md`.
+- Source URL: `https://raw.githubusercontent.com/wiki/kyundae-kim/docmesh-py-core/API-Reference-v0.5.0.md` (requested GitHub Wiki page: `https://github.com/kyundae-kim/docmesh-py-core/wiki/API-Reference-v0.5.0`).
+- Body SHA-256: `1c6f4b9bc04043d03778890e7c33318cae8e34fb2a3771897b21fc9d8fb79b82`.
+- The v0.5.0 contract documents typed `Service`/`RuntimePlan` assembly, non-connecting `diagnose_services`, plan-aware runtime lookup, startup failure policy, catalog metadata, and aggregated cleanup/error taxonomy. The workspace installs `docmesh-py-core 0.4.0`, so these additions are recorded as upgrade candidates rather than current runtime behavior.
+- Updated: `entities/docmesh-py-core.md`, `concepts/docmesh-py-core-usage-patterns.md`, `index.md`.
+
+## [2026-07-26] ingest | dms-core GitHub Wiki API Reference v0.6.0
+- Captured immutable source: `raw/articles/dms-core-wiki-api-reference-v0.6.0.md`.
+- Source URL: `https://raw.githubusercontent.com/wiki/kyundae-kim/dms-core/API-Reference-v0.6.0.md` (requested GitHub Wiki page: `https://github.com/kyundae-kim/dms-core/wiki/API-Reference-v0.6.0`).
+- Body SHA-256: `e8dfdc821655a3899253d485d86db5e758c5204bde744a63266839e66a89171f` (distinct from the preserved v0.5.0 body hash).
+- The v0.6.0 reference retains public-safe metadata and settings-bundle assembly while documenting async stream APIs, cursor-default listing, and a recommended host HTTP-error projection. Installed `dms 0.5.0` confirms the v0.5 factories and metadata boundary but lacks those async/HTTP symbols and retains offset `list_documents`; record these as upgrade candidates rather than runtime facts.
+- Updated: `entities/dms-core.md`, `concepts/dms-core-usage-patterns.md`, `concepts/dms-core-document-lifecycle.md`, `concepts/fastapi-core-app-assembly.md`, `index.md`.
+
+## [2026-07-26] ingest | dms-core GitHub Wiki Configuration v0.6.0
+- Captured immutable source: `raw/articles/dms-core-wiki-configuration-v0.6.0.md`.
+- Source URL: `https://raw.githubusercontent.com/wiki/kyundae-kim/dms-core/Configuration-v0.6.0.md` (requested GitHub Wiki page: `https://github.com/kyundae-kim/dms-core/wiki/Configuration-v0.6.0`).
+- Body SHA-256: `91594367444281559dcc96c35ab2ec1b3875d7a857e3065497853edfe1d3892d` (distinct from the preserved v0.5.0 body hash).
+- The v0.6.0 reference documents detailed storage selection, DSN rejection, typed PostgreSQL/SQLite/MinIO settings, factory ownership, service-config startup policy, and production TLS constraints. Installed `dms 0.5.0` confirms the individual-field/DSN diagnosis boundary and v0.5 service-config/formatter APIs; v0.6-only helper and production behavior remain upgrade candidates.
+- Updated: `entities/dms-core.md`, `concepts/dms-core-configuration.md`, `concepts/fastapi-core-configuration.md`.
+
+## [2026-07-26] ingest | dms-core GitHub Wiki Examples v0.6.0
+- Captured immutable source: `raw/articles/dms-core-wiki-examples-v0.6.0.md`.
+- Source URL: `https://raw.githubusercontent.com/wiki/kyundae-kim/dms-core/Examples-v0.6.0.md` (requested GitHub Wiki page: `https://github.com/kyundae-kim/dms-core/wiki/Examples-v0.6.0`).
+- Body SHA-256: `1cdd933d1cd11d75fffaf971bf3ca8ac6db7f1a3305bf2cfc9de9b918743925d` (distinct from the preserved v0.5.0 body hash).
+- The v0.6.0 examples cover environment/service-config/component assembly, diagnosis, idempotent sync/async streaming, public/internal metadata, cursor listing, structured metadata, recovery plans, lifecycle, and HTTP-error projection. Installed `dms 0.5.0` confirms the synchronous factory/diagnosis/recovery path but lacks the async streams, HTTP helper, and cursor-default list signature; these remain upgrade candidates.
+- Updated: `entities/dms-core.md`, `concepts/dms-core-usage-patterns.md`, `concepts/dms-core-document-lifecycle.md`, `concepts/fastapi-core-app-assembly.md`.

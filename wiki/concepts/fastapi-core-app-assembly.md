@@ -1,10 +1,10 @@
 ---
 title: fastapi-core application assembly
 created: 2026-07-11
-updated: 2026-07-20
+updated: 2026-07-26
 type: concept
 tags: [fastapi, fastapi-core, architecture, deployment, configuration, observability]
-sources: [raw/articles/fastapi-core-api-v0.1.6.md, raw/articles/fastapi-core-api-v0.3.0.md, raw/articles/fastapi-core-wiki-api-reference.md, raw/articles/fastapi-core-wiki-api-reference-v0.5.0.md, raw/articles/fastapi-core-config-v0.1.6.md, raw/articles/fastapi-core-config-v0.2.0.md, raw/articles/fastapi-core-config-v0.3.0.md, raw/articles/fastapi-core-wiki-configuration.md, raw/articles/fastapi-core-wiki-configuration-v0.5.0.md, raw/articles/fastapi-core-env-example-v0.4.0.md, raw/articles/fastapi-core-env-example-v0.5.0.md, raw/articles/fastapi-core-examples-v0.1.6.md, raw/articles/fastapi-core-examples-v0.2.0.md, raw/articles/fastapi-core-examples-v0.3.0.md, raw/articles/fastapi-core-wiki-examples.md, raw/articles/fastapi-core-wiki-examples-v0.5.0.md, raw/articles/fastapi-core-messaging-v0.1.6.md, raw/articles/fastapi-core-messaging-v0.2.0.md, raw/articles/dms-core-wiki-api-reference-v0.4.0.md, raw/articles/dms-core-wiki-api-reference-v0.5.0.md, raw/articles/dms-core-wiki-examples-v0.4.0.md]
+sources: [raw/articles/fastapi-core-api-v0.1.6.md, raw/articles/fastapi-core-api-v0.3.0.md, raw/articles/fastapi-core-wiki-api-reference.md, raw/articles/fastapi-core-wiki-api-reference-v0.5.0.md, raw/articles/fastapi-core-config-v0.1.6.md, raw/articles/fastapi-core-config-v0.2.0.md, raw/articles/fastapi-core-config-v0.3.0.md, raw/articles/fastapi-core-wiki-configuration.md, raw/articles/fastapi-core-wiki-configuration-v0.5.0.md, raw/articles/fastapi-core-env-example-v0.4.0.md, raw/articles/fastapi-core-env-example-v0.5.0.md, raw/articles/fastapi-core-examples-v0.1.6.md, raw/articles/fastapi-core-examples-v0.2.0.md, raw/articles/fastapi-core-examples-v0.3.0.md, raw/articles/fastapi-core-wiki-examples.md, raw/articles/fastapi-core-wiki-examples-v0.5.0.md, raw/articles/fastapi-core-messaging-v0.1.6.md, raw/articles/fastapi-core-messaging-v0.2.0.md, raw/articles/dms-core-wiki-api-reference-v0.4.0.md, raw/articles/dms-core-wiki-api-reference-v0.5.0.md, raw/articles/dms-core-wiki-api-reference-v0.6.0.md, raw/articles/dms-core-wiki-examples-v0.4.0.md, raw/articles/dms-core-wiki-examples-v0.6.0.md]
 confidence: medium
 ---
 
@@ -52,6 +52,10 @@ DMS v0.4.0의 내부 `storage_key`는 HTTP 공개 계약이 아니므로 route �
 
 DMS v0.5.0 Wiki API reference는 public metadata를 기본 조회/list 결과로 만들고 internal metadata를 별도 accessor에 한정하는 migration을 문서화한다. 현재 설치된 DMS v0.4.0은 아직 internal metadata를 반환하므로, adapter의 allowlist response model을 유지한다. `create_sdk_from_service_configs`도 v0.5.0 source에만 있으므로 FastAPI runtime/service settings와 DMS storage assembly를 직접 연결했다고 가정하지 않는다. ^[raw/articles/dms-core-wiki-api-reference-v0.5.0.md]
 
+DMS v0.6.0 API reference는 `recommended_http_error(...)`로 안정적인 DMS 오류 속성을 HTTP status/body로 투영하는 host-side 권고를 추가하지만, 설치된 `dms 0.5.0`에는 helper가 없다. 따라서 [[dms-core-document-lifecycle]]의 현재 error mapper를 유지하고, future upgrade에서는 helper의 status/body와 기존 FastAPI error renderer가 동일한 공개 오류·비밀 마스킹 contract를 지키는지 route test로 확인해야 한다. ^[raw/articles/dms-core-wiki-api-reference-v0.6.0.md]
+
+DMS v0.6.0 Examples는 `recommended_http_error(...)`가 host transport convenience이며 DMS exception 자체에 HTTP status를 추가하지 않는다고 명확히 한다. 설치된 `dms 0.5.0`에는 helper가 없으므로 current FastAPI error renderer를 유지하고, upgrade 시에는 413 payload-size와 retryable idempotency-in-progress를 포함한 route contract test로 새 mapping을 검증한다. ^[raw/articles/dms-core-wiki-examples-v0.6.0.md]
+
 v0.4.0 예제가 권장하는 HTTP-facing 흐름은 `public_metadata()`, cursor의 `has_more`/`next_cursor`, 명시적 soft/hard 삭제다. 현재 project adapter는 allowlist response model로 `storage_key`를 제외하지만 목록은 offset 방식이고 삭제는 호환 `delete_document(...)`를 사용한다. 이는 오류가 아니라 지원되는 legacy surface이며, cursor 또는 명시 삭제 endpoint로 이동할 때 [[dms-core-usage-patterns]]의 계약을 유지한다. ^[raw/articles/dms-core-wiki-examples-v0.4.0.md]
 
 ## Open questions
@@ -82,4 +86,6 @@ v0.4.0 예제가 권장하는 HTTP-facing 흐름은 `public_metadata()`, cursor�
 - `raw/articles/fastapi-core-messaging-v0.2.0.md`
 - `raw/articles/dms-core-wiki-api-reference-v0.4.0.md`
 - `raw/articles/dms-core-wiki-api-reference-v0.5.0.md`
+- `raw/articles/dms-core-wiki-api-reference-v0.6.0.md`
 - `raw/articles/dms-core-wiki-examples-v0.4.0.md`
+- `raw/articles/dms-core-wiki-examples-v0.6.0.md`

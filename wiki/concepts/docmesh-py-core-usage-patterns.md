@@ -1,10 +1,10 @@
 ---
 title: docmesh-py-core usage patterns
 created: 2026-07-15
-updated: 2026-07-15
+updated: 2026-07-26
 type: concept
 tags: [configuration, workflow, integration, testing, security]
-sources: [raw/articles/docmesh-py-core-examples-v0.2.0.md]
+sources: [raw/articles/docmesh-py-core-examples-v0.2.0.md, raw/articles/docmesh-py-core-wiki-api-reference-v0.5.0.md]
 confidence: medium
 ---
 
@@ -18,9 +18,13 @@ confidence: medium
 
 FastAPI custom lifespan에서는 bundle/runtime을 `app.state.services`에 두고, 필요한 wrapper/builder만 별도 state 키로 노출한다. NATS runtime 예시는 `async with runtime:`으로 cleanup을 보장하고 `runtime.require("nats")`로 builder를 얻는다. 앱 수준 lifecycle·readiness 정책은 [[fastapi-core-app-assembly]]와 [[fastapi-core-messaging-integration]]의 경계를 따른다. ^[raw/articles/docmesh-py-core-examples-v0.2.0.md]
 
+v0.5.0 contract를 사용하는 소비자는 string 집합 대신 `RuntimePlan(services=(Service.SQLITE.required(), Service.NATS.optional()), ...)`처럼 typed plan을 구성하고 `await assemble_service_runtime(plan=plan)`을 사용한다. `ServiceRuntime.require(Service.NATS)`는 plan 밖 접근과 초기화 실패를 구분하며, `async with runtime:`은 sync/async client 모두를 정리한다. 이 API는 현재 workspace의 설치 버전보다 새로우므로 dependency alignment와 signature 확인 전에는 실행 경로로 채택하지 않는다. ^[raw/articles/docmesh-py-core-wiki-api-reference-v0.5.0.md]
+
 ## Selective services and health
 
 부분 기능 소비자는 `load_service_configs(services={...})`로 선택 서비스만 로드한다. 선택하지 않은 `ServiceConfigs` 필드는 `None`이며, Langfuse가 비활성화된 경우 factory가 `None`을 반환할 수 있다. health endpoint는 `check_all_services(...)`에 required service 집합을 전달하고 `HealthCheckError`일 때 503 및 구조화된 결과를 반환하는 방식으로 구성한다. 설정 선택과 security guardrail은 [[docmesh-py-core]] 및 [[fastapi-core-configuration]]을 참고한다. ^[raw/articles/docmesh-py-core-examples-v0.2.0.md]
+
+새 plan 기반 preflight에서는 `diagnose_services(plan=plan, selection_mode="strict")`로 연결 없이 partial/invalid 설정, 대안 backend의 동시 구성, placeholder·전송 보안 위반을 먼저 확인한다. 진단 결과와 `SERVICE_CATALOG`은 secret 원문을 포함하지 않는 운영자용 입력이며 runtime assembly나 healthcheck의 대체물이 아니다. ^[raw/articles/docmesh-py-core-wiki-api-reference-v0.5.0.md]
 
 ## Direct integrations
 
@@ -29,3 +33,4 @@ NATS factory는 연결된 client가 아니라 `NatsConnectionBuilder`를 반환�
 ## Source
 
 - `raw/articles/docmesh-py-core-examples-v0.2.0.md`
+- `raw/articles/docmesh-py-core-wiki-api-reference-v0.5.0.md`

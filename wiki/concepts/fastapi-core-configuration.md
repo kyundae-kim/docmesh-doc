@@ -1,10 +1,10 @@
 ---
 title: fastapi-core configuration model
 created: 2026-07-11
-updated: 2026-07-20
+updated: 2026-07-26
 type: concept
 tags: [fastapi, fastapi-core, configuration, deployment, security, observability]
-sources: [raw/articles/fastapi-core-api-v0.1.6.md, raw/articles/fastapi-core-api-v0.3.0.md, raw/articles/fastapi-core-config-v0.1.6.md, raw/articles/fastapi-core-config-v0.2.0.md, raw/articles/fastapi-core-config-v0.3.0.md, raw/articles/fastapi-core-wiki-configuration.md, raw/articles/fastapi-core-wiki-configuration-v0.5.0.md, raw/articles/fastapi-core-env-example-v0.3.0.md, raw/articles/fastapi-core-env-example-v0.4.0.md, raw/articles/fastapi-core-env-example-v0.5.0.md, raw/articles/fastapi-core-examples-v0.1.6.md, raw/articles/fastapi-core-wiki-examples.md, raw/articles/dms-core-config-v0.2.0.md, raw/articles/dms-core-wiki-configuration-v0.4.0.md, raw/articles/dms-core-wiki-configuration-v0.5.0.md, raw/articles/dms-core-env-example-v0.4.0.md, raw/articles/dms-core-env-example-v0.5.0.md, raw/articles/docmesh-py-core-config-v0.2.0.md]
+sources: [raw/articles/fastapi-core-api-v0.1.6.md, raw/articles/fastapi-core-api-v0.3.0.md, raw/articles/fastapi-core-config-v0.1.6.md, raw/articles/fastapi-core-config-v0.2.0.md, raw/articles/fastapi-core-config-v0.3.0.md, raw/articles/fastapi-core-wiki-configuration.md, raw/articles/fastapi-core-wiki-configuration-v0.5.0.md, raw/articles/fastapi-core-env-example-v0.3.0.md, raw/articles/fastapi-core-env-example-v0.4.0.md, raw/articles/fastapi-core-env-example-v0.5.0.md, raw/articles/fastapi-core-examples-v0.1.6.md, raw/articles/fastapi-core-wiki-examples.md, raw/articles/dms-core-config-v0.2.0.md, raw/articles/dms-core-wiki-configuration-v0.4.0.md, raw/articles/dms-core-wiki-configuration-v0.5.0.md, raw/articles/dms-core-wiki-configuration-v0.6.0.md, raw/articles/dms-core-env-example-v0.4.0.md, raw/articles/dms-core-env-example-v0.5.0.md, raw/articles/docmesh-py-core-config-v0.2.0.md]
 confidence: medium
 ---
 
@@ -52,6 +52,8 @@ DMS v0.4.0의 `diagnose_environment()`는 DMS storage 선택뿐 아니라 설치
 
 DMS v0.5.0 Configuration reference도 DMS 환경 진단/SDK 조립과 FastAPI `AppConfig` 검증을 별개 경계로 둔다. prevalidated `ServiceConfigs` factory는 v0.5.0 contract이지만 설치된 DMS v0.4.0에는 없으므로, current app은 DMS `diagnose_environment()` 및 its environment/component factory를 FastAPI startup/readiness policy와 혼동하지 않는다. ^[raw/articles/dms-core-wiki-configuration-v0.5.0.md]
 
+DMS v0.6.0 Configuration reference도 DMS가 `ServiceConfigs` 묶음에서 문서 metadata store와 MinIO만 조립하며, FastAPI `AppConfig`·CORS·router·required-service policy를 소유하지 않는다고 구분한다. 현재 설치된 `dms 0.5.0`에는 service-config factory와 diagnosis formatter가 있지만, v0.6.0의 `HealthcheckPolicy` mapping 및 secret-safe HTTP helper는 runtime에 없다. 따라서 DMS storage diagnosis와 FastAPI application/readiness 검증은 계속 별도로 수행한다. ^[raw/articles/dms-core-wiki-configuration-v0.6.0.md]
+
 DMS v0.4.0 environment template에는 `ROOT_PATH`, `TOKEN_URL`, CORS, `DOCMESH_SERVICES`, `READINESS_REQUIRED_SERVICES`가 없으며 storage assembly 변수만 담긴다. 따라서 이 파일을 FastAPI deployment template으로 사용하지 말고, [[dms-core-configuration]]의 SDK 설정과 FastAPI v0.4.0 template의 application 설정을 배포 계층에서 명시적으로 결합한다. ^[raw/articles/dms-core-env-example-v0.4.0.md]
 
 DMS v0.5.0 environment template도 DMS SDK storage assembly만 다루며 FastAPI `ROOT_PATH`, CORS, router 또는 required-service policy를 제공하지 않는다. `DOCMESH_ENV`와 healthcheck variable의 공통 이름이 있어도 SDK overlay/restore 설명을 FastAPI app startup policy로 확대 해석하지 않고, application configuration과 DMS storage configuration을 따로 검증한다. ^[raw/articles/dms-core-env-example-v0.5.0.md]
@@ -80,6 +82,7 @@ DMS v0.5.0 environment template도 DMS SDK storage assembly만 다루며 FastAPI
 - `raw/articles/dms-core-config-v0.2.0.md`
 - `raw/articles/dms-core-wiki-configuration-v0.4.0.md`
 - `raw/articles/dms-core-wiki-configuration-v0.5.0.md`
+- `raw/articles/dms-core-wiki-configuration-v0.6.0.md`
 - `raw/articles/dms-core-env-example-v0.4.0.md`
 - `raw/articles/dms-core-env-example-v0.5.0.md`
 - `raw/articles/docmesh-py-core-config-v0.2.0.md`

@@ -1,10 +1,10 @@
 ---
 title: dms-core configuration model
 created: 2026-07-11
-updated: 2026-07-20
+updated: 2026-07-26
 type: concept
 tags: [dms-core, dms, configuration, storage, metadata, security, deployment]
-sources: [raw/articles/dms-core-api-v0.3.0.md, raw/articles/dms-core-wiki-api-reference-v0.4.0.md, raw/articles/dms-core-wiki-api-reference-v0.5.0.md, raw/articles/dms-core-wiki-configuration-v0.4.0.md, raw/articles/dms-core-wiki-configuration-v0.5.0.md, raw/articles/dms-core-wiki-examples-v0.4.0.md, raw/articles/dms-core-wiki-examples-v0.5.0.md, raw/articles/dms-core-config-v0.2.0.md, raw/articles/dms-core-config-v0.3.0.md, raw/articles/dms-core-env-example-v0.3.0.md, raw/articles/dms-core-env-example-v0.4.0.md, raw/articles/dms-core-env-example-v0.5.0.md, raw/articles/dms-core-examples-v0.2.0.md, raw/articles/dms-core-examples-v0.3.0.md, raw/articles/docmesh-py-core-config-v0.2.0.md]
+sources: [raw/articles/dms-core-api-v0.3.0.md, raw/articles/dms-core-wiki-api-reference-v0.4.0.md, raw/articles/dms-core-wiki-api-reference-v0.5.0.md, raw/articles/dms-core-wiki-configuration-v0.4.0.md, raw/articles/dms-core-wiki-configuration-v0.5.0.md, raw/articles/dms-core-wiki-configuration-v0.6.0.md, raw/articles/dms-core-wiki-examples-v0.4.0.md, raw/articles/dms-core-wiki-examples-v0.5.0.md, raw/articles/dms-core-config-v0.2.0.md, raw/articles/dms-core-config-v0.3.0.md, raw/articles/dms-core-env-example-v0.3.0.md, raw/articles/dms-core-env-example-v0.4.0.md, raw/articles/dms-core-env-example-v0.5.0.md, raw/articles/dms-core-examples-v0.2.0.md, raw/articles/dms-core-examples-v0.3.0.md, raw/articles/docmesh-py-core-config-v0.2.0.md]
 confidence: medium
 ---
 
@@ -31,6 +31,8 @@ v0.4.0 factory는 선택적 `recovery_audit_hook`을 환경/component 조립 모
 v0.5.0 API reference는 prevalidated `ServiceConfigs`를 받는 `create_sdk_from_service_configs`와 secret-free `format_environment_diagnosis`를 설정 entrypoint로 추가한다. 설치된 v0.4.0에는 두 symbol이 없으므로 현재 deployment는 environment/component factory와 existing diagnosis model을 사용한다. v0.5.0 source만으로 FastAPI service settings와 DMS SDK가 이미 직접 조립된다고 단정하지 않고, version-aligned upgrade에서 assembly path를 검증한다. ^[raw/articles/dms-core-wiki-api-reference-v0.5.0.md]
 
 v0.5.0 Wiki Configuration reference는 DSN을 unsupported key로 명시하고 individual `POSTGRES_*` 필드, MinIO bucket/credential, SQLite alternative, backend auto-selection/strict policy를 다시 규정한다. 설치된 v0.4.0 probe도 DSN-only configuration을 invalid로, individual PostgreSQL fields를 valid로 확인했다. source는 또한 prevalidated `ServiceConfigs` 기반 factory와 safe formatter를 문서화하지만 v0.4.0 runtime에는 없다. 따라서 현재 배포는 environment/component factory와 diagnosis object를 사용하며, v0.5.0 settings-bundle path는 upgrade 후 검증할 candidate다. ^[raw/articles/dms-core-wiki-configuration-v0.5.0.md]
+
+v0.6.0 Configuration reference는 selection·strict·DSN rejection을 유지하면서 PostgreSQL/SQLite/MinIO의 typed defaults, service-config startup option, factory별 자원 소유권, production MinIO TLS guardrail을 명시한다. 설치된 `dms 0.5.0`은 individual PostgreSQL mapping을 valid로, DSN-only mapping을 invalid/unsupported으로 진단하고 `create_sdk_from_service_configs(..., check_on_startup=False)` 및 formatter를 제공한다. 이 probe는 selection/factory 경계만 확인한 것이므로 production TLS·secret-safe HTTP response behavior는 v0.6.0 runtime upgrade 뒤 별도 integration test로 확인한다. ^[raw/articles/dms-core-wiki-configuration-v0.6.0.md]
 
 v0.5.0 Examples는 `diagnose_environment(dict(os.environ))` 뒤 argument-free `create_sdk_from_environment()`와 formatter를 사용한다. 현재 installed v0.4.0 factory는 mapping argument를 요구하고 formatter가 없으므로, process environment를 직접 읽는 v0.5.0 invocation을 현 dependency에 복사하지 않는다. secret-safe diagnostic logging 원칙은 유지하되, 현재는 diagnosis object의 fields만 사용한다. ^[raw/articles/dms-core-wiki-examples-v0.5.0.md]
 
@@ -60,6 +62,7 @@ v0.4.0 `.env.example`은 같은 PostgreSQL-default/MinIO-required/placeholder-he
 - `raw/articles/dms-core-wiki-api-reference-v0.5.0.md`
 - `raw/articles/dms-core-wiki-configuration-v0.4.0.md`
 - `raw/articles/dms-core-wiki-configuration-v0.5.0.md`
+- `raw/articles/dms-core-wiki-configuration-v0.6.0.md`
 - `raw/articles/dms-core-wiki-examples-v0.4.0.md`
 - `raw/articles/dms-core-wiki-examples-v0.5.0.md`
 - `raw/articles/dms-core-examples-v0.2.0.md`
