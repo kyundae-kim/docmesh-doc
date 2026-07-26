@@ -4,7 +4,7 @@ created: 2026-07-11
 updated: 2026-07-26
 type: concept
 tags: [fastapi, fastapi-core, configuration, deployment, security, observability]
-sources: [raw/articles/fastapi-core-api-v0.1.6.md, raw/articles/fastapi-core-api-v0.3.0.md, raw/articles/fastapi-core-config-v0.1.6.md, raw/articles/fastapi-core-config-v0.2.0.md, raw/articles/fastapi-core-config-v0.3.0.md, raw/articles/fastapi-core-wiki-configuration.md, raw/articles/fastapi-core-wiki-configuration-v0.5.0.md, raw/articles/fastapi-core-env-example-v0.3.0.md, raw/articles/fastapi-core-env-example-v0.4.0.md, raw/articles/fastapi-core-env-example-v0.5.0.md, raw/articles/fastapi-core-examples-v0.1.6.md, raw/articles/fastapi-core-wiki-examples.md, raw/articles/dms-core-config-v0.2.0.md, raw/articles/dms-core-wiki-configuration-v0.4.0.md, raw/articles/dms-core-wiki-configuration-v0.5.0.md, raw/articles/dms-core-wiki-configuration-v0.6.0.md, raw/articles/dms-core-env-example-v0.4.0.md, raw/articles/dms-core-env-example-v0.5.0.md, raw/articles/docmesh-py-core-config-v0.2.0.md]
+sources: [raw/articles/fastapi-core-api-v0.1.6.md, raw/articles/fastapi-core-api-v0.3.0.md, raw/articles/fastapi-core-wiki-api-reference-v0.6.0.md, raw/articles/fastapi-core-config-v0.1.6.md, raw/articles/fastapi-core-config-v0.2.0.md, raw/articles/fastapi-core-config-v0.3.0.md, raw/articles/fastapi-core-wiki-configuration.md, raw/articles/fastapi-core-wiki-configuration-v0.5.0.md, raw/articles/fastapi-core-wiki-configuration-v0.6.0.md, raw/articles/fastapi-core-env-example-v0.3.0.md, raw/articles/fastapi-core-env-example-v0.4.0.md, raw/articles/fastapi-core-env-example-v0.5.0.md, raw/articles/fastapi-core-env-example-v0.6.0.md, raw/articles/fastapi-core-examples-v0.1.6.md, raw/articles/fastapi-core-wiki-examples.md, raw/articles/dms-core-config-v0.2.0.md, raw/articles/dms-core-wiki-configuration-v0.4.0.md, raw/articles/dms-core-wiki-configuration-v0.5.0.md, raw/articles/dms-core-wiki-configuration-v0.6.0.md, raw/articles/dms-core-env-example-v0.4.0.md, raw/articles/dms-core-env-example-v0.5.0.md, raw/articles/docmesh-py-core-config-v0.2.0.md]
 confidence: medium
 ---
 
@@ -14,7 +14,11 @@ confidence: medium
 
 GitHub Wiki Configuration snapshot도 같은 두 계층과 `ServiceRuntime` 조립 경계를 확인한다. 다만 이 source는 기준 버전을 `fastapi-core 0.3.0`, `docmesh-py-core v0.3.0`으로 표기하면서도 tagged v0.3.0 config snapshot과 body가 다르다. 특히 `build_docmesh_env_overlay()`가 개발 fallback을 추가하지 않고 `os.environ`의 복사본만 반환한다고 명시한다. installed runtime 검증 전에는 이 차이를 문서 간 불일치로 보존한다. ^[raw/articles/fastapi-core-wiki-configuration.md] ^[raw/articles/fastapi-core-config-v0.3.0.md]
 
-2026-07-19 v0.5.0 Wiki Configuration reference는 이 두 계층을 `fastapi-core 0.5.0`과 `docmesh-py-core 0.4.0`의 current implementation으로 제시하고, `.env.example`은 자동 로드되지 않으며 loader cache는 테스트에서 명시적으로 clear해야 한다고 기록한다. 현재 설치된 `fastapi-core 0.4.0`과 `docmesh-py-core 0.3.0`에서는 `AppConfig`/loader 경계와 `.env` 비자동 로딩을 확인했지만, 문서가 추가한 startup failure mode·retry fields는 v0.4.0 `AppConfig`에 없다. 그러므로 v0.5.0의 서비스 설정 catalog와 새 startup 정책은 runtime 사실이 아니라 upgrade 후보로 유지한다. ^[raw/articles/fastapi-core-wiki-configuration-v0.5.0.md]
+2026-07-19 v0.5.0 Wiki Configuration reference는 이 두 계층을 `fastapi-core 0.5.0`과 `docmesh-py-core 0.4.0`의 current implementation으로 제시하고, `.env.example`은 자동 로드되지 않으며 loader cache는 테스트에서 명시적으로 clear해야 한다고 기록한다. 설치된 `fastapi-core 0.5.0`은 `AppConfig`/loader 경계와 startup failure mode·retry fields를 제공하고 프로젝트는 `docmesh-py-core 0.4.0`을 선언한다. 배포 값은 runtime policy와 함께 검증한다. ^[raw/articles/fastapi-core-wiki-configuration-v0.5.0.md]
+
+v0.6.0 API reference도 `AppConfig`와 `load_app_config()`를 intended configuration entrypoint로 두고 loader 결과가 1개로 cache되며 환경 변경 test 뒤 `cache_clear()`가 필요하다고 기록한다. 이는 현재 v0.5.0 loader surface와 연결되지만, v0.6.0 configuration field의 변경을 증명하지는 않는다. ^[raw/articles/fastapi-core-wiki-api-reference-v0.6.0.md]
+
+요청된 v0.6.0 Configuration endpoint는 수집 시 v0.6.0 API Reference와 body-only SHA-256 및 바이트가 동일했다. 따라서 immutable raw capture는 보존하되 configuration-specific 사실을 중복 추가하지 않았으며, mutable Wiki endpoint가 이후 변할 수 있으므로 다음 수집에서 다시 비교한다. ^[raw/articles/fastapi-core-wiki-api-reference-v0.6.0.md] ^[raw/articles/fastapi-core-wiki-configuration-v0.6.0.md]
 
 ## Deployment contract
 
@@ -28,13 +32,15 @@ tagged v0.3.0 config snapshot은 `build_docmesh_env_overlay()`가 Keycloak, MinI
 
 Git tag `v0.4.0`의 `.env.example`은 자동 loading을 하지 않고, dotenv를 쓰더라도 애플리케이션이 명시적으로 선택해야 한다고 다시 명시한다. 이 template은 서비스 없는 최소 실행을 기본으로 `DOCMESH_SERVICES=`와 `READINESS_REQUIRED_SERVICES=`를 비운다. 즉, v0.3.0 template의 keycloak default surface와 달리 필요한 서비스와 그 credential을 모두 명시적으로 활성화해야 한다. `DOCMESH_SERVICE_ALTERNATIVES`는 세미콜론 group/쉼표 service 형식을 사용하며, production security validation은 `DOCMESH_ENV` 또는 `DOCMESH_SECURITY_MODE`로 켠다. ^[raw/articles/fastapi-core-env-example-v0.4.0.md]
 
-Git tag `v0.5.0` `.env.example`은 같은 명시적 dotenv loading과 서비스 없는 baseline을 유지하면서 readiness timeout, CORS, logging, 서비스별 secret placeholder를 한 template에 정리한다. PostgreSQL에는 DSN이 아닌 개별 접속 필드만 제시하고, 필요한 credential-dependent service를 활성화할 때 credential도 함께 주입하라고 명시한다. 다만 template의 `DOCMESH_STARTUP_FAILURE_MODE`, attempts, retry-delay는 설치된 v0.4.0 `AppConfig`에 없고 template은 `docmesh-py-core`의 별도 v0.5.0-compatible runtime을 보장하지 않으므로 deployment에 그대로 복사하지 않는다. ^[raw/articles/fastapi-core-env-example-v0.5.0.md]
+Git tag `v0.5.0` `.env.example`은 같은 명시적 dotenv loading과 서비스 없는 baseline을 유지하면서 readiness timeout, CORS, logging, 서비스별 secret placeholder를 한 template에 정리한다. PostgreSQL에는 DSN이 아닌 개별 접속 필드만 제시하고, 필요한 credential-dependent service를 활성화할 때 credential도 함께 주입하라고 명시한다. 설치된 v0.5.0 `AppConfig`에는 `DOCMESH_STARTUP_FAILURE_MODE`, attempts, retry-delay가 있지만 template의 설정을 deployment에 채택하기 전에는 DocMesh runtime과 함께 검증한다. ^[raw/articles/fastapi-core-env-example-v0.5.0.md]
+
+Git tag `v0.6.0` `.env.example`도 process environment만 읽고 파일을 자동 로드하지 않는다고 명시한다. active line은 empty enabled/required service, `CORS_ORIGINS=*`와 `CORS_CREDENTIALS=false`, startup fail/retry defaults를 service-free baseline으로 둔다. 서비스 block은 선택 목록을 먼저 채운 뒤에만 완성해 주입해야 하며 real secret은 version control 밖에 둔다. 설치된 v0.5.0은 startup fields를 제공하지만 template의 access-log keys는 `AppConfig` field에 없으므로, v0.6.0 template 전체는 current deployment template이 아니라 upgrade candidate다. ^[raw/articles/fastapi-core-env-example-v0.6.0.md]
 
 `v0.2.0` 설정 문서는 PostgreSQL을 `ServiceConfigs`가 다루는 외부 시스템, development/test fallback, 그리고 전용 dependency 범위에 포함한다. 이는 PostgreSQL 지원이 `fastapi-core` 자체의 문서 저장 API를 뜻하는 것은 아니며, [[docmesh-py-core]]가 제공하는 설정·client wrapper를 [[fastapi-core-app-assembly]]가 선택 서비스와 readiness에 연결하는 application-layer 통합이다. ^[raw/articles/fastapi-core-config-v0.2.0.md]
 
 `v0.2.0` config 문서는 `CORS_ORIGINS`, `DOCMESH_SERVICES`, `READINESS_REQUIRED_SERVICES`의 빈 문자열이 validation error라고 기록하지만, `v0.3.0` API는 환경변수 빈 문자열을 빈 목록으로 해석하고 미설정일 때만 기본값을 사용한다고 문서화한다. 새 ref를 채택할 때는 빈 `DOCMESH_SERVICES`가 keycloak 기본값이 아니라 빈 enabled set이 되는지 설치된 패키지와 테스트에서 확인해야 한다. ^[raw/articles/fastapi-core-api-v0.3.0.md]
 
-`v0.4.0` environment template은 그 빈-CSV 해석을 deployable configuration으로 채택한다: template에 기록된 빈 `DOCMESH_SERVICES`와 `READINESS_REQUIRED_SERVICES`는 서비스 없는 앱을 뜻하며, AppConfig default를 의도하면 변수를 제거한다. 현재 소비 프로젝트는 같은 Git ref `v0.4.0`을 선언·설치했으며 `AppConfig`의 서비스 선택·readiness·logging 필드와 `.env` 비자동 로딩을 확인했다. 반면 v0.5.0 문서의 startup failure mode·attempts·retry-delay는 이 설치본에 없으므로 해당 migration은 upgrade 전 검증해야 한다. ^[raw/articles/fastapi-core-env-example-v0.4.0.md] ^[raw/articles/fastapi-core-wiki-configuration-v0.5.0.md]
+`v0.4.0` environment template은 그 빈-CSV 해석을 deployable configuration으로 채택한다: template에 기록된 빈 `DOCMESH_SERVICES`와 `READINESS_REQUIRED_SERVICES`는 서비스 없는 앱을 뜻하며, AppConfig default를 의도하면 변수를 제거한다. 현재 소비 프로젝트는 `fastapi-core 0.5.0`을 선언·설치했고 `AppConfig`의 서비스 선택·readiness·logging 및 startup failure/retry 필드와 `.env` 비자동 로딩을 확인했다. ^[raw/articles/fastapi-core-env-example-v0.4.0.md] ^[raw/articles/fastapi-core-wiki-configuration-v0.5.0.md]
 
 `v0.3.0` config와 GitHub Wiki snapshot은 `DOCMESH_SERVICE_ALTERNATIVES`의 세미콜론 그룹·쉼표 서비스 목록 parsing, readiness per-service/overall timeout, `DOCMESH_HEALTHCHECK_ENABLED`의 `startup_healthcheck` alias, 그리고 `required_services ⊆ enabled_services` 검증을 함께 기록한다. Wiki snapshot은 `load_docmesh_settings(...)`/`build_docmesh_env_overlay()`가 process environment를 변경하지 않으며, runtime injection 시 서비스 설정·client 조립만 우회되고 AppConfig CORS/logging/readiness 정책은 계속 적용된다고 설명한다. ^[raw/articles/fastapi-core-config-v0.3.0.md] ^[raw/articles/fastapi-core-wiki-configuration.md]
 
@@ -69,14 +75,17 @@ DMS v0.5.0 environment template도 DMS SDK storage assembly만 다루며 FastAPI
 
 - `raw/articles/fastapi-core-api-v0.1.6.md`
 - `raw/articles/fastapi-core-api-v0.3.0.md`
+- `raw/articles/fastapi-core-wiki-api-reference-v0.6.0.md`
 - `raw/articles/fastapi-core-config-v0.1.6.md`
 - `raw/articles/fastapi-core-config-v0.2.0.md`
 - `raw/articles/fastapi-core-config-v0.3.0.md`
 - `raw/articles/fastapi-core-wiki-configuration.md`
 - `raw/articles/fastapi-core-wiki-configuration-v0.5.0.md`
+- `raw/articles/fastapi-core-wiki-configuration-v0.6.0.md`
 - `raw/articles/fastapi-core-env-example-v0.3.0.md`
 - `raw/articles/fastapi-core-env-example-v0.4.0.md`
 - `raw/articles/fastapi-core-env-example-v0.5.0.md`
+- `raw/articles/fastapi-core-env-example-v0.6.0.md`
 - `raw/articles/fastapi-core-examples-v0.1.6.md`
 - `raw/articles/fastapi-core-wiki-examples.md`
 - `raw/articles/dms-core-config-v0.2.0.md`

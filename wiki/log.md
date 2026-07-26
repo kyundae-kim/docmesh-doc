@@ -313,3 +313,31 @@
 - Body SHA-256: `1cdd933d1cd11d75fffaf971bf3ca8ac6db7f1a3305bf2cfc9de9b918743925d` (distinct from the preserved v0.5.0 body hash).
 - The v0.6.0 examples cover environment/service-config/component assembly, diagnosis, idempotent sync/async streaming, public/internal metadata, cursor listing, structured metadata, recovery plans, lifecycle, and HTTP-error projection. Installed `dms 0.5.0` confirms the synchronous factory/diagnosis/recovery path but lacks the async streams, HTTP helper, and cursor-default list signature; these remain upgrade candidates.
 - Updated: `entities/dms-core.md`, `concepts/dms-core-usage-patterns.md`, `concepts/dms-core-document-lifecycle.md`, `concepts/fastapi-core-app-assembly.md`.
+
+## [2026-07-26] ingest | fastapi-core GitHub Wiki API Reference v0.6.0
+- Captured immutable source: `raw/articles/fastapi-core-wiki-api-reference-v0.6.0.md`.
+- Source URL: `https://raw.githubusercontent.com/wiki/kyundae-kim/fastapi-core/API-Reference-v0.6.0.md` (requested GitHub Wiki page: `https://github.com/kyundae-kim/fastapi-core/wiki/API-Reference-v0.6.0`).
+- Body SHA-256: `898c44f0fb901d6eef599b4371f2c33a48c1307857e346afc3ba523e634e7ec7`.
+- The v0.6.0 reference adds `DomainModule`/`ErrorMapperSpec`, module-aware `create_app` inputs, collision rejection, and broader consumer contract-test helpers. The installed `fastapi-core 0.5.0` matches the documented v0.5 public factory/config surface but lacks the new v0.6 module arguments, module package, and module/OpenAPI/environment test helpers; these are upgrade candidates, not current adapter behavior.
+- Updated: `entities/fastapi-core.md`, `concepts/fastapi-core-app-assembly.md`, `concepts/fastapi-core-configuration.md`, `concepts/fastapi-core-usage-patterns.md`, `concepts/fastapi-core-messaging-integration.md`. Reviewed `index.md`; its date and page count were already current and unchanged.
+
+## [2026-07-26] ingest | fastapi-core GitHub Wiki Configuration v0.6.0
+- Captured immutable source: `raw/articles/fastapi-core-wiki-configuration-v0.6.0.md`.
+- Source URL: `https://raw.githubusercontent.com/wiki/kyundae-kim/fastapi-core/Configuration-v0.6.0.md` (requested GitHub Wiki page: `https://github.com/kyundae-kim/fastapi-core/wiki/Configuration-v0.6.0`).
+- Body SHA-256: `898c44f0fb901d6eef599b4371f2c33a48c1307857e346afc3ba523e634e7ec7`, identical to the separately preserved v0.6.0 API Reference body at collection time.
+- Retained both immutable provenance captures. Added an equivalence note rather than duplicating API facts; mutable Wiki endpoints must be compared again on future collection.
+- Updated: `entities/fastapi-core.md`, `concepts/fastapi-core-configuration.md`. Reviewed `index.md`; its date and page count were already current and unchanged.
+
+## [2026-07-26] ingest | fastapi-core GitHub Wiki Examples v0.6.0
+- Captured immutable source: `raw/articles/fastapi-core-wiki-examples-v0.6.0.md`.
+- Source URL: `https://raw.githubusercontent.com/wiki/kyundae-kim/fastapi-core/Examples-v0.6.0.md` (requested GitHub Wiki page: `https://github.com/kyundae-kim/fastapi-core/wiki/Examples-v0.6.0`).
+- Body SHA-256: `f94a9d72e002c6365a4166cdf574cb9a0f72492a76eb02a57fcd56945bb7d484`, distinct from the preserved v0.5.0 examples body.
+- The examples exercise module-aware assembly, router-collision rules, framework-owned lifecycle order, `.env`-free configuration, and expanded consumer contract helpers. Installed `fastapi-core 0.5.0` lacks `fastapi_core.modules` and the module/OpenAPI/environment helpers, so those v0.6 patterns remain upgrade candidates; current explicit DMS resource/error-mapper assembly is retained.
+- Updated: `entities/fastapi-core.md`, `concepts/fastapi-core-app-assembly.md`, `concepts/fastapi-core-usage-patterns.md`. Reviewed `index.md`; its date and page count were already current and unchanged.
+
+## [2026-07-26] ingest | fastapi-core environment template v0.6.0
+- Captured immutable source: `raw/articles/fastapi-core-env-example-v0.6.0.md`.
+- Source URL: `https://raw.githubusercontent.com/kyundae-kim/fastapi-core/v0.6.0/.env.example` (requested GitHub blob URL was converted to the raw content endpoint).
+- Body SHA-256: `bd5afa926e3b9dff6bc75a37a83248b07a1eaf5c2dde7755af7ad6188bbf6df8`, distinct from the preserved v0.5.0 template body.
+- The template remains process-environment-only and service-free by default, adds active CORS/access-log/common-environment keys, and requires a complete settings block only after selecting its service. Installed `fastapi-core 0.5.0` supports startup failure/retry keys but lacks the v0.6 access-log fields, so the template is an upgrade candidate rather than a current deployment template.
+- Updated: `entities/fastapi-core.md`, `concepts/fastapi-core-configuration.md`, `concepts/fastapi-core-app-assembly.md`. Reviewed `index.md`; its date and page count were already current and unchanged.
