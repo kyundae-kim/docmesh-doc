@@ -1,10 +1,10 @@
 ---
 title: fastapi-core
 created: 2026-07-11
-updated: 2026-07-18
+updated: 2026-07-26
 type: entity
 tags: [fastapi-core, fastapi, api, integration, architecture]
-sources: [raw/articles/fastapi-core-api-v0.1.6.md, raw/articles/fastapi-core-api-main.md, raw/articles/fastapi-core-api-v0.3.0.md, raw/articles/fastapi-core-wiki-api-reference.md, raw/articles/fastapi-core-config-v0.1.6.md, raw/articles/fastapi-core-config-v0.2.0.md, raw/articles/fastapi-core-config-v0.3.0.md, raw/articles/fastapi-core-wiki-configuration.md, raw/articles/fastapi-core-env-example-v0.4.0.md, raw/articles/fastapi-core-examples-v0.1.6.md, raw/articles/fastapi-core-examples-v0.2.0.md, raw/articles/fastapi-core-examples-v0.3.0.md, raw/articles/fastapi-core-wiki-examples.md]
+sources: [raw/articles/fastapi-core-api-v0.1.6.md, raw/articles/fastapi-core-api-main.md, raw/articles/fastapi-core-api-v0.3.0.md, raw/articles/fastapi-core-wiki-api-reference.md, raw/articles/fastapi-core-wiki-api-reference-v0.5.0.md, raw/articles/fastapi-core-wiki-api-reference-v0.6.0.md, raw/articles/fastapi-core-config-v0.1.6.md, raw/articles/fastapi-core-config-v0.2.0.md, raw/articles/fastapi-core-config-v0.3.0.md, raw/articles/fastapi-core-wiki-configuration.md, raw/articles/fastapi-core-wiki-configuration-v0.5.0.md, raw/articles/fastapi-core-wiki-configuration-v0.6.0.md, raw/articles/fastapi-core-env-example-v0.4.0.md, raw/articles/fastapi-core-env-example-v0.5.0.md, raw/articles/fastapi-core-env-example-v0.6.0.md, raw/articles/fastapi-core-examples-v0.1.6.md, raw/articles/fastapi-core-examples-v0.2.0.md, raw/articles/fastapi-core-examples-v0.3.0.md, raw/articles/fastapi-core-wiki-examples.md, raw/articles/fastapi-core-wiki-examples-v0.5.0.md, raw/articles/fastapi-core-wiki-examples-v0.6.0.md]
 confidence: medium
 ---
 
@@ -16,6 +16,8 @@ confidence: medium
 
 - Git tag `v0.3.0` API snapshot은 `create_app(config=None, settings=None, lifespan=None, include_auth_router=True, resources=())`를 기록하지만, 별도 GitHub Wiki snapshot도 기준 버전을 `0.3.0`으로 표시하면서 `create_app(config=None, *, runtime=None, lifespan=None, include_auth_router=True, resources=(), error_renderer=None)`를 공개 계약으로 기록한다. 후자는 테스트/host app의 사전 조립 `ServiceRuntime` 주입과 custom error renderer를 추가하고 `settings` 주입을 제거한다. 두 source body는 서로 다르므로, installed package 검증 전에는 어느 쪽도 현재 runtime 계약으로 단정하지 않는다. ^[raw/articles/fastapi-core-api-v0.3.0.md] ^[raw/articles/fastapi-core-wiki-api-reference.md]
 - Wiki snapshot의 package root는 `create_app`, `ManagedResource`, `ResourceKey`, `ReadinessCheckSpec`, `ErrorMapping`, `ErrorRenderer`, `register_readiness_check`, `register_error_mapper`를 권장 API로 열거한다. 앱 상태의 readiness 단일 통합 지점은 `app.state.readiness_registry`이며, `settings`, `service_clients` 및 legacy readiness flat state/alias는 공개 계약이 아니고 생성되지 않는다고 명시한다. ^[raw/articles/fastapi-core-wiki-api-reference.md]
+- GitHub Wiki의 2026-07-19 `0.5.0` API reference는 동일한 root export와 config·root logger·service runtime·readiness/resource registry·OAuth2 scheme·error renderer state를 current implementation 계약으로 기록한다. `fastapi-core 0.5.0` 설치본은 이 root export와 `include_auth_router=False` 기본값을 포함한 `create_app` signature를 확인한다. ^[raw/articles/fastapi-core-wiki-api-reference-v0.5.0.md]
+- v0.6.0 API reference는 `DomainModule`/`ErrorMapperSpec`와 `create_app(..., routers=(), modules=(), error_mappers=(), auth_provider=...)`를 문서화하고 module·resource·router·operation ID 충돌을 app 생성 시 거부한다고 기록한다. 2026-07-26 workspace를 동기화한 설치본은 `fastapi-core 0.6.0`이며 이 signature, `fastapi_core.modules`, module/OpenAPI assertion 및 `test_environment` export를 확인했다. 소비 adapter는 문서 router, DMS resource와 오류 mapper를 `documents` module로 묶고 module contract test를 통과한다. ^[raw/articles/fastapi-core-wiki-api-reference-v0.6.0.md]
 - Wiki snapshot은 app state에 config, `service_runtime`, readiness/resource registry, 앱별 OAuth2 scheme, error renderer와 필요 시 auth provider를 둔다. service client와 설정은 runtime을 통해 dependency에서 해석한다. ^[raw/articles/fastapi-core-wiki-api-reference.md]
 - 기본으로 health router를 포함하고, 선택적으로 auth router를 포함한다.
 - `POST /token`, `GET /user`, `GET /health/liveness`, `GET /health/readiness`가 문서화된 기본 HTTP 표면이다.
@@ -34,13 +36,27 @@ DMS 애플리케이션은 [[fastapi-core-app-assembly]]를 통해 lifecycle·COR
 
 이 프로젝트가 선언한 `v0.4.0`의 environment template은 서비스 없는 앱을 기본 예시로 두고 빈 enabled/required CSV와 placeholder/redacted secret을 사용한다. 이를 runtime 사실로 단정할 수는 없지만, 배포 configuration에서는 keycloak이나 다른 external service를 implicit default로 기대하지 않고 필요 service와 secret을 명시해야 한다는 upstream candidate다. ^[raw/articles/fastapi-core-env-example-v0.4.0.md]
 
+v0.5.0 Wiki Configuration reference는 AppConfig 정책과 DocMesh ServiceConfigs 접속 설정의 ownership을 분리하고 `.env.example` 자동 loading을 부정한다. 설치된 v0.4.0은 같은 AppConfig 계층과 비자동 dotenv 동작을 확인했지만, v0.5.0에 문서화된 startup failure/retry 정책은 아직 없다. 따라서 서비스/secret 명시 주입 원칙은 유지하되 새 startup 필드는 package upgrade와 contract test 뒤에만 채택한다. ^[raw/articles/fastapi-core-wiki-configuration-v0.5.0.md]
+
+v0.5.0 Git tag의 `.env.example`도 서비스 없는 baseline, explicit configuration, redacted secret, individual PostgreSQL connection field 정책을 제공한다. 이는 배포 policy의 upstream evidence이지만, 현재 설치된 v0.4.0에 없는 startup retry fields와 version-misaligned `docmesh-py-core` settings를 포함하므로 그대로 실행 template으로 채택하지 않는다. ^[raw/articles/fastapi-core-env-example-v0.5.0.md]
+
+v0.6.0 `.env.example`는 service-free active baseline과 complete-per-selected-service block을 유지하면서 CORS wildcard를 credentials false와 함께 제시하고 access-log keys를 추가한다. 설치된 v0.6.0 `AppConfig`가 access-log와 startup policy field를 제공하므로 이 template은 현재 package surface와 일치하지만, 실제 service credential과 enabled/required 집합은 [[fastapi-core-configuration]]의 배포 정책으로 별도 주입한다. ^[raw/articles/fastapi-core-env-example-v0.6.0.md]
+
 ## Usage patterns
 
 실제 시작·인증·readiness override·custom lifespan·선택 서비스 로딩의 사용 패턴은 [[fastapi-core-usage-patterns]]에 정리한다. `v0.3.0` 예제는 `ManagedResource`, typed readiness, role/scope/permission dependency, correlation-ID problem-details 확장을 포함한다. 문서 내부 버전 표기와 Git tag의 관계는 배포 대상 패키지에서 검증해야 한다. ^[raw/articles/fastapi-core-examples-v0.3.0.md]
 
+v0.5.0 Wiki Examples는 service-free app, explicit settings cache control, typed dependency/resource, error renderer, readiness 및 router assembly를 current examples로 제공한다. 설치된 v0.5.0은 핵심 app/resource/error APIs와 일부 `fastapi_core.testing` helper를 제공한다. 현재 DMS adapter는 package에 존재하는 resource/error APIs만 사용하고, v0.6.0의 module/OpenAPI testing surface는 다음 upgrade 후보로 둔다. ^[raw/articles/fastapi-core-wiki-examples-v0.5.0.md] ^[raw/articles/fastapi-core-wiki-api-reference-v0.6.0.md]
+
+v0.6.0 reference는 `fastapi_core.testing`에 health/auth/module/OpenAPI contract assertion과 isolated environment helper를 열거한다. 설치된 v0.6.0에서 이 export를 확인했으며 adapter는 기존 health/auth assertion에 `assert_module_contract`를 추가했다. ^[raw/articles/fastapi-core-wiki-api-reference-v0.6.0.md]
+
+v0.6.0 Examples는 module 조립, `routers=` 충돌 방지, framework-owned lifecycle 순서, `test_environment` 및 OpenAPI/module contract assertion을 실행 패턴으로 제시한다. 설치된 v0.6.0에서 이 표면을 확인했고 DMS adapter는 module-first 조립과 `assert_module_contract`를 채택했다. ^[raw/articles/fastapi-core-wiki-examples-v0.6.0.md]
+
 ## Version note
 
-Git tag `v0.1.6`와 `main`의 API 문서를 각각 수집했으며, 2026-07-12 수집 시 두 raw 본문의 SHA-256은 동일했다. 두 URL은 동일한 API 스냅샷을 제공하지만, `main`은 변할 수 있으므로 이 동등성은 수집 시점의 사실이다. `v0.3.0` Git-tag API/config/examples와 GitHub Wiki API/config/examples reference는 모두 `0.3.0` 기준을 표방하지만 body SHA-256과 `create_app`/state/public-export, overlay fallback, example coverage가 다르다. 소비 프로젝트가 선언한 `v0.4.0` environment template은 서비스 없는 default와 full service/security configuration catalog를 제공하지만, runtime import가 불가능했으므로 v0.4.0 template도 실행 검증 전 upstream reference로 유지한다. ^[raw/articles/fastapi-core-api-v0.3.0.md] ^[raw/articles/fastapi-core-wiki-api-reference.md] ^[raw/articles/fastapi-core-config-v0.3.0.md] ^[raw/articles/fastapi-core-wiki-configuration.md] ^[raw/articles/fastapi-core-examples-v0.3.0.md] ^[raw/articles/fastapi-core-wiki-examples.md] ^[raw/articles/fastapi-core-env-example-v0.4.0.md]
+Git tag `v0.1.6`와 `main`의 API 문서를 각각 수집했으며, 2026-07-12 수집 시 두 raw 본문의 SHA-256은 동일했다. 두 URL은 동일한 API 스냅샷을 제공하지만, `main`은 변할 수 있으므로 이 동등성은 수집 시점의 사실이다. `v0.3.0` Git-tag API/config/examples와 GitHub Wiki API/config/examples reference는 모두 `0.3.0` 기준을 표방하지만 body SHA-256과 `create_app`/state/public-export, overlay fallback, example coverage가 다르다. 현재 소비 프로젝트는 `fastapi-core 0.6.0`을 설치했고 v0.6.0의 module-first assembly, 추가 `create_app` 인자와 확장 test helpers를 runtime probe와 adapter contract tests로 확인했다. ^[raw/articles/fastapi-core-wiki-api-reference-v0.5.0.md] ^[raw/articles/fastapi-core-wiki-api-reference-v0.6.0.md]
+
+요청된 v0.6.0 Configuration Wiki raw endpoint는 수집 시 API Reference v0.6.0과 body-only SHA-256 및 바이트가 동일했다. 두 immutable provenance capture는 모두 보존하지만, mutable Wiki page가 이후 달라질 수 있으므로 이 동등성은 수집 시점의 사실이며 별도 configuration claim으로 중복 반영하지 않는다. ^[raw/articles/fastapi-core-wiki-api-reference-v0.6.0.md] ^[raw/articles/fastapi-core-wiki-configuration-v0.6.0.md]
 
 ## Source
 
@@ -48,12 +64,20 @@ Git tag `v0.1.6`와 `main`의 API 문서를 각각 수집했으며, 2026-07-12 �
 - `raw/articles/fastapi-core-api-main.md`
 - `raw/articles/fastapi-core-api-v0.3.0.md`
 - `raw/articles/fastapi-core-wiki-api-reference.md`
+- `raw/articles/fastapi-core-wiki-api-reference-v0.5.0.md`
+- `raw/articles/fastapi-core-wiki-api-reference-v0.6.0.md`
 - `raw/articles/fastapi-core-config-v0.1.6.md`
 - `raw/articles/fastapi-core-config-v0.2.0.md`
 - `raw/articles/fastapi-core-config-v0.3.0.md`
 - `raw/articles/fastapi-core-wiki-configuration.md`
+- `raw/articles/fastapi-core-wiki-configuration-v0.5.0.md`
+- `raw/articles/fastapi-core-wiki-configuration-v0.6.0.md`
 - `raw/articles/fastapi-core-env-example-v0.4.0.md`
+- `raw/articles/fastapi-core-env-example-v0.5.0.md`
+- `raw/articles/fastapi-core-env-example-v0.6.0.md`
 - `raw/articles/fastapi-core-examples-v0.1.6.md`
 - `raw/articles/fastapi-core-examples-v0.2.0.md`
 - `raw/articles/fastapi-core-examples-v0.3.0.md`
 - `raw/articles/fastapi-core-wiki-examples.md`
+- `raw/articles/fastapi-core-wiki-examples-v0.5.0.md`
+- `raw/articles/fastapi-core-wiki-examples-v0.6.0.md`

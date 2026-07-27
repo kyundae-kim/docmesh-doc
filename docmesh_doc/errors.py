@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import dms
 from fastapi import Request
 from fastapi.responses import JSONResponse
@@ -11,10 +9,16 @@ def _error(status: int, code: str, detail: str) -> ErrorMapping:
 
 
 ERRORS = {
+    dms.PayloadTooLargeError: _error(
+        413, "DOCUMENT_TOO_LARGE", "The document exceeds the configured size limit."
+    ),
     dms.ValidationError: _error(
         400, "VALIDATION_ERROR", "The request is invalid."
     ),
     dms.DocumentNotFoundError: _error(
+        404, "DOCUMENT_NOT_FOUND", "Document was not found."
+    ),
+    dms.DocumentDeletedError: _error(
         404, "DOCUMENT_NOT_FOUND", "Document was not found."
     ),
     dms.DuplicateDocumentError: _error(
@@ -43,7 +47,7 @@ ERRORS = {
         "The idempotency key conflicts with an existing upload.",
     ),
     dms.IdempotencyInProgressError: _error(
-        409, "IDEMPOTENCY_IN_PROGRESS", "The upload is still in progress."
+        425, "IDEMPOTENCY_IN_PROGRESS", "The upload is still in progress."
     ),
     dms.UploadOperationNotFoundError: _error(
         404, "UPLOAD_OPERATION_NOT_FOUND", "Upload operation was not found."
@@ -56,13 +60,14 @@ STATUS_CODES = {
     403: "FORBIDDEN",
     404: "NOT_FOUND",
     409: "CONFLICT",
+    413: "PAYLOAD_TOO_LARGE",
+    425: "TOO_EARLY",
     500: "INTERNAL_ERROR",
     503: "DEPENDENCY_UNAVAILABLE",
 }
 
 
 def render_error(request: Request, mapping: ErrorMapping) -> JSONResponse:
-    correlation_id = request.state.correlation_id
     return JSONResponse(
         status_code=mapping.status_code,
         content={
@@ -70,7 +75,7 @@ def render_error(request: Request, mapping: ErrorMapping) -> JSONResponse:
                 "code": mapping.code
                 or STATUS_CODES.get(mapping.status_code, "HTTP_ERROR"),
                 "message": mapping.detail,
-                "correlation_id": correlation_id,
+                "correlation_id": request.state.correlation_id,
             }
         },
         headers=mapping.headers,

@@ -1,13 +1,13 @@
 # Wiki Index
 
 > DMS를 `dms-core` 로직 코어와 `fastapi-core` FastAPI 컴포넌트로 구성하여 배포하기 위한 지식 카탈로그.
-> Last updated: 2026-07-18 | Total pages: 12
+> Last updated: 2026-07-26 | Total pages: 14
 
 ## Entities
 <!-- Alphabetical within section -->
 - [[dms-core]] — bounded stream 업로드·멱등 작업·cursor 목록·명시 삭제·안전 복구를 제공하는 Python DMS SDK.
 - [[docmesh-py-core]] — 설정·service client·health 집계·Keycloak/NATS 통합을 제공하는 `fastapi-core`의 공통 업스트림 의존성.
-- [[fastapi-core]] — DMS FastAPI 서비스의 앱 조립·라우터·dependency 공개 표면.
+- [[fastapi-core]] — DMS FastAPI 서비스의 module 조립·라우터·dependency·contract-test 공개 표면.
 
 ## Concepts
 - [[dms-core-configuration]] — DMS SDK의 tagged template, backend 선택, 개별 PostgreSQL 필드, MinIO, metadata policy와 startup health 설정 경계.
@@ -23,3 +23,5 @@
 ## Comparisons
 
 ## Queries
+- [[dms-application-optimization]] — v0.6 동기 stream을 inline/download에 공통 적용하고 buffer 상한과 통합 cleanup을 강화한 검토.
+- [[fastapi-core-application-optimization]] — v0.6 module 조립을 유지하면서 root path, OpenAPI 오류 계약과 contract test를 정합화한 적용 검토.

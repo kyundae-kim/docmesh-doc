@@ -1,10 +1,10 @@
 ---
 title: dms-core usage patterns
 created: 2026-07-11
-updated: 2026-07-18
+updated: 2026-07-26
 type: concept
 tags: [dms-core, dms, document, storage, workflow, testing, integration]
-sources: [raw/articles/dms-core-api-v0.2.0.md, raw/articles/dms-core-api-v0.3.0.md, raw/articles/dms-core-wiki-api-reference-v0.4.0.md, raw/articles/dms-core-wiki-configuration-v0.4.0.md, raw/articles/dms-core-wiki-examples-v0.4.0.md, raw/articles/dms-core-config-v0.2.0.md, raw/articles/dms-core-config-v0.3.0.md, raw/articles/dms-core-examples-v0.2.0.md, raw/articles/dms-core-examples-v0.3.0.md]
+sources: [raw/articles/dms-core-api-v0.2.0.md, raw/articles/dms-core-api-v0.3.0.md, raw/articles/dms-core-wiki-api-reference-v0.4.0.md, raw/articles/dms-core-wiki-api-reference-v0.5.0.md, raw/articles/dms-core-wiki-api-reference-v0.6.0.md, raw/articles/dms-core-wiki-configuration-v0.4.0.md, raw/articles/dms-core-wiki-configuration-v0.5.0.md, raw/articles/dms-core-wiki-examples-v0.4.0.md, raw/articles/dms-core-wiki-examples-v0.5.0.md, raw/articles/dms-core-wiki-examples-v0.6.0.md, raw/articles/dms-core-config-v0.2.0.md, raw/articles/dms-core-config-v0.3.0.md, raw/articles/dms-core-examples-v0.2.0.md, raw/articles/dms-core-examples-v0.3.0.md]
 confidence: medium
 ---
 
@@ -28,6 +28,16 @@ v0.4.0의 `UploadDocumentUnknownSizeStreamRequest`는 알려진 크기 대신 �
 
 cursor 순회는 `page.has_more`가 false이면 종료하고, 계속할 때만 불투명 `page.next_cursor`를 같은 status와 전달한다. 삭제는 의도를 드러내는 `soft_delete_document(...)`와 `hard_delete_document(...)`를 우선하며 `delete_document(..., hard_delete=...)`는 호환 API로 취급한다. ^[raw/articles/dms-core-wiki-examples-v0.4.0.md]
 
+v0.5.0 API reference는 새 integration에서 `create_sdk_from_service_configs(configs, ...)`를 사용해 이미 검증된 DocMesh settings를 전달하고, 기본 metadata/list 반환을 public-safe 모델로 사용하도록 문서화한다. 설치된 v0.4.0에는 이 factory와 internal metadata accessor가 없고 기존 metadata/list 결과에 `storage_key`가 있으므로, 현재 application은 `public_metadata(...)` 또는 allowlist response model을 계속 적용한다. ^[raw/articles/dms-core-wiki-api-reference-v0.5.0.md]
+
+v0.5.0 Examples는 explicit idempotency scope, known/unknown-size streaming, context-managed download, cursor filter preservation, explicit soft delete와 dry-run plan execution을 하나의 public-root workflow로 보인다. 이 핵심 SDK methods는 installed v0.4.0에서 확인되지만, example의 argument-free environment factory와 `format_environment_diagnosis`는 없다. 현재 code는 explicit environment mapping/diagnosis object를 사용하고, v0.5.0 assembly/formatter flow는 version-aligned upgrade 뒤에만 채택한다. ^[raw/articles/dms-core-wiki-examples-v0.5.0.md]
+
+v0.6.0 API는 bytes·동기·비동기 upload에 동일한 metadata 검증과 명시적 idempotency scope를 요구하고, async 다운로드 stream은 완료·오류·취소 시 자원을 정리한다고 설명한다. 설치된 `dms 0.6.0`에서 async stream method와 cursor-default `list_documents`를 확인했다. 현재 adapter는 동기 stream lifecycle을 유지하면서 목록을 `DocumentPage` 응답으로 전환했고, 다음 호출에서 status와 limit을 보존하도록 HTTP 계약을 문서화했다. ^[raw/articles/dms-core-wiki-api-reference-v0.6.0.md]
+
+v0.6.0 Examples는 service-config assembly에서 `check_on_startup=True`를 명시하고, 입력 stream이 호출자 소유임을 확인하며, public metadata와 internal/recovery metadata를 분리한다. 설치된 `dms 0.6.0`에서 service-config factory, formatter, sync/async stream, `recommended_http_error(...)`와 cursor-default 목록을 확인했다. adapter는 caller-owned upload stream과 context-managed sync download, public allowlist page를 유지한다. ^[raw/articles/dms-core-wiki-examples-v0.6.0.md]
+
+현재 adapter는 inline content와 attachment download 모두 `get_document_content_stream()`을 사용하고 하나의 context-managed response 경계에서 chunk를 전달한다. caller가 지정하는 read buffer는 1 byte~8 MiB로 제한해 전체 object 적재와 비정상적으로 큰 단일 read를 피한다. 통합 테스트는 실제 PostgreSQL·MinIO 문서를 fixture cleanup으로 제거하며 marker selection과 root-path-aware `Location`을 검증한다. 적용 범위와 후속 후보는 [[dms-application-optimization]]에 기록한다. ^[raw/articles/dms-core-wiki-examples-v0.6.0.md]
+
 ## Assembly choices
 
 일반 애플리케이션은 `create_sdk_from_environment(...)`를 사용하고, 테스트나 custom infrastructure 조립에는 `create_sdk_from_components(...)`를 사용한다. PostgreSQL/SQLite metadata store 모두 MinIO object store가 필요하며, 최소 환경변수와 startup health policy는 [[dms-core-configuration]]에서 관리한다. ^[raw/articles/dms-core-config-v0.2.0.md]
@@ -35,6 +45,8 @@ cursor 순회는 `page.has_more`가 false이면 종료하고, 계속할 때만 �
 v0.3.0의 component assembly는 `max_file_size`, persistent idempotency용 `operation_store`, `metadata_validator`, metadata size/depth 한계를 선택적으로 받을 수 있다. 환경 조립에서는 backend를 명시하거나 strict automatic selection을 적용해 테스트 fixture와 실제 배포가 같은 storage 선택을 하도록 만든다. ^[raw/articles/dms-core-config-v0.3.0.md]
 
 v0.4.0 환경 조립에서는 PostgreSQL DSN 대신 개별 connection fields를 사용하고, 연결 전 `diagnose_environment(env)`의 `valid`, `missing_required_keys`, `warnings`를 확인한다. custom `metadata_validator`를 component factory에 전달할 때는 factory의 기본 metadata size/depth 한계가 자동 적용되지 않으므로 validator 자체 policy에 필요한 한계를 포함한다. 구체적인 현재 runtime 차이는 [[dms-core-configuration]]을 따른다. ^[raw/articles/dms-core-wiki-configuration-v0.4.0.md]
+
+v0.5.0 configuration reference는 `create_sdk_from_service_configs(..., check_on_startup=False)`로 validated settings bundle을 환경 mutation 없이 조립하는 흐름을 제시한다. 설치된 v0.4.0에는 이 entrypoint가 없으므로 현재 code는 environment/component assembly를 계속 사용하고, version-aligned upgrade 시에만 DMS SDK health policy와 FastAPI lifecycle을 별도 contract test로 연결한다. ^[raw/articles/dms-core-wiki-configuration-v0.5.0.md]
 
 ## HTTP integration boundary
 
@@ -49,8 +61,13 @@ FastAPI route는 request parsing, SDK error-to-HTTP mapping, streaming response 
 - `raw/articles/dms-core-api-v0.2.0.md`
 - `raw/articles/dms-core-api-v0.3.0.md`
 - `raw/articles/dms-core-wiki-api-reference-v0.4.0.md`
+- `raw/articles/dms-core-wiki-api-reference-v0.5.0.md`
+- `raw/articles/dms-core-wiki-api-reference-v0.6.0.md`
 - `raw/articles/dms-core-wiki-configuration-v0.4.0.md`
+- `raw/articles/dms-core-wiki-configuration-v0.5.0.md`
 - `raw/articles/dms-core-wiki-examples-v0.4.0.md`
+- `raw/articles/dms-core-wiki-examples-v0.5.0.md`
+- `raw/articles/dms-core-wiki-examples-v0.6.0.md`
 - `raw/articles/dms-core-config-v0.2.0.md`
 - `raw/articles/dms-core-config-v0.3.0.md`
 - `raw/articles/dms-core-examples-v0.2.0.md`

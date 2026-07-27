@@ -4,12 +4,13 @@ from datetime import UTC, datetime
 from io import BytesIO
 
 import dms
+from docmesh_py_core import AuthenticatedUser
 from fastapi.testclient import TestClient
 from fastapi_core.config import AppConfig
 from fastapi_core.dependencies import get_current_user
-from fastapi_core.schemas import UserInfo
 
 from docmesh_doc.application import create_application
+from docmesh_doc.router import DEFAULT_DOWNLOAD_CHUNK_SIZE
 
 
 NOW = datetime(2026, 7, 11, tzinfo=UTC)
@@ -30,6 +31,20 @@ def metadata(document_id: str = "doc-1") -> dms.DocumentMetadata:
     )
 
 
+def public_metadata(document_id: str = "doc-1") -> dms.PublicDocumentMetadata:
+    return dms.PublicDocumentMetadata(
+        document_id=document_id,
+        original_filename="contract.pdf",
+        content_type="application/pdf",
+        file_size=3,
+        status=dms.DocumentStatus.AVAILABLE,
+        created_at=NOW,
+        updated_at=NOW,
+        created_by="user-1",
+        extra_metadata={"category": "contract"},
+    )
+
+
 class FakeSDK:
     def __init__(self) -> None:
         self.closed = False
@@ -38,13 +53,15 @@ class FakeSDK:
         self.delete_call = None
         self.list_args = None
         self.stream_closed = False
+        self.metadata_calls = 0
+        self.content_calls = 0
+        self.content_stream_calls = 0
 
     def upload_document(self, request):
         self.upload_request = request
-        item = metadata(request.document_id or "generated-id")
+        item = public_metadata(request.document_id or "generated-id")
         return dms.UploadDocumentResult(
             document_id=item.document_id,
-            storage_key=item.storage_key,
             metadata=item,
         )
 
@@ -52,23 +69,28 @@ class FakeSDK:
         self.upload_stream_request = request
         content = request.stream.read()
         assert len(content) == request.size
-        item = metadata(request.document_id or "generated-id")
+        item = public_metadata(request.document_id or "generated-id")
         return dms.UploadDocumentResult(
             document_id=item.document_id,
-            storage_key=item.storage_key,
             metadata=item,
         )
 
     def get_document_metadata(self, document_id):
+        self.metadata_calls += 1
         if document_id == "missing":
             raise dms.DocumentNotFoundError(document_id)
-        return metadata(document_id)
+        return public_metadata(document_id)
 
-    def list_documents(self, *, offset=0, limit=100, status=None):
-        self.list_args = (offset, limit, status)
-        return [metadata("doc-1"), metadata("doc-2")]
+    def list_documents(self, *, cursor=None, limit=100, status=None):
+        self.list_args = (cursor, limit, status)
+        return dms.DocumentPage(
+            items=[public_metadata("doc-1"), public_metadata("doc-2")],
+            next_cursor="next-page",
+            has_more=True,
+        )
 
     def get_document_content(self, document_id):
+        self.content_calls += 1
         return dms.DocumentContent(
             document_id=document_id,
             content=b"pdf",
@@ -77,7 +99,13 @@ class FakeSDK:
             size=3,
         )
 
-    def get_document_content_stream(self, document_id, *, chunk_size=65536):
+    def get_document_content_stream(
+        self,
+        document_id,
+        *,
+        chunk_size=DEFAULT_DOWNLOAD_CHUNK_SIZE,
+    ):
+        self.content_stream_calls += 1
         return dms.DocumentContentStream(
             document_id=document_id,
             stream=BytesIO(b"pdf"),
@@ -113,17 +141,32 @@ class FakeSDK:
         self.closed = True
 
 
-def client_for(sdk: FakeSDK, *, roles: list[str] | None = None) -> TestClient:
+def client_for(
+    sdk: FakeSDK,
+    *,
+    roles: list[str] | None = None,
+    scopes: list[str] | None = None,
+    root_path: str = "",
+) -> TestClient:
     app = create_application(
         sdk,
         config=AppConfig(
+            root_path=root_path,
             startup_healthcheck=False,
             enabled_services=[],
             required_services=[],
         ),
         include_auth_router=False,
     )
-    app.dependency_overrides[get_current_user] = lambda: UserInfo(
-        sub="user-1", username="alice", roles=roles or []
+    app.dependency_overrides[get_current_user] = lambda: AuthenticatedUser(
+        sub="user-1",
+        preferred_username="alice",
+        email=None,
+        given_name=None,
+        family_name=None,
+        name=None,
+        realm_roles=roles or [],
+        client_roles={},
+        claims={"scope": " ".join(scopes or [])},
     )
     return TestClient(app)

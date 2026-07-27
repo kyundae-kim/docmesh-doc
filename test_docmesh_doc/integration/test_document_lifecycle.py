@@ -7,8 +7,10 @@ import pytest
 from fastapi.testclient import TestClient
 from fastapi_core.schemas import UserInfo
 
+from docmesh_doc.dependencies import HARD_DELETE_PERMISSION
 
 PAYLOAD = b"DocMesh integration test payload"
+pytestmark = pytest.mark.integration
 
 
 def upload(client: TestClient, document_id: str):
@@ -35,7 +37,10 @@ def test_upload_persists_metadata_and_content_in_postgres_and_minio(
     response = upload(client, document_id)
 
     assert response.status_code == 201
-    assert response.headers["Location"] == f"/documents/{document_id}"
+    root_path = client.app.root_path.rstrip("/")
+    assert response.headers["Location"] == (
+        f"{root_path}/documents/{document_id}"
+    )
     assert response.headers["X-Correlation-ID"] == f"correlation-{document_id}"
     assert response.json()["document_id"] == document_id
     assert response.json()["created_by"] == user.sub
@@ -49,9 +54,6 @@ def test_upload_persists_metadata_and_content_in_postgres_and_minio(
     assert metadata.extra_metadata == {"suite": "integration"}
     assert content.content == PAYLOAD
     assert content.content_type == "text/plain"
-
-    sdk.hard_delete_document(document_id)
-
 
 def test_metadata_lookup_and_streaming_download_use_real_stores(
     integration_client: tuple[
@@ -71,17 +73,18 @@ def test_metadata_lookup_and_streaming_download_use_real_stores(
     )
 
     assert list_response.status_code == 200
-    assert document_id in {item["document_id"] for item in list_response.json()}
-    assert all("storage_key" not in item for item in list_response.json())
+    assert document_id in {
+        item["document_id"] for item in list_response.json()["items"]
+    }
+    assert all(
+        "storage_key" not in item for item in list_response.json()["items"]
+    )
     assert metadata_response.status_code == 200
     assert metadata_response.json()["status"] == "available"
     assert download_response.status_code == 200
     assert download_response.content == PAYLOAD
     assert download_response.headers["Content-Type"].startswith("text/plain")
     assert download_response.headers["Content-Disposition"].startswith("attachment;")
-
-    sdk.hard_delete_document(document_id)
-
 
 def test_hard_delete_removes_postgres_metadata_and_minio_object(
     integration_client: tuple[
@@ -90,9 +93,9 @@ def test_hard_delete_removes_postgres_metadata_and_minio_object(
     document_id: str,
 ):
     client, sdk, user = integration_client
-    if "document:delete:hard" not in user.roles:
+    if HARD_DELETE_PERMISSION not in user.roles:
         pytest.skip(
-            "integration Keycloak user does not have document:delete:hard role"
+            f"integration Keycloak user does not have {HARD_DELETE_PERMISSION} role"
         )
     assert upload(client, document_id).status_code == 201
 

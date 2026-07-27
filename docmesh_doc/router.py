@@ -1,110 +1,149 @@
-from __future__ import annotations
-
-from typing import Annotated
+from typing import Annotated, Any, Literal
 
 import dms
-from fastapi import APIRouter, File, Form, HTTPException, Query, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Query, Request, Response, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import StreamingResponse
+from fastapi_core.dependencies import get_current_user
+from pydantic import Json
 
-from docmesh_doc.dependencies import CurrentUser, DmsSdk
+from docmesh_doc.dependencies import CurrentUser, DmsSdk, require_hard_delete
 from docmesh_doc.document_http import (
     content_disposition,
-    parse_metadata_form,
-    require_readable_document,
     validate_upload_file,
 )
-from docmesh_doc.schemas import DeleteDocumentResponse, DocumentMetadataResponse
+from docmesh_doc.schemas import (
+    DeleteDocumentResponse,
+    DocumentMetadataResponse,
+    DocumentPageResponse,
+    ErrorResponse,
+)
 
-router = APIRouter(prefix="/documents", tags=["documents"])
+DEFAULT_DOWNLOAD_CHUNK_SIZE = 64 * 1024
+MAX_DOWNLOAD_CHUNK_SIZE = 8 * 1024 * 1024
+
+
+class DocumentStreamingResponse(StreamingResponse):
+    def __init__(
+        self,
+        item: dms.DocumentContentStream,
+        *,
+        media_type: str,
+        headers: dict[str, str],
+    ) -> None:
+        super().__init__(
+            content=item.iter_chunks(), media_type=media_type, headers=headers
+        )
+        self.item = item
+
+    async def __call__(self, scope, receive, send) -> None:
+        try:
+            await super().__call__(scope, receive, send)
+        finally:
+            await run_in_threadpool(self.item.close)
+
+
+def _stream_document(
+    item: dms.DocumentContentStream,
+    *,
+    disposition: Literal["inline", "attachment"],
+) -> StreamingResponse:
+    return DocumentStreamingResponse(
+        item,
+        media_type=item.content_type,
+        headers={
+            "Content-Length": str(item.size),
+            "Content-Disposition": content_disposition(disposition, item.filename),
+        },
+    )
+
+
+router = APIRouter(
+    prefix="/documents",
+    tags=["documents"],
+    dependencies=[Depends(get_current_user)],
+    responses={
+        400: {"model": ErrorResponse, "description": "Invalid request"},
+        "default": {"model": ErrorResponse, "description": "Request failed"},
+    },
+)
 
 
 @router.post("", status_code=201, response_model=DocumentMetadataResponse)
 def upload_document(
+    request: Request,
     response: Response,
     sdk: DmsSdk,
     user: CurrentUser,
     file: Annotated[UploadFile, File()],
     document_id: Annotated[str | None, Form()] = None,
-    metadata: Annotated[str, Form()] = "{}",
+    metadata: Annotated[Json[dict[str, Any]], Form()] = "{}",
     checksum: Annotated[str | None, Form()] = None,
 ) -> DocumentMetadataResponse:
-    extra_metadata = parse_metadata_form(metadata)
     filename, content_type, size = validate_upload_file(file)
-    request = dms.UploadDocumentStreamRequest(
-        stream=file.file,
-        size=size,
-        filename=filename,
-        content_type=content_type,
-        document_id=document_id or None,
-        metadata=extra_metadata,
-        created_by=user.sub,
-        checksum=checksum or None,
+    result = sdk.upload_document_stream(
+        dms.UploadDocumentStreamRequest(
+            stream=file.file,
+            size=size,
+            filename=filename,
+            content_type=content_type,
+            document_id=document_id or None,
+            metadata=metadata,
+            created_by=user.sub,
+            checksum=checksum or None,
+        )
     )
-    result = sdk.upload_document_stream(request)
-    response.headers["Location"] = f"/documents/{result.document_id}"
-    return dms.public_metadata(result)
+    response.headers["Location"] = request.url_for(
+        "get_document_metadata", document_id=result.document_id
+    ).path
+    return result.metadata
 
 
-@router.get("", response_model=list[DocumentMetadataResponse])
+@router.get("", response_model=DocumentPageResponse)
 def list_documents(
     sdk: DmsSdk,
-    user: CurrentUser,
-    offset: Annotated[int, Query(ge=0)] = 0,
-    limit: Annotated[int, Query(ge=1)] = 100,
+    cursor: str | None = None,
+    limit: Annotated[int, Query(ge=1, le=1000)] = 100,
     status: dms.DocumentStatus | None = None,
-) -> list[DocumentMetadataResponse]:
-    items = sdk.list_documents(offset=offset, limit=limit, status=status)
-    return [dms.public_metadata(item) for item in items]
+) -> dms.DocumentPage:
+    return sdk.list_documents(cursor=cursor, limit=limit, status=status)
 
 
 @router.get("/{document_id}", response_model=DocumentMetadataResponse)
-def get_document_metadata(document_id: str, sdk: DmsSdk, user: CurrentUser) -> DocumentMetadataResponse:
-    return dms.public_metadata(require_readable_document(sdk, document_id))
+def get_document_metadata(
+    document_id: str,
+    sdk: DmsSdk,
+) -> DocumentMetadataResponse:
+    return sdk.get_document_metadata(document_id)
 
 
 @router.get("/{document_id}/content")
-def get_document_content(document_id: str, sdk: DmsSdk, user: CurrentUser) -> Response:
-    require_readable_document(sdk, document_id)
-    item = sdk.get_document_content(document_id)
-    return Response(content=item.content, media_type=item.content_type, headers={
-        "Content-Length": str(item.size),
-        "Content-Disposition": content_disposition("inline", item.filename),
-    })
+def get_document_content(document_id: str, sdk: DmsSdk) -> StreamingResponse:
+    item = sdk.get_document_content_stream(document_id)
+    return _stream_document(item, disposition="inline")
 
 
 @router.get("/{document_id}/download")
 def download_document(
     document_id: str,
     sdk: DmsSdk,
-    user: CurrentUser,
-    chunk_size: Annotated[int, Query(ge=1)] = 65536,
+    chunk_size: Annotated[
+        int,
+        Query(ge=1, le=MAX_DOWNLOAD_CHUNK_SIZE),
+    ] = DEFAULT_DOWNLOAD_CHUNK_SIZE,
 ) -> StreamingResponse:
-    require_readable_document(sdk, document_id)
     item = sdk.get_document_content_stream(document_id, chunk_size=chunk_size)
-
-    def body():
-        try:
-            yield from item.iter_chunks()
-        finally:
-            item.close()
-
-    return StreamingResponse(body(), media_type=item.content_type, headers={
-        "Content-Length": str(item.size),
-        "Content-Disposition": content_disposition("attachment", item.filename),
-    })
+    return _stream_document(item, disposition="attachment")
 
 
 @router.delete("/{document_id}", response_model=DeleteDocumentResponse)
-def delete_document(
+async def delete_document(
     document_id: str,
     sdk: DmsSdk,
     user: CurrentUser,
     hard: bool = False,
 ):
-    if hard and "document:delete:hard" not in user.roles:
-        raise HTTPException(status_code=403, detail="Permission denied.")
-    return (
-        sdk.hard_delete_document(document_id)
-        if hard
-        else sdk.soft_delete_document(document_id)
-    )
+    if hard:
+        await require_hard_delete(current_user=user)
+    delete = sdk.hard_delete_document if hard else sdk.soft_delete_document
+    return await run_in_threadpool(delete, document_id)

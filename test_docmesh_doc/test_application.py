@@ -1,26 +1,31 @@
 from __future__ import annotations
 
-import os
-
 import dms
 import pytest
 from fastapi.testclient import TestClient
 from fastapi_core.config import AppConfig
+from fastapi_core.testing import (
+    assert_auth_router_contract,
+    assert_health_contract,
+    assert_module_contract,
+    assert_openapi_contract,
+)
 
 from docmesh_doc.application import create_application
+from docmesh_doc.dependencies import DMS_RESOURCE
 from test_docmesh_doc.support import NOW, FakeSDK, client_for
 
 
-def test_application_creates_dms_sdk_from_process_environment_at_startup(monkeypatch):
+def test_application_delegates_process_environment_loading_to_dms(monkeypatch):
     sdk = FakeSDK()
-    captured_environment = None
+    create_calls = 0
     monkeypatch.setenv("DMS_METADATA_BACKEND", "postgresql")
     monkeypatch.setenv("DMS_CONFIGURATION_STRICT", "true")
     monkeypatch.delenv("POSTGRES_DSN", raising=False)
 
-    def create_sdk(environment):
-        nonlocal captured_environment
-        captured_environment = environment
+    def create_sdk():
+        nonlocal create_calls
+        create_calls += 1
         return sdk
 
     monkeypatch.setattr(
@@ -35,10 +40,9 @@ def test_application_creates_dms_sdk_from_process_environment_at_startup(monkeyp
     )
 
     with TestClient(app):
-        assert app.state.resource_registry.require("dms") is sdk
+        assert app.state.resource_registry.require(DMS_RESOURCE.name) is sdk
 
-    assert captured_environment == dict(os.environ)
-    assert captured_environment is not os.environ
+    assert create_calls == 1
 
 
 def test_dms_sdk_is_owned_by_the_managed_resource_registry():
@@ -50,11 +54,70 @@ def test_dms_sdk_is_owned_by_the_managed_resource_registry():
     )
 
     with TestClient(app):
-        assert app.state.resource_registry.require("dms") is sdk
+        assert app.state.resource_registry.require(DMS_RESOURCE.name) is sdk
         assert not hasattr(app.state, "dms_sdk")
         assert not hasattr(app.state, "readiness_checks")
 
     assert sdk.closed is True
+
+
+@pytest.mark.parametrize("included", [False, True])
+def test_application_explicitly_controls_the_auth_router(included):
+    app = create_application(
+        FakeSDK(),
+        config=AppConfig(enabled_services=[], required_services=[]),
+        include_auth_router=included,
+        auth_provider=object() if included else None,
+    )
+
+    with TestClient(app) as client:
+        assert_auth_router_contract(client, included=included)
+
+
+def test_application_installs_the_document_domain_module():
+    app = create_application(
+        FakeSDK(),
+        config=AppConfig(enabled_services=[], required_services=[]),
+        include_auth_router=False,
+    )
+
+    assert len(app.state.domain_modules) == 1
+    assert app.state.domain_modules[0].name == "documents"
+    assert_module_contract(app, app.state.domain_modules[0])
+
+
+def test_application_preserves_fastapi_core_health_contract():
+    with client_for(FakeSDK()) as client:
+        assert_health_contract(client)
+
+
+def test_application_openapi_matches_document_contract():
+    app = create_application(
+        FakeSDK(),
+        config=AppConfig(enabled_services=[], required_services=[]),
+        include_auth_router=False,
+    )
+
+    assert_openapi_contract(
+        app,
+        expected_paths={
+            "/documents": {"get", "post"},
+            "/documents/{document_id}": {"get", "delete"},
+            "/documents/{document_id}/content": {"get"},
+            "/documents/{document_id}/download": {"get"},
+        },
+        expected_security_schemes={"OAuth2PasswordBearer"},
+    )
+
+    for path, path_item in app.openapi()["paths"].items():
+        if not path.startswith("/documents"):
+            continue
+        for method, operation in path_item.items():
+            if method not in {"get", "post", "delete"}:
+                continue
+            assert "400" in operation["responses"]
+            assert "default" in operation["responses"]
+            assert "422" not in operation["responses"]
 
 
 def test_lifespan_closes_sdk():
@@ -102,7 +165,7 @@ def test_readiness_returns_503_when_dms_sdk_is_unhealthy():
 
 
 def test_sdk_environment_failure_aborts_application_startup(monkeypatch):
-    def failing_create_dms_sdk(_environment):
+    def failing_create_dms_sdk():
         raise RuntimeError("SDK startup failed")
 
     monkeypatch.setattr(dms, "create_sdk_from_environment", failing_create_dms_sdk)

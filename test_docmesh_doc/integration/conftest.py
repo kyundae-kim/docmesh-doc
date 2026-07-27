@@ -14,9 +14,8 @@ from minio import Minio
 from sqlalchemy import URL, create_engine, text
 
 from docmesh_doc.application import create_application
+from docmesh_doc.dependencies import DMS_RESOURCE
 
-
-pytestmark = pytest.mark.integration
 
 _REQUIRED_ENV = (
     "POSTGRES_HOST",
@@ -89,8 +88,19 @@ def prepare_integration_services(integration_env: dict[str, str]) -> Iterator[No
 
 
 @pytest.fixture
-def document_id() -> str:
-    return f"integration-{uuid4()}"
+def document_id(
+    integration_client: tuple[
+        TestClient, dms.DefaultDocumentManagementSDK, UserInfo
+    ],
+) -> Iterator[str]:
+    value = f"integration-{uuid4()}"
+    yield value
+
+    _, sdk, _ = integration_client
+    try:
+        sdk.hard_delete_document(value)
+    except dms.DocumentNotFoundError:
+        pass
 
 
 @pytest.fixture
@@ -119,4 +129,4 @@ def integration_client(
 
         user = _wait_for_authenticated_user(client)
 
-        yield client, app.state.resource_registry.require("dms"), user
+        yield client, app.state.resource_registry.require(DMS_RESOURCE.name), user
