@@ -62,7 +62,7 @@ Source checkout 없이 GitHub branch, tag 또는 commit에서 직접 설치할 �
 ```bash
 uv venv
 uv pip install \
-  "docmesh-doc @ git+https://github.com/kyundae-kim/docmesh-doc.git@v0.3.0"
+  "docmesh-doc @ git+https://github.com/kyundae-kim/docmesh-doc.git@docmesh-py-core-v0.5.0"
 ```
 
 설치한 애플리케이션은 import entrypoint로 실행합니다.
@@ -74,7 +74,7 @@ uv run --no-project python -m fastapi run \
   --port 8000
 ```
 
-현재 프로젝트는 `fastapi-core`와 `dms-core`의 `v0.6.0` Git tag를 사용합니다. 재현 가능한 운영 배포에서는 이동 가능한 branch보다 release tag 또는 commit SHA를 사용하는 것이 좋습니다.
+현재 저장소에는 package version `0.3.0`에 대응하는 `v0.3.0` Git tag가 없으므로 위 명령은 현재 원격 branch를 명시합니다. 현재 프로젝트는 `fastapi-core`와 `dms-core`의 `v0.6.0` Git tag를 사용합니다. 재현 가능한 운영 배포에서는 이동 가능한 branch보다 검증한 commit SHA를 사용하는 것이 좋습니다.
 
 ## 설정
 
@@ -240,6 +240,7 @@ Soft delete는 object를 삭제하고 metadata를 `deleted` 상태로 보존합�
 
 - OpenAPI schema: `/openapi.json`
 - Swagger UI: `/docs`
+- Swagger UI OAuth redirect: `/docs/oauth2-redirect`
 - ReDoc: `/redoc`
 
 운영 환경에서 이 경로를 외부에 공개할지는 reverse proxy 정책으로 통제하세요.
