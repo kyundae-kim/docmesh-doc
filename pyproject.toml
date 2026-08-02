@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "dms",
+    "docmesh-config",
     "docmesh-py-core",
     "fastapi-core",
 ]
@@ -28,9 +29,10 @@ markers = [
 ]
 
 [tool.uv.sources]
-docmesh-py-core = { git = "https://github.com/kyundae-kim/docmesh-py-core.git", rev = "v0.5.0" }
-fastapi-core = { git = "https://github.com/kyundae-kim/fastapi-core.git", rev = "v0.6.0" }
-dms = { git = "https://github.com/kyundae-kim/dms-core.git", rev = "v0.6.0" }
+docmesh-config = { git = "https://github.com/kyundae-kim/docmesh-config.git", rev = "v0.1.0" }
+docmesh-py-core = { git = "https://github.com/kyundae-kim/docmesh-py-core.git", rev = "v0.6.0" }
+fastapi-core = { git = "https://github.com/kyundae-kim/fastapi-core.git", rev = "v0.7.0" }
+dms = { git = "https://github.com/kyundae-kim/dms-core.git", rev = "v0.7.0" }
 
 [dependency-groups]
 dev = [
