@@ -7,6 +7,7 @@ from fastapi_core import DomainModule, ErrorMapperSpec, ManagedResource, create_
 from fastapi_core.config import AppConfig
 
 from docmesh_doc.dependencies import DMS_RESOURCE
+from docmesh_doc.dms_factory import create_dms_sdk
 from docmesh_doc.errors import (
     map_dms_error,
     map_validation_error,
@@ -29,7 +30,7 @@ def create_application(
             ManagedResource(
                 name=DMS_RESOURCE,
                 factory=lambda _application: (
-                    sdk if sdk is not None else dms.create_sdk_from_environment()
+                    sdk if sdk is not None else create_dms_sdk()
                 ),
                 healthcheck=lambda current: current.check_health().ok,
                 required=True,

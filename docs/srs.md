@@ -4,7 +4,7 @@
 | --- | --- |
 | 제품명 | DocMesh Document Service |
 | 대상 릴리스 | MVP |
-| 최종 코드 대조일 | 2026-07-27 |
+| 최종 코드 대조일 | 2026-08-02 |
 | 상위 문서 | [제품 요구사항 정의서](prd.md) |
 
 ## 1. 목적
@@ -28,11 +28,11 @@
 
 | ID | 요구사항 |
 | --- | --- |
-| SRS-ARC-001 | 애플리케이션은 `fastapi_core.create_app(config=..., modules=..., error_renderer=..., include_auth_router=...)`으로 생성해야 한다. `fastapi-core` v0.6.0의 auth router 기본값은 `False`지만 제품 `create_application()`은 기본 제품 앱에 `/token`, `/user`를 포함하도록 `True`를 명시해야 한다. 인증 runtime을 조립하지 않는 테스트·embedding 환경은 명시적 `auth_provider`를 주입해야 한다. |
+| SRS-ARC-001 | 애플리케이션은 `fastapi_core.create_app(config=..., modules=..., error_renderer=..., include_auth_router=...)`으로 생성해야 한다. `fastapi-core` v0.7.0의 auth router 기본값은 `False`지만 제품 `create_application()`은 기본 제품 앱에 `/token`, `/user`를 포함하도록 `True`를 명시해야 한다. 인증 runtime을 조립하지 않는 테스트·embedding 환경은 명시적 `auth_provider`를 주입해야 한다. |
 | SRS-ARC-002 | DMS route, managed resource, DMS·validation error mapper는 이름이 `documents`인 `DomainModule`로 묶고 공통 health route와 충돌하지 않아야 한다. |
 | SRS-ARC-003 | `ResourceKey[DefaultDocumentManagementSDK]("dms")`를 선언하고 같은 key를 `ManagedResource.name`과 route의 `Depends(key.dependency)`에 사용해야 한다. resource가 준비되지 않은 요청은 503으로 응답해야 한다. |
-| SRS-ARC-004 | route, dependency, background callback은 `DefaultDocumentManagementSDK` 또는 저장소 client를 직접 생성해서는 안 된다. SDK는 DMS의 공개 environment, service-config 또는 component factory 중 제품이 선택한 factory로 생성해야 한다. |
-| SRS-ARC-005 | SDK factory 실패는 애플리케이션 startup을 중단해야 한다. required managed-resource startup health check는 `DOCMESH_HEALTHCHECK_ENABLED=true`일 때 실행하며, 비활성화되어도 같은 check를 runtime readiness registry에는 등록해야 한다. |
+| SRS-ARC-004 | route, dependency, background callback은 `DefaultDocumentManagementSDK` 또는 저장소 client를 직접 생성해서는 안 된다. host adapter가 `docmesh-config` 설정 loader와 `docmesh-py-core` client factory를 사용해 저장소 client를 만들고, DMS v0.7의 `create_sdk_from_clients(...)`에 주입해야 한다. |
+| SRS-ARC-005 | host-owned SDK factory 실패는 애플리케이션 startup을 중단해야 한다. DMS `DmsAssemblyPlan`은 host가 명시한 조립 정책을 받고, required managed-resource health check는 FastAPI startup policy에 따라 실행하며 비활성화되어도 같은 check를 runtime readiness registry에는 등록해야 한다. |
 | SRS-ARC-006 | lifespan 종료 시 resource를 역순 close해야 한다. 명시적 `ManagedResource.close`, SDK `aclose()`, SDK `close()` 순서의 지원 계약을 따르고, 하나의 close가 실패해도 나머지 close를 시도한 뒤 종료 오류를 전파·기록해야 한다. |
 | SRS-ARC-007 | lifecycle 순서는 service runtime 조립, DMS resource 생성·선택적 startup check, custom lifespan 진입·종료, DMS resource 역순 close, service runtime close여야 한다. |
 
@@ -40,16 +40,16 @@
 
 | ID | 요구사항 |
 | --- | --- |
-| SRS-STO-001 | 기본 배포 template은 `DMS_METADATA_BACKEND=postgresql`과 `POSTGRES_HOST`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, 선택 `POSTGRES_PORT`로 metadata store를 구성해야 한다. `POSTGRES_DSN`은 dms-core v0.6.0에서 단독·병용 모두 지원하지 않으며 발견 시 조립 전에 거부해야 한다. |
+| SRS-STO-001 | 기본 배포 template은 `DMS_METADATA_BACKEND=postgresql`과 `POSTGRES_HOST`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, 선택 `POSTGRES_PORT`로 metadata store를 구성해야 한다. `POSTGRES_DSN`은 dms-core v0.7.0 host assembly에서 지원하지 않으며 발견 시 조립 전에 거부해야 한다. |
 | SRS-STO-002 | PostgreSQL backend 선택 시 필수 연결 필드가 없거나 연결을 구성할 수 없으면 SDK 조립 또는 health 단계가 실패해야 한다. |
 | SRS-STO-003 | 서비스는 `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_BUCKET`으로 object store를 구성해야 한다. |
-| SRS-STO-004 | 제품 애플리케이션은 저장소를 별도로 진단하거나 직접 조립하지 않고 `dms.create_sdk_from_environment()`에 선택·검증·조립을 위임해야 한다. DMS environment factory는 `MINIO_BUCKET`을 필수로 검증하고 bucket이 없거나 client를 구성할 수 없으면 resource factory를 실패시켜야 한다. fastapi-core 서비스 설정에서의 필드 optional 여부와 제품 저장소 요구사항을 혼동해서는 안 된다. |
-| SRS-STO-005 | DMS `ManagedResource.healthcheck`는 `sdk.check_health().ok`를 명시적으로 판정하고 required readiness check로 항상 등록해야 한다. `DOCMESH_HEALTHCHECK_ENABLED`는 DMS environment factory와 FastAPI managed-resource startup 사전 실행에 각각 소비되므로 배포에서 값을 명시해야 한다. 값이 없으면 DMS factory는 startup check를 기본 실행하지만 FastAPI는 managed-resource startup check를 기본 생략한다. service-runtime의 failure mode·retry 설정은 managed-resource check에 자동 적용되지 않는다. |
+| SRS-STO-004 | 제품 host adapter는 `docmesh-config`로 선택·검증한 설정을 `docmesh-py-core` client factory에 전달하고, 생성된 Engine·MinIO client를 `dms.create_sdk_from_clients(...)`에 주입해야 한다. DMS public package는 환경변수에서 client를 만들지 않으며 `MINIO_BUCKET`이 없거나 client를 구성할 수 없으면 host resource factory를 실패시켜야 한다. fastapi-core 서비스 설정에서의 필드 optional 여부와 제품 저장소 요구사항을 혼동해서는 안 된다. |
+| SRS-STO-005 | DMS `ManagedResource.healthcheck`는 `sdk.check_health().ok`를 명시적으로 판정하고 required readiness check로 항상 등록해야 한다. DMS `check_on_startup`과 FastAPI managed-resource startup check는 서로 다른 실행 경계이므로 host가 중복 실행 여부와 startup policy를 명시하고, service-runtime의 failure mode·retry 설정이 DMS check에 자동 적용된다고 가정해서는 안 된다. |
 | SRS-STO-006 | 원본 filename, `created_by`, 사용자 정의 metadata는 선택된 document metadata store에 보관하고 MinIO object metadata에는 저장하지 않아야 한다. |
 | SRS-STO-007 | 선택된 metadata store는 object를 찾기 위한 내부 `storage_key`를 보관할 수 있으나 일반 API response에 노출해서는 안 된다. |
 | SRS-STO-008 | 로컬 개발에서 `DMS_METADATA_BACKEND=sqlite`를 선택할 수 있어야 하며 `SQLITE_PATH`를 필수로, `SQLITE_READONLY`, `SQLITE_ENABLE_WAL`, `SQLITE_BUSY_TIMEOUT_MS`, `SQLITE_CHECK_SAME_THREAD`, `SQLITE_ECHO`를 선택 설정으로 받아야 한다. SQLite는 metadata store만 대체하므로 MinIO는 계속 필수다. 운영·통합 release gate는 PostgreSQL을 사용한다. |
-| SRS-STO-009 | PostgreSQL은 `POSTGRES_SSLMODE`, `POSTGRES_CONNECT_TIMEOUT_SECONDS`, `POSTGRES_POOL_SIZE`, `POSTGRES_MAX_OVERFLOW`, `POSTGRES_POOL_PRE_PING`, `POSTGRES_POOL_RECYCLE_SECONDS`, `POSTGRES_ECHO`, `POSTGRES_APPLICATION_NAME`을, MinIO는 `MINIO_SECURE`, `MINIO_CERT_CHECK`, `MINIO_REGION`, `MINIO_REQUEST_TIMEOUT_SECONDS`, `MINIO_MAX_RETRIES`를 환경변수로 조정할 수 있어야 한다. production 보안 모드에서는 `MINIO_SECURE=true`와 `MINIO_CERT_CHECK=true`를 강제해야 한다. |
-| SRS-CFG-001 | startup 중 DMS environment factory는 선택된 PostgreSQL 또는 SQLite metadata store와 MinIO의 필수 값 누락·공백을 검증하고 실패를 애플리케이션 startup에 전파해야 한다. fastapi-core service runtime은 인증 등 활성 service 구성을 자체 경계에서 검증해야 하며 제품 애플리케이션은 두 검증을 중복 구현해서는 안 된다. |
+| SRS-STO-009 | PostgreSQL은 `POSTGRES_SSLMODE`, `POSTGRES_CONNECT_TIMEOUT_SECONDS`, `POSTGRES_POOL_SIZE`, `POSTGRES_MAX_OVERFLOW`, `POSTGRES_POOL_PRE_PING`, `POSTGRES_POOL_RECYCLE_SECONDS`, `POSTGRES_ECHO`, `POSTGRES_APPLICATION_NAME`을, MinIO는 `MINIO_SECURE`, `MINIO_CERT_CHECK`, `MINIO_REGION`, `MINIO_REQUEST_TIMEOUT_SECONDS`, `MINIO_MAX_RETRIES`를 환경변수로 조정할 수 있어야 한다. production 보안 모드에서는 `MINIO_SECURE=true`와 `MINIO_CERT_CHECK=true`를 강제해야 하며, 이 검증은 host config layer가 담당한다. |
+| SRS-CFG-001 | startup 중 host-owned DMS factory는 선택된 PostgreSQL 또는 SQLite metadata store와 MinIO의 필수 값 누락·공백을 검증하고 실패를 애플리케이션 startup에 전파해야 한다. fastapi-core service runtime은 인증 등 활성 service 구성을 자체 경계에서 검증해야 하며 제품 애플리케이션은 두 검증을 중복 구현해서는 안 된다. |
 | SRS-CFG-002 | password, access key, secret key, client secret은 secret provider 또는 환경변수에서 읽어야 하며 source code, 기본값, API response에 하드코딩해서는 안 된다. |
 | SRS-CFG-003 | `ROOT_PATH`, `TOKEN_URL`, `CORS_ORIGINS`, `CORS_CREDENTIALS`, `DOCMESH_HEALTHCHECK_ENABLED`, `READINESS_PARALLEL`, `READINESS_TIMEOUT_SECONDS`, `READINESS_OVERALL_TIMEOUT_SECONDS`는 배포 환경별로 명시할 수 있어야 한다. `ROOT_PATH`는 ASGI root path이고 `TOKEN_URL`은 OpenAPI OAuth2 URL이며 실제 `/token` route를 변경하지 않는다. |
 | SRS-CFG-004 | DMS SDK의 metadata store·MinIO 조립과 health 정책은 `DOCMESH_SERVICES` 및 `READINESS_REQUIRED_SERVICES`로 대체하거나 중복 조립해서는 안 된다. DMS aggregate health는 managed-resource readiness에, FastAPI service client health는 service-runtime readiness에 연결해야 한다. |
@@ -71,7 +71,7 @@
 
 ### 3.4 문서 도메인과 상태
 
-HTTP 공개 metadata에는 최소 `document_id`, `original_filename`, `content_type`, `file_size`, `status`, `created_at`, `updated_at`, `deleted_at`, `created_by`, `checksum`, 사용자 `metadata`를 포함해야 한다. SDK의 `extra_metadata`는 HTTP `metadata`로 validation alias 변환하고 `storage_key`는 포함해서는 안 된다. 공개 schema의 `status`는 자유 문자열이 아니라 dms-core v0.6.0 `DocumentStatus` enum이며 wire 값은 `uploaded`, `available`, `deleting`, `deleted`, `failed`다. 정상 업로드 응답은 `available`이고 일반 단건 조회와 상태 filter가 없는 목록 조회에서 `deleting`과 `deleted`는 SDK 정책에 따라 숨겨진다.
+HTTP 공개 metadata에는 최소 `document_id`, `original_filename`, `content_type`, `file_size`, `status`, `created_at`, `updated_at`, `deleted_at`, `created_by`, `checksum`, 사용자 `metadata`를 포함해야 한다. SDK의 `extra_metadata`는 HTTP `metadata`로 validation alias 변환하고 `storage_key`는 포함해서는 안 된다. 공개 schema의 `status`는 자유 문자열이 아니라 dms-core v0.7.0 `DocumentStatus` enum이며 wire 값은 `uploaded`, `available`, `deleting`, `deleted`, `failed`다. 정상 업로드 응답은 `available`이고 일반 단건 조회와 상태 filter가 없는 목록 조회에서 `deleting`과 `deleted`는 SDK 정책에 따라 숨겨진다.
 
 | ID | 요구사항 |
 | --- | --- |
@@ -97,7 +97,7 @@ HTTP 공개 metadata에는 최소 `document_id`, `original_filename`, `content_t
 
 | ID | 요구사항 |
 | --- | --- |
-| SRS-API-001 | `POST /documents`는 `multipart/form-data`로 `file`과 선택 `document_id`, JSON object를 직렬화한 text field `metadata`, `checksum`을 받고 filename과 content type은 `UploadFile`에서 읽어야 한다. `metadata` 생략 시 기본값은 `{}`이며 JSON 문법 오류 또는 object가 아닌 값은 framework validation 단계에서 400으로 정규화해야 한다. |
+| SRS-API-001 | `POST /documents`는 `multipart/form-data`로 `file`과 선택 `document_id`, JSON object를 직렬화한 text field `metadata`를 받고 filename과 content type은 `UploadFile`에서 읽어야 한다. `metadata` 생략 시 기본값은 `{}`이며 JSON 문법 오류 또는 object가 아닌 값은 framework validation 단계에서 400으로 정규화해야 한다. checksum은 dms-core v0.7.0 stream upload가 본문에서 파생하므로 multipart field로 전달하지 않는다. |
 | SRS-API-002 | 업로드 route는 입력을 `UploadDocumentStreamRequest`로 변환해 `sdk.upload_document_stream(...)`을 호출하고 `ROOT_PATH`를 반영한 `Location` header와 public metadata를 반환해야 한다. |
 | SRS-API-003 | 빈 본문, trim 후 빈 filename/content type, malformed JSON·배열·문자열·숫자·boolean·null metadata, 0 이하 chunk size 같은 잘못된 입력은 SDK·저장소 작업 전에 `400 VALIDATION_ERROR`로 반환해야 한다. |
 | SRS-API-004 | `GET /documents`는 선택 `cursor`, 기본 `limit=100`, 선택 status filter를 SDK `list_documents(cursor=..., limit=..., status=...)`에 전달해야 한다. limit은 1~1000이며 cursor는 불투명하게 취급한다. 응답은 공개 metadata `items`, `next_cursor`, `has_more`를 포함하고 다음 page 요청은 cursor에 결합된 limit과 status를 유지해야 한다. |

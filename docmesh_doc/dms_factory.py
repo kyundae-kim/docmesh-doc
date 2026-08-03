@@ -1,0 +1,144 @@
+from __future__ import annotations
+
+import os
+
+import dms
+import docmesh_config
+import docmesh_py_core
+from docmesh_config import Service
+
+
+_METADATA_BACKENDS = {"postgresql", "sqlite"}
+
+
+def _environment_value(name: str) -> str | None:
+    value = os.environ.get(name)
+    if value is None:
+        return None
+    value = value.strip()
+    return value or None
+
+
+def _metadata_backend() -> str:
+    value = (_environment_value("DMS_METADATA_BACKEND") or "postgresql").lower()
+    if value not in _METADATA_BACKENDS:
+        supported = ", ".join(sorted(_METADATA_BACKENDS))
+        raise dms.ConfigurationError(
+            f"DMS_METADATA_BACKEND must be one of: {supported}"
+        )
+    return value
+
+
+def _strict_configuration() -> bool:
+    value = _environment_value("DMS_CONFIGURATION_STRICT")
+    if value is None:
+        return False
+    if value.lower() not in {"true", "false"}:
+        raise docmesh_config.ConfigError(
+            "DMS_CONFIGURATION_STRICT: expected true or false"
+        )
+    return value.lower() == "true"
+
+
+def _reject_legacy_dsn() -> None:
+    if _environment_value("POSTGRES_DSN") is not None:
+        raise docmesh_config.ConfigError(
+            "POSTGRES_DSN is not supported; configure the individual POSTGRES_* fields"
+        )
+
+
+def _diagnose_strict_configuration() -> None:
+    plan = docmesh_config.RuntimePlan(
+        services=(Service.POSTGRES, Service.SQLITE, Service.MINIO),
+        one_of=((Service.POSTGRES, Service.SQLITE),),
+        minio_bucket_required=True,
+    )
+    diagnosis = docmesh_config.diagnose_services(
+        plan=plan,
+        selection_mode="strict",
+    )
+    if diagnosis.ok:
+        return
+
+    messages = []
+    for issue in diagnosis.issues:
+        subject = issue.env_key or issue.service
+        messages.append(f"{subject}: {issue.reason}")
+    raise docmesh_config.ConfigError("\n".join(messages))
+
+
+def _close_on_failure(
+    clients: list[docmesh_py_core.ServiceClientWrapper[object]],
+    error: BaseException,
+) -> None:
+    failures: list[BaseException] = []
+    for client in reversed(clients):
+        try:
+            client.close()
+        except BaseException as close_error:  # pragma: no cover - defensive cleanup
+            failures.append(close_error)
+    if failures:
+        error.add_note(
+            "DMS client cleanup failed during assembly: "
+            + "; ".join(type(item).__name__ for item in failures)
+        )
+
+
+def create_dms_sdk(
+    *,
+    check_on_startup: bool = False,
+) -> dms.DefaultDocumentManagementSDK:
+    """Create the DMS SDK from host-owned configuration and clients.
+
+    ``dms`` deliberately does not read process environment variables. This host
+    adapter owns configuration selection, creates the SQLAlchemy and MinIO
+    clients through the canonical DocMesh packages, and passes their lifecycle
+    callbacks to the DMS client factory.
+    """
+
+    backend = _metadata_backend()
+    strict = _strict_configuration()
+    _reject_legacy_dsn()
+    if strict:
+        _diagnose_strict_configuration()
+
+    services = {Service.MINIO}
+    if backend == "postgresql":
+        services.add(Service.POSTGRES)
+    else:
+        services.add(Service.SQLITE)
+
+    configs = docmesh_config.load_service_configs(services=services)
+    minio_config = configs.require_minio()
+    minio_bucket = docmesh_config.require_minio_bucket(minio_config)
+    clients: list[docmesh_py_core.ServiceClientWrapper[object]] = []
+
+    try:
+        if backend == "postgresql":
+            metadata_client = docmesh_py_core.create_postgres_client(
+                configs.require_postgres()
+            )
+        else:
+            metadata_client = docmesh_py_core.create_sqlite_client(
+                configs.require_sqlite()
+            )
+        clients.append(metadata_client)
+
+        minio_client = docmesh_py_core.create_minio_client(minio_config)
+        clients.append(minio_client)
+
+        plan = dms.DmsAssemblyPlan(
+            metadata_backend=backend,
+            strict_configuration=strict,
+            check_on_startup=check_on_startup,
+        )
+        return dms.create_sdk_from_clients(
+            engine=metadata_client.client,
+            minio_client=minio_client.client,
+            bucket_name=minio_bucket,
+            close_callbacks=(metadata_client.close, minio_client.close),
+            plan=plan,
+        )
+    except BaseException as error:
+        _close_on_failure(clients, error)
+        raise

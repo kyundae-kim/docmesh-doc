@@ -4,6 +4,7 @@ import dms
 from fastapi import APIRouter, Depends, File, Form, Query, Request, Response, UploadFile
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import StreamingResponse
+from fastapi_core import ManagedStreamingResponse
 from fastapi_core.dependencies import get_current_user
 from pydantic import Json
 
@@ -23,33 +24,14 @@ DEFAULT_DOWNLOAD_CHUNK_SIZE = 64 * 1024
 MAX_DOWNLOAD_CHUNK_SIZE = 8 * 1024 * 1024
 
 
-class DocumentStreamingResponse(StreamingResponse):
-    def __init__(
-        self,
-        item: dms.DocumentContentStream,
-        *,
-        media_type: str,
-        headers: dict[str, str],
-    ) -> None:
-        super().__init__(
-            content=item.iter_chunks(), media_type=media_type, headers=headers
-        )
-        self.item = item
-
-    async def __call__(self, scope, receive, send) -> None:
-        try:
-            await super().__call__(scope, receive, send)
-        finally:
-            await run_in_threadpool(self.item.close)
-
-
 def _stream_document(
     item: dms.DocumentContentStream,
     *,
     disposition: Literal["inline", "attachment"],
 ) -> StreamingResponse:
-    return DocumentStreamingResponse(
-        item,
+    return ManagedStreamingResponse(
+        item.iter_chunks(),
+        resource=item,
         media_type=item.content_type,
         headers={
             "Content-Length": str(item.size),
@@ -78,7 +60,6 @@ def upload_document(
     file: Annotated[UploadFile, File()],
     document_id: Annotated[str | None, Form()] = None,
     metadata: Annotated[Json[dict[str, Any]], Form()] = "{}",
-    checksum: Annotated[str | None, Form()] = None,
 ) -> DocumentMetadataResponse:
     filename, content_type, size = validate_upload_file(file)
     result = sdk.upload_document_stream(
@@ -90,7 +71,6 @@ def upload_document(
             document_id=document_id or None,
             metadata=metadata,
             created_by=user.sub,
-            checksum=checksum or None,
         )
     )
     response.headers["Location"] = request.url_for(

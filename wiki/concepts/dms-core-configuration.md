@@ -1,52 +1,51 @@
 ---
 title: dms-core configuration model
 created: 2026-07-11
-updated: 2026-07-26
+updated: 2026-08-02
 type: concept
 tags: [dms-core, dms, configuration, storage, metadata, security, deployment]
-sources: [raw/articles/dms-core-api-v0.3.0.md, raw/articles/dms-core-wiki-api-reference-v0.4.0.md, raw/articles/dms-core-wiki-api-reference-v0.5.0.md, raw/articles/dms-core-wiki-configuration-v0.4.0.md, raw/articles/dms-core-wiki-configuration-v0.5.0.md, raw/articles/dms-core-wiki-configuration-v0.6.0.md, raw/articles/dms-core-wiki-examples-v0.4.0.md, raw/articles/dms-core-wiki-examples-v0.5.0.md, raw/articles/dms-core-config-v0.2.0.md, raw/articles/dms-core-config-v0.3.0.md, raw/articles/dms-core-env-example-v0.3.0.md, raw/articles/dms-core-env-example-v0.4.0.md, raw/articles/dms-core-env-example-v0.5.0.md, raw/articles/dms-core-examples-v0.2.0.md, raw/articles/dms-core-examples-v0.3.0.md, raw/articles/docmesh-py-core-config-v0.2.0.md]
+sources: [raw/articles/dms-core-api-v0.3.0.md, raw/articles/dms-core-wiki-api-reference-v0.7.0.md, raw/articles/dms-core-wiki-configuration-v0.7.0.md, raw/articles/dms-core-wiki-examples-v0.7.0.md, raw/articles/dms-core-config-v0.2.0.md, raw/articles/dms-core-config-v0.3.0.md, raw/articles/dms-core-env-example-v0.3.0.md, raw/articles/dms-core-examples-v0.2.0.md, raw/articles/dms-core-examples-v0.3.0.md, raw/articles/docmesh-config-wiki-api-reference-v0.1.0.md, raw/articles/docmesh-config-wiki-configuration-v0.1.0.md, raw/articles/docmesh-config-wiki-examples-v0.1.0.md, raw/articles/docmesh-config-env-example-v0.1.0.md, raw/articles/docmesh-py-core-wiki-api-reference-v0.6.0.md, raw/articles/docmesh-py-core-wiki-configuration-v0.6.0.md, raw/articles/docmesh-py-core-wiki-examples-v0.6.0.md, raw/articles/docmesh-py-core-env-example-v0.6.0.md]
 confidence: medium
 ---
 
 # dms-core configuration model
 
-`dms-core`는 환경 기반 SDK 조립과 명시적 의존성 주입을 지원한다. `DMS_METADATA_BACKEND=postgresql|sqlite`를 지정하면 선택한 metadata backend만 로드·검증하며, 미지정이면 PostgreSQL 우선 자동 선택을 유지한다. 자동 선택에서 양쪽 설정이 공존하면 경고 후 PostgreSQL을 선택하지만 `DMS_CONFIGURATION_STRICT=true`면 `ConfigurationError`로 거부한다. 이 선택 정책은 v0.3.0 tagged 문서와 v0.4.0 Wiki 설정 계약이 일치한다. ^[raw/articles/dms-core-config-v0.3.0.md] ^[raw/articles/dms-core-wiki-configuration-v0.4.0.md]
+v0.3.0 source set은 환경 기반 SDK 조립과 backend 선택을 설명했다. 이 선택 정책은 해당 버전의 historical contract로 보존한다. ^[raw/articles/dms-core-config-v0.3.0.md]
+
+## v0.7 host-owned configuration boundary
+
+v0.7.0 Configuration reference는 공개 DMS package에 환경변수를 읽는 factory나 환경 진단 API가 없다고 명시한다. 현재 공개 조립은 `create_sdk_from_clients(...)`, `create_sdk_from_components(...)`와 각각의 async facade이며, 호스트가 설정 파일·환경변수·secret manager를 읽어 Engine/MinIO client 또는 storage component를 만든 뒤 주입한다. 따라서 `POSTGRES_*`, `POSTGRES_DSN`, `SQLITE_PATH`, `MINIO_*`, `DMS_METADATA_BACKEND`, `DMS_CONFIGURATION_STRICT`는 DMS가 자동 해석하는 입력이 아니다. ^[raw/articles/dms-core-wiki-configuration-v0.7.0.md]
+
+`DmsServiceConfigs`는 MinIO와 PostgreSQL/SQLite 중 정확히 하나를 표현하는 immutable host-side value object다. DMS public factory가 이 객체를 자동 소비하지 않으므로, 호스트는 이를 사용해 client를 만들거나 component adapter를 조립해야 한다. `metadata_backend`, `strict_configuration`, startup check/timeout, metadata limits, access policy와 observer는 `DmsAssemblyPlan`으로 전달되는 정책 값이며 환경변수 selector로 해석하지 않는다. 현재 interpreter에서 `dms` v0.7.0의 public factory와 plan signature를 확인했으며, workspace host adapter는 이 계약을 따르는 client injection과 close callback을 사용한다. ^[raw/articles/dms-core-wiki-api-reference-v0.7.0.md] ^[raw/articles/dms-core-wiki-configuration-v0.7.0.md]
 
 ## Storage and startup-health contract
 
-문서 본문 저장소는 MinIO가 필수이며 SQLite는 metadata store 대안일 뿐이다. `DOCMESH_HEALTHCHECK_ENABLED`는 기본 활성화되어 있고, SDK 생성 시 선택된 metadata store와 MinIO 상태 점검이 실패하면 `HealthCheckFailedError`가 발생한다. 이 정책은 [[dms-core]] factory와 [[dms-core-document-lifecycle]]의 운영 lifecycle에 연결된다.
+아래의 PostgreSQL/SQLite 선택·환경 진단 세부사항은 v0.3.0 historical contract다. v0.7.0 candidate에서는 같은 정책을 호스트 설정 계층이 수행하고, DMS는 이미 생성된 저장소와 명시된 `DmsAssemblyPlan`을 검증·실행한다.
 
-명시 선택은 SQLite 개발 환경에 남아 있는 `POSTGRES_` 변수가 의도치 않게 PostgreSQL을 선택하는 문제를 피하는 방법이다. SDK 환경 조립에 필요한 MinIO 키는 `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_BUCKET`이고, v0.4.0 PostgreSQL 입력은 `POSTGRES_HOST`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`와 공통 설정이 해석하는 port 값이며 SQLite에는 `SQLITE_PATH`가 필요하다. v0.3.0 tagged 문서는 `POSTGRES_DSN`도 허용한다고 했지만 v0.4.0 Wiki는 이를 DMS 환경 조립 입력이 아니라고 명시한다. 설치된 `dms 0.4.0`의 `diagnose_environment()`도 DSN-only 구성을 거부하고 개별 필드를 요구했으며, `POSTGRES_PORT` 생략은 현재 runtime default로 유효했다. 따라서 현재 배포에서는 DSN 경로를 사용하지 않는다. ^[raw/articles/dms-core-config-v0.3.0.md] ^[raw/articles/dms-core-wiki-configuration-v0.4.0.md]
+문서 본문 저장소는 MinIO가 필수이며 SQLite는 metadata store 대안일 뿐이다. v0.7 DMS는 startup health를 환경변수에서 결정하지 않으므로 host가 `DmsAssemblyPlan(check_on_startup=...)` 또는 FastAPI managed-resource policy 중 하나의 경계를 명시해야 한다. 이 workspace는 assembly plan의 network health check를 기본 비활성화하고, `ManagedResource.healthcheck`를 required readiness 경계로 등록한다. ^[raw/articles/dms-core-wiki-api-reference-v0.7.0.md]
 
 ## Shared configuration boundary
 
-`KEYCLOAK_*`, `NATS_SERVERS`, `MILVUS_URI` 등은 DMS SDK 기능의 직접 설정이 아니라 `docmesh-py-core` loader가 해당 서비스를 선택했을 때 검증할 수 있는 외부 통합 설정이다. `load_service_configs(services=...)`는 선택 서비스만 검증하지만, `load_available_service_configs(...)`는 관련 prefix가 보이는 부분 설정을 오류로 다룬다. DMS SDK 설정과 FastAPI 앱 설정을 섞지 않고, 앱 레이어는 [[fastapi-core-configuration]], SDK 저장소/health 설정은 이 페이지에서 각각 관리해야 한다. ^[raw/articles/docmesh-py-core-config-v0.2.0.md]
+`KEYCLOAK_*`, `NATS_SERVERS`, `MILVUS_URI` 등은 DMS SDK 기능의 직접 설정이 아니라 `docmesh-py-core` loader가 해당 서비스를 선택했을 때 검증할 수 있는 외부 통합 설정이다. `load_service_configs(services=...)`는 선택 서비스만 검증하지만, `load_available_service_configs(...)`는 관련 prefix가 보이는 부분 설정을 오류로 다룬다. DMS SDK 설정과 FastAPI 앱 설정을 섞지 않고, 앱 레이어는 [[fastapi-core-configuration]], SDK 저장소/health 설정은 이 페이지에서 각각 관리해야 한다. ^[raw/articles/docmesh-py-core-wiki-configuration-v0.6.0.md]
 
-v0.4.0의 환경 진단은 연결하지 않지만 설치된 DocMesh 공통 설정 검증 결과를 반영할 수 있으므로, 고정된 공통 필수 변수 목록을 추측하지 않고 `missing_required_keys`와 `warnings`를 배포별 기준으로 사용한다. 현재 설치 runtime은 `DOCMESH_ENV`가 없는 최소 PostgreSQL/SQLite 진단을 허용했지만, 이는 다른 공통 설정 버전이나 production security mode의 요구사항까지 보장하지 않는다. 이 경계는 [[fastapi-core-configuration]]의 application/service 설정과 분리한다. ^[raw/articles/dms-core-wiki-configuration-v0.4.0.md]
+`docmesh-config` v0.1.0도 같은 외부 서비스 이름과 environment prefix를 다루지만, 그 source set은 DMS metadata backend 선택·object-store factory·`dms` SDK 조립을 정의하지 않는다. generic `PostgresConfig`/`MinioConfig`와 `RuntimePlan`을 발견했다고 해서 DMS의 `POSTGRES_DSN` exclusion, PostgreSQL/SQLite 선택, MinIO 필수 정책이 자동으로 위임되었다고 추론하지 않는다. 이 package boundary는 [[docmesh-config-configuration]]과 [[docmesh-config-runtime-plan]]에서 별도로 기록한다. ^[raw/articles/docmesh-config-wiki-api-reference-v0.1.0.md] ^[raw/articles/docmesh-config-wiki-configuration-v0.1.0.md]
 
-v0.3.0 API의 `diagnose_environment(env)`는 연결·client 생성·SDK 조립 없이 선택 결과, MinIO/healthcheck 상태, 누락 키, 경고와 유효성을 사전 점검하고 secret 또는 설정값 자체를 결과에 포함하지 않는다. 이 진단은 [[dms-core]]의 environment factory 실패를 대체하지 않으며, 배포 검증 단계에서 설정을 노출하지 않는 보조 신호로 취급한다. ^[raw/articles/dms-core-api-v0.3.0.md]
+v0.3.0 API의 `diagnose_environment(env)`는 historical environment-factory contract다. v0.7 DMS에는 이 public API가 없으므로, 현재 host는 `docmesh_config.diagnose_services(...)`를 strict mode에서 사용해 대안 backend ambiguity를 network-free로 검증하고, 선택 service는 `load_service_configs(...)`로 로드한다. ^[raw/articles/dms-core-api-v0.3.0.md] ^[raw/articles/dms-core-wiki-configuration-v0.7.0.md]
 
-v0.4.0 factory는 선택적 `recovery_audit_hook`을 환경/component 조립 모두에 추가하며, component 조립의 `max_file_size`는 known-size와 unknown-size stream upload에 공통 상한으로 적용된다. factory의 `metadata_max_serialized_bytes`와 `metadata_max_depth`는 기본 `DefaultMetadataPolicy`에만 적용되고 custom `metadata_validator`를 주입하면 자동 적용되지 않는다. `StructuredMetadataValidator`는 기본 `policy`를 내장해 parser/projector 결과를 다시 검증하지만, 다른 custom validator가 같은 보호를 유지하려면 자체 policy로 크기·깊이·민감 키 검사를 명시해야 한다. audit hook은 best-effort이므로 규제·보존 요구사항이 있는 배포에서는 별도의 durable sink와 실패 관측을 application layer에서 구성한다. ^[raw/articles/dms-core-wiki-api-reference-v0.4.0.md] ^[raw/articles/dms-core-wiki-configuration-v0.4.0.md] ^[raw/articles/dms-core-wiki-examples-v0.4.0.md]
 
-v0.5.0 API reference는 prevalidated `ServiceConfigs`를 받는 `create_sdk_from_service_configs`와 secret-free `format_environment_diagnosis`를 설정 entrypoint로 추가한다. 설치된 v0.4.0에는 두 symbol이 없으므로 현재 deployment는 environment/component factory와 existing diagnosis model을 사용한다. v0.5.0 source만으로 FastAPI service settings와 DMS SDK가 이미 직접 조립된다고 단정하지 않고, version-aligned upgrade에서 assembly path를 검증한다. ^[raw/articles/dms-core-wiki-api-reference-v0.5.0.md]
+v0.7.0은 factory 공통 option과 plan 정책을 분리한다. `max_file_size`는 bytes/file/known-size sync stream에 공통 적용되고, `operation_store`는 component factory의 영속 idempotency에 필요하다. `check_on_startup`과 timeout은 등록한 service check를 조립 직후 실행하며 실패 시 SDK-owned resource만 역순 rollback한다. caller-owned engine/client는 explicit `ManagedResource(SDK)` 또는 callback으로 등록하지 않으면 닫지 않는다. ^[raw/articles/dms-core-wiki-configuration-v0.7.0.md] ^[raw/articles/dms-core-wiki-api-reference-v0.7.0.md]
 
-v0.5.0 Wiki Configuration reference는 DSN을 unsupported key로 명시하고 individual `POSTGRES_*` 필드, MinIO bucket/credential, SQLite alternative, backend auto-selection/strict policy를 다시 규정한다. 설치된 v0.4.0 probe도 DSN-only configuration을 invalid로, individual PostgreSQL fields를 valid로 확인했다. source는 또한 prevalidated `ServiceConfigs` 기반 factory와 safe formatter를 문서화하지만 v0.4.0 runtime에는 없다. 따라서 현재 배포는 environment/component factory와 diagnosis object를 사용하며, v0.5.0 settings-bundle path는 upgrade 후 검증할 candidate다. ^[raw/articles/dms-core-wiki-configuration-v0.5.0.md]
+v0.7.0 logging은 주입 logger의 `dms_` structured fields를 사용하되 본문·token·password를 기록하지 않는다. 외부 HTTP 계층은 내부 exception text 대신 `error_descriptor()` 또는 `recommended_http_error()`의 secret-safe 표현을 사용한다. DMS 자체는 auth helper, search, presigned URL, message broker 설정을 제공하지 않는다. ^[raw/articles/dms-core-wiki-configuration-v0.7.0.md] ^[raw/articles/dms-core-wiki-api-reference-v0.7.0.md]
 
-v0.6.0 Configuration reference는 selection·strict·DSN rejection을 유지하면서 PostgreSQL/SQLite/MinIO의 typed defaults, service-config startup option, factory별 자원 소유권, production MinIO TLS guardrail을 명시한다. 설치된 `dms 0.5.0`은 individual PostgreSQL mapping을 valid로, DSN-only mapping을 invalid/unsupported으로 진단하고 `create_sdk_from_service_configs(..., check_on_startup=False)` 및 formatter를 제공한다. 이 probe는 selection/factory 경계만 확인한 것이므로 production TLS·secret-safe HTTP response behavior는 v0.6.0 runtime upgrade 뒤 별도 integration test로 확인한다. ^[raw/articles/dms-core-wiki-configuration-v0.6.0.md]
+예제의 SQLite 사전 진단은 `DMS_METADATA_BACKEND=sqlite`, `SQLITE_PATH`와 네 개의 MinIO 필수 키를 같은 환경에 넣은 뒤 configuration diagnosis와 selected-service loader를 통해 SDK를 생성한다. 현재 consumer는 이 host boundary를 `docmesh-config`/`docmesh-py-core` adapter로 구현하며, credential을 로그에 기록하지 않는다. ^[raw/articles/dms-core-examples-v0.3.0.md] ^[raw/articles/docmesh-config-wiki-api-reference-v0.1.0.md]
 
-v0.5.0 Examples는 `diagnose_environment(dict(os.environ))` 뒤 argument-free `create_sdk_from_environment()`와 formatter를 사용한다. 현재 installed v0.4.0 factory는 mapping argument를 요구하고 formatter가 없으므로, process environment를 직접 읽는 v0.5.0 invocation을 현 dependency에 복사하지 않는다. secret-safe diagnostic logging 원칙은 유지하되, 현재는 diagnosis object의 fields만 사용한다. ^[raw/articles/dms-core-wiki-examples-v0.5.0.md]
+## v0.6 docmesh-py-core boundary
 
-v0.5.0 `.env.example`은 DMS가 standalone API server가 아닌 SDK이며 PostgreSQL/SQLite metadata store 하나와 MinIO object store 하나가 항상 필요함을 다시 명시한다. Template은 development `DOCMESH_ENV`, placeholder endpoint에 따른 disabled health check, explicit PostgreSQL selection, individual PostgreSQL fields, MinIO TLS 및 shared integration-test variables를 제시한다. 또한 v0.5 assembly가 DMS/DocMesh variables를 임시 overlay한 뒤 복원하므로 조립 중 concurrent mutation을 금지한다고 설명한다. 설치된 v0.4.0은 mapping argument를 받는 factory이므로 이 overlay semantics는 current runtime 사실이 아니라 upgrade candidate다. ^[raw/articles/dms-core-env-example-v0.5.0.md]
-
-예제의 SQLite 사전 진단은 `DMS_METADATA_BACKEND=sqlite`, `SQLITE_PATH`와 네 개의 MinIO 필수 키를 같은 `env` mapping에 넣은 뒤 `report.valid`를 확인하고 SDK를 생성한다. 이 흐름은 credential을 로그에 기록하지 않은 채 CI/배포 준비 단계에서 configuration 오류를 분리하는 방법이다. ^[raw/articles/dms-core-examples-v0.3.0.md]
+`docmesh-py-core` v0.6.0은 generic service client/lifecycle assembly와 `docmesh_config.RuntimePlan` 소비를 문서화하지만 DMS metadata backend, object-store factory, `POSTGRES_DSN` exclusion 또는 DMS document lifecycle을 정의하지 않는다. 따라서 이 package bridge는 DMS storage configuration을 대체하지 않지만, 현재 consumer가 명시적으로 선택한 backend의 client를 만드는 구현 primitive로 사용한다. ^[raw/articles/docmesh-py-core-wiki-api-reference-v0.6.0.md] ^[raw/articles/docmesh-py-core-wiki-configuration-v0.6.0.md]
 
 ## Deployment guidance
 
-로컬 개발은 SQLite + MinIO 구성에서 health check를 필요에 따라 끌 수 있지만, 통합/운영 환경에서는 PostgreSQL + MinIO 및 health check 활성화를 기준으로 검증한다. v0.3.0 `.env.example`은 placeholder endpoint 때문에 `DOCMESH_HEALTHCHECK_ENABLED=false`를 기본으로 하고 `DMS_METADATA_BACKEND=postgresql`을 명시한다. 실제 서비스 주소·credential을 주입한 뒤에만 health check를 활성화하며, SQLite를 의도하면 `POSTGRES_*`를 제거/주석 처리하거나 backend를 `sqlite`로 선택한다. 실제 endpoint·credential·DSN은 외부 secret 주입으로 관리한다. 운영 환경에서는 `MINIO_SECURE=true`와 유효한 TLS 구성을 권장하고, MinIO bucket과 PostgreSQL 계정에는 최소 권한을 준다. ^[raw/articles/dms-core-env-example-v0.3.0.md]
-
-v0.4.0 `.env.example`은 같은 PostgreSQL-default/MinIO-required/placeholder-healthcheck 정책을 유지하면서 `POSTGRES_DSN`을 `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`로 교체한다. 설치된 `dms 0.4.0`의 `diagnose_environment()`에 template mapping 전체를 전달했을 때 PostgreSQL/MinIO가 선택되고 health check는 비활성화되며 누락·경고 없이 유효했다. Template의 placeholder와 `replace-me` 값은 실행 가능한 secret이 아니므로 실제 배포에서는 외부 secret으로 교체한 뒤 health check를 활성화한다. ^[raw/articles/dms-core-env-example-v0.4.0.md]
-
-통합 테스트는 별도 credential set을 요구하지 않고, 준비·도달 가능한 기존 `POSTGRES_*`/`MINIO_*` 값을 재사용한다. 이 템플릿은 [[dms-core]] SDK의 조립 범위만 나타내며 [[fastapi-core-configuration]]의 application hosting 설정을 대신하지 않는다. ^[raw/articles/dms-core-env-example-v0.3.0.md] ^[raw/articles/dms-core-env-example-v0.4.0.md]
+로컬 개발은 SQLite + MinIO 구성에서 host assembly의 startup health check를 비활성화할 수 있지만, 통합/운영 환경에서는 PostgreSQL + MinIO와 required managed-resource readiness를 기준으로 검증한다. 실제 서비스 주소·credential을 주입한 뒤에만 network health check를 활성화하고, SQLite를 의도하면 `POSTGRES_*`를 제거/주석 처리하거나 backend를 `sqlite`로 선택한다. 실제 endpoint·credential·DSN은 외부 secret 주입으로 관리한다. 운영 환경에서는 `MINIO_SECURE=true`와 유효한 TLS 구성을 권장하고, MinIO bucket과 PostgreSQL 계정에는 최소 권한을 준다. ^[raw/articles/dms-core-env-example-v0.3.0.md]
 
 환경 기반·명시적 component SDK 조립과 close 보장 패턴은 [[dms-core-usage-patterns]]에서 확인한다. 이 패턴은 [[dms-core-document-lifecycle]]의 upload/download/delete 작업 전후에 적용된다.
 
@@ -55,16 +54,17 @@ v0.4.0 `.env.example`은 같은 PostgreSQL-default/MinIO-required/placeholder-he
 - `raw/articles/dms-core-config-v0.2.0.md`
 - `raw/articles/dms-core-config-v0.3.0.md`
 - `raw/articles/dms-core-env-example-v0.3.0.md`
-- `raw/articles/dms-core-env-example-v0.4.0.md`
-- `raw/articles/dms-core-env-example-v0.5.0.md`
 - `raw/articles/dms-core-api-v0.3.0.md`
-- `raw/articles/dms-core-wiki-api-reference-v0.4.0.md`
-- `raw/articles/dms-core-wiki-api-reference-v0.5.0.md`
-- `raw/articles/dms-core-wiki-configuration-v0.4.0.md`
-- `raw/articles/dms-core-wiki-configuration-v0.5.0.md`
-- `raw/articles/dms-core-wiki-configuration-v0.6.0.md`
-- `raw/articles/dms-core-wiki-examples-v0.4.0.md`
-- `raw/articles/dms-core-wiki-examples-v0.5.0.md`
+- `raw/articles/dms-core-wiki-api-reference-v0.7.0.md`
+- `raw/articles/dms-core-wiki-configuration-v0.7.0.md`
+- `raw/articles/dms-core-wiki-examples-v0.7.0.md`
 - `raw/articles/dms-core-examples-v0.2.0.md`
 - `raw/articles/dms-core-examples-v0.3.0.md`
-- `raw/articles/docmesh-py-core-config-v0.2.0.md`
+- `raw/articles/docmesh-config-wiki-api-reference-v0.1.0.md`
+- `raw/articles/docmesh-config-wiki-configuration-v0.1.0.md`
+- `raw/articles/docmesh-config-wiki-examples-v0.1.0.md`
+- `raw/articles/docmesh-config-env-example-v0.1.0.md`
+- `raw/articles/docmesh-py-core-wiki-api-reference-v0.6.0.md`
+- `raw/articles/docmesh-py-core-wiki-configuration-v0.6.0.md`
+- `raw/articles/docmesh-py-core-wiki-examples-v0.6.0.md`
+- `raw/articles/docmesh-py-core-env-example-v0.6.0.md`

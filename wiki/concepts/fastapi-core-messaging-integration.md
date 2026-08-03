@@ -1,10 +1,10 @@
 ---
 title: fastapi-core messaging integration
 created: 2026-07-11
-updated: 2026-07-26
+updated: 2026-08-02
 type: concept
 tags: [fastapi, fastapi-core, messaging, integration, deployment, observability]
-sources: [raw/articles/fastapi-core-api-v0.1.6.md, raw/articles/fastapi-core-api-v0.3.0.md, raw/articles/fastapi-core-wiki-api-reference.md, raw/articles/fastapi-core-wiki-api-reference-v0.5.0.md, raw/articles/fastapi-core-wiki-api-reference-v0.6.0.md, raw/articles/fastapi-core-config-v0.1.6.md, raw/articles/fastapi-core-messaging-v0.1.6.md, raw/articles/fastapi-core-messaging-v0.2.0.md, raw/articles/dms-core-messaging-v0.2.0.md]
+sources: [raw/articles/fastapi-core-api-v0.1.6.md, raw/articles/fastapi-core-api-v0.3.0.md, raw/articles/fastapi-core-wiki-api-reference.md, raw/articles/fastapi-core-wiki-api-reference-v0.5.0.md, raw/articles/fastapi-core-wiki-api-reference-v0.6.0.md, raw/articles/fastapi-core-wiki-api-reference-v0.7.0.md, raw/articles/fastapi-core-wiki-configuration-v0.7.0.md, raw/articles/fastapi-core-wiki-examples-v0.7.0.md, raw/articles/fastapi-core-env-example-v0.7.0.md, raw/articles/fastapi-core-config-v0.1.6.md, raw/articles/fastapi-core-messaging-v0.1.6.md, raw/articles/fastapi-core-messaging-v0.2.0.md, raw/articles/dms-core-messaging-v0.2.0.md]
 confidence: medium
 ---
 
@@ -15,6 +15,8 @@ confidence: medium
 v0.5.0 API reference도 `get_nats_connection_builder`를 typed service dependency로, `get_service_client`를 일반 lookup으로 열거하지만 messaging route·publisher·subscriber API는 열거하지 않는다. 따라서 이 source는 NATS가 hosting/runtime 확장 경계라는 기존 결론을 보강할 뿐 `dms-core`와 직접 통합된다는 근거는 아니다. ^[raw/articles/fastapi-core-wiki-api-reference-v0.5.0.md]
 
 v0.6.0 API reference도 `get_nats_connection_builder`를 8개 typed service dependency 중 하나로 열거하고, module 조립을 추가하면서도 messaging router·publisher·subscriber API는 추가하지 않는다. 따라서 module API는 host application의 조립 단위일 뿐 `dms-core`와 직접 메시징 통합을 뜻하지 않는다. ^[raw/articles/fastapi-core-wiki-api-reference-v0.6.0.md]
+
+v0.7.0 API/config/examples는 같은 경계를 유지한다. `get_nats_connection_builder`는 typed service dependency이고 `NatsConfig`는 `NATS_SERVERS`와 user/password, token, creds-file 중 하나의 인증 mode를 다루지만, publisher/subscriber helper·messaging router·connection-state dependency는 공개하지 않는다. 실제 persistent connection과 drain ownership은 consumer의 `ManagedResource`/lifespan 확장으로 남는다. ^[raw/articles/fastapi-core-wiki-api-reference-v0.7.0.md] ^[raw/articles/fastapi-core-wiki-configuration-v0.7.0.md] ^[raw/articles/fastapi-core-wiki-examples-v0.7.0.md]
 
 ## Service selection and health policy
 
@@ -43,6 +45,10 @@ NATS credential 및 연결 세부 설정은 `ServiceConfigs` 영역에서 해석
 - `raw/articles/fastapi-core-wiki-api-reference.md`
 - `raw/articles/fastapi-core-wiki-api-reference-v0.5.0.md`
 - `raw/articles/fastapi-core-wiki-api-reference-v0.6.0.md`
+- `raw/articles/fastapi-core-wiki-api-reference-v0.7.0.md`
+- `raw/articles/fastapi-core-wiki-configuration-v0.7.0.md`
+- `raw/articles/fastapi-core-wiki-examples-v0.7.0.md`
+- `raw/articles/fastapi-core-env-example-v0.7.0.md`
 - `raw/articles/fastapi-core-config-v0.1.6.md`
 - `raw/articles/fastapi-core-messaging-v0.1.6.md`
 - `raw/articles/fastapi-core-messaging-v0.2.0.md`

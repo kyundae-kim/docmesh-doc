@@ -29,7 +29,7 @@ DocMesh Document Service
               └─ MinIO: document content
 ```
 
-애플리케이션은 `docmesh_doc.application.create_application()`에서 조립됩니다. 문서 router, DMS managed resource와 오류 mapper는 `fastapi-core` v0.6.0의 `DomainModule`로 함께 등록됩니다. DMS SDK는 전체 lifespan 동안 재사용되며 애플리케이션 종료 시 함께 닫힙니다. 기본 ASGI entrypoint는 `docmesh_doc.main:app`입니다.
+애플리케이션은 `docmesh_doc.application.create_application()`에서 조립됩니다. 문서 router, DMS managed resource와 오류 mapper는 `fastapi-core` v0.7.0의 `DomainModule`로 함께 등록됩니다. DMS SDK는 전체 lifespan 동안 재사용되며 애플리케이션 종료 시 함께 닫힙니다. 기본 ASGI entrypoint는 `docmesh_doc.main:app`입니다.
 
 ## 요구 사항
 
@@ -74,11 +74,11 @@ uv run --no-project python -m fastapi run \
   --port 8000
 ```
 
-현재 저장소에는 package version `0.3.0`에 대응하는 `v0.3.0` Git tag가 없으므로 위 명령은 현재 원격 branch를 명시합니다. 현재 프로젝트는 `fastapi-core`와 `dms-core`의 `v0.6.0` Git tag를 사용합니다. 재현 가능한 운영 배포에서는 이동 가능한 branch보다 검증한 commit SHA를 사용하는 것이 좋습니다.
+현재 저장소에는 package version `0.3.0`에 대응하는 `v0.3.0` Git tag가 없으므로 위 명령은 현재 원격 branch를 명시합니다. 현재 프로젝트는 `docmesh-config` v0.1.0, `docmesh-py-core` v0.6.0, `fastapi-core`와 `dms-core`의 v0.7.0 Git tag를 사용합니다. 재현 가능한 운영 배포에서는 이동 가능한 branch보다 검증한 commit SHA를 사용하는 것이 좋습니다.
 
 ## 설정
 
-서비스는 DMS SDK 설정을 process environment에서 직접 읽습니다. `.env` 파일을 만들기만 해서는 DMS 설정이 자동으로 적용되지 않으므로, 실행 전에 환경변수로 export하거나 배포 도구의 environment/secret 기능으로 주입해야 합니다.
+서비스는 `docmesh_doc.dms_factory.create_dms_sdk()`에서 host-owned 설정을 조립합니다. 이 adapter는 `docmesh-config`로 선택한 서비스 설정을 로드하고, `docmesh-py-core`로 PostgreSQL/SQLite와 MinIO client를 만든 뒤, `dms.create_sdk_from_clients(...)`에 client와 close callback을 주입합니다. `dms` 자체는 환경변수나 `.env`를 읽지 않습니다. `.env` 파일을 만들기만 해서는 설정이 적용되지 않으므로, 실행 전에 환경변수로 export하거나 배포 도구의 environment/secret 기능으로 주입해야 합니다.
 
 최소 저장소 설정은 다음과 같습니다.
 
@@ -99,7 +99,15 @@ MINIO_BUCKET=documents
 MINIO_SECURE=false
 ```
 
-인증을 포함한 기본 애플리케이션에는 Keycloak 설정도 필요합니다.
+로컬 개발에서 SQLite metadata store를 사용하려면 PostgreSQL block 대신 다음을 선택합니다.
+
+```env
+DMS_METADATA_BACKEND=sqlite
+DMS_CONFIGURATION_STRICT=true
+SQLITE_PATH=./data/docmesh.sqlite3
+```
+
+본문 저장소는 모든 backend에서 MinIO가 필요합니다. 인증을 포함한 기본 애플리케이션에는 Keycloak 설정도 필요합니다.
 
 ```env
 KEYCLOAK_URL=http://keycloak:8080
@@ -119,7 +127,7 @@ ROOT_PATH=/dms
 TOKEN_URL=/dms/token
 ```
 
-> PostgreSQL 개별 필드와 deprecated `POSTGRES_DSN`을 함께 전달하면 DMS 설정 검증이 실패합니다. 이 서비스의 권장 구성에서는 `POSTGRES_DSN`을 설정하지 않습니다.
+> PostgreSQL 개별 필드와 deprecated `POSTGRES_DSN`을 함께 전달하면 host adapter가 조립 전에 거부합니다. 이 서비스의 권장 구성에서는 `POSTGRES_DSN`을 설정하지 않습니다.
 
 전체 변수, 기본값, CORS, readiness 및 운영 보안 정책은 [설정 정의서](docs/config.md)를 참조하세요.
 
@@ -177,7 +185,7 @@ Compose 파일은 document service와 PostgreSQL만 생성합니다. MinIO·Keyc
 | Liveness | `GET` | `/health/liveness` |
 | Readiness | `GET` | `/health/readiness` |
 
-문서 목록은 dms-core v0.6.0의 cursor page 계약을 사용합니다. 첫 요청에서는 `cursor`를 생략하고, 후속 요청에서는 이전 응답의 `next_cursor`를 동일한 `limit`·`status`와 함께 전달합니다. 응답은 `items`, `next_cursor`, `has_more`를 포함하며 `items`에는 내부 `storage_key`가 노출되지 않습니다.
+문서 목록은 dms-core v0.7.0의 cursor page 계약을 사용합니다. 첫 요청에서는 `cursor`를 생략하고, 후속 요청에서는 이전 응답의 `next_cursor`를 동일한 `limit`·`status`와 함께 전달합니다. 응답은 `items`, `next_cursor`, `has_more`를 포함하며 `items`에는 내부 `storage_key`가 노출되지 않습니다. stream 업로드의 checksum은 DMS가 본문에서 파생하며, v0.7.0의 `UploadDocumentStreamRequest`에는 client-supplied checksum form field가 없습니다.
 
 ### 상태 확인
 
@@ -272,6 +280,7 @@ uv run pytest -m integration
 ```text
 docmesh_doc/
 ├── application.py       # FastAPI app 및 DMS managed resource 조립
+├── dms_factory.py       # host 설정·client 조립과 DMS client factory bridge
 ├── dependencies.py      # 인증 사용자와 DMS SDK dependency
 ├── document_http.py     # HTTP 입력 검증 및 download header 정책
 ├── errors.py            # 오류 mapping과 공통 response renderer
