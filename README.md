@@ -62,7 +62,7 @@ Source checkout 없이 GitHub branch, tag 또는 commit에서 직접 설치할 �
 ```bash
 uv venv
 uv pip install \
-  "docmesh-doc @ git+https://github.com/kyundae-kim/docmesh-doc.git@docmesh-py-core-v0.5.0"
+  "docmesh-doc @ git+https://github.com/kyundae-kim/docmesh-doc.git@v0.4.0"
 ```
 
 설치한 애플리케이션은 import entrypoint로 실행합니다.

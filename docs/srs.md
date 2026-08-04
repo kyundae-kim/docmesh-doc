@@ -3,8 +3,8 @@
 | 항목 | 내용 |
 | --- | --- |
 | 제품명 | DocMesh Document Service |
-| 대상 릴리스 | MVP |
-| 최종 코드 대조일 | 2026-08-02 |
+| 대상 릴리스 | v0.4.0 |
+| 최종 코드 대조일 | 2026-08-04 |
 | 상위 문서 | [제품 요구사항 정의서](prd.md) |
 
 ## 1. 목적
@@ -32,19 +32,20 @@
 | SRS-ARC-002 | DMS route, managed resource, DMS·validation error mapper는 이름이 `documents`인 `DomainModule`로 묶고 공통 health route와 충돌하지 않아야 한다. |
 | SRS-ARC-003 | `ResourceKey[DefaultDocumentManagementSDK]("dms")`를 선언하고 같은 key를 `ManagedResource.name`과 route의 `Depends(key.dependency)`에 사용해야 한다. resource가 준비되지 않은 요청은 503으로 응답해야 한다. |
 | SRS-ARC-004 | route, dependency, background callback은 `DefaultDocumentManagementSDK` 또는 저장소 client를 직접 생성해서는 안 된다. host adapter가 `docmesh-config` 설정 loader와 `docmesh-py-core` client factory를 사용해 저장소 client를 만들고, DMS v0.7의 `create_sdk_from_clients(...)`에 주입해야 한다. |
-| SRS-ARC-005 | host-owned SDK factory 실패는 애플리케이션 startup을 중단해야 한다. DMS `DmsAssemblyPlan`은 host가 명시한 조립 정책을 받고, required managed-resource health check는 FastAPI startup policy에 따라 실행하며 비활성화되어도 같은 check를 runtime readiness registry에는 등록해야 한다. |
+| SRS-ARC-005 | host-owned SDK factory 실패는 애플리케이션 startup을 중단해야 한다. DMS `DmsAssemblyPlan`은 host가 명시한 조립 정책을 받고 `check_on_startup=False`로 중복 network check를 비활성화해야 하며, required managed-resource health check는 FastAPI startup policy에 따라 실행하고 같은 check를 runtime readiness registry에도 등록해야 한다. |
 | SRS-ARC-006 | lifespan 종료 시 resource를 역순 close해야 한다. 명시적 `ManagedResource.close`, SDK `aclose()`, SDK `close()` 순서의 지원 계약을 따르고, 하나의 close가 실패해도 나머지 close를 시도한 뒤 종료 오류를 전파·기록해야 한다. |
-| SRS-ARC-007 | lifecycle 순서는 service runtime 조립, DMS resource 생성·선택적 startup check, custom lifespan 진입·종료, DMS resource 역순 close, service runtime close여야 한다. |
+| SRS-ARC-007 | lifecycle 순서는 service runtime 조립, DMS resource 생성(`check_on_startup=False`), custom lifespan 진입·종료, DMS resource 역순 close, service runtime close여야 한다. |
+| SRS-ARC-008 | host adapter는 metadata client와 MinIO client의 close callback을 idempotent wrapper로 DMS assembly에 전달해야 한다. DMS가 assembly rollback에서 callback을 호출한 뒤 host rollback이 다시 호출해도 성공한 client close는 client별 한 번만 실행되어야 한다. |
 
 ### 3.2 저장소와 설정
 
 | ID | 요구사항 |
 | --- | --- |
-| SRS-STO-001 | 기본 배포 template은 `DMS_METADATA_BACKEND=postgresql`과 `POSTGRES_HOST`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, 선택 `POSTGRES_PORT`로 metadata store를 구성해야 한다. `POSTGRES_DSN`은 dms-core v0.7.0 host assembly에서 지원하지 않으며 발견 시 조립 전에 거부해야 한다. |
+| SRS-STO-001 | 기본 배포 template은 `DMS_METADATA_BACKEND=postgresql`과 `POSTGRES_HOST`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, 선택 `POSTGRES_PORT`로 metadata store를 구성해야 한다. `DMS_METADATA_BACKEND`는 `postgresql` 또는 `sqlite`만 허용하고 미지정 시 `postgresql`을 사용해야 한다. `POSTGRES_DSN`은 dms-core v0.7.0 host assembly에서 지원하지 않으며 발견 시 조립 전에 거부해야 한다. |
 | SRS-STO-002 | PostgreSQL backend 선택 시 필수 연결 필드가 없거나 연결을 구성할 수 없으면 SDK 조립 또는 health 단계가 실패해야 한다. |
 | SRS-STO-003 | 서비스는 `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_BUCKET`으로 object store를 구성해야 한다. |
 | SRS-STO-004 | 제품 host adapter는 `docmesh-config`로 선택·검증한 설정을 `docmesh-py-core` client factory에 전달하고, 생성된 Engine·MinIO client를 `dms.create_sdk_from_clients(...)`에 주입해야 한다. DMS public package는 환경변수에서 client를 만들지 않으며 `MINIO_BUCKET`이 없거나 client를 구성할 수 없으면 host resource factory를 실패시켜야 한다. fastapi-core 서비스 설정에서의 필드 optional 여부와 제품 저장소 요구사항을 혼동해서는 안 된다. |
-| SRS-STO-005 | DMS `ManagedResource.healthcheck`는 `sdk.check_health().ok`를 명시적으로 판정하고 required readiness check로 항상 등록해야 한다. DMS `check_on_startup`과 FastAPI managed-resource startup check는 서로 다른 실행 경계이므로 host가 중복 실행 여부와 startup policy를 명시하고, service-runtime의 failure mode·retry 설정이 DMS check에 자동 적용된다고 가정해서는 안 된다. |
+| SRS-STO-005 | DMS `ManagedResource.healthcheck`는 `sdk.check_health().ok`를 명시적으로 판정하고 required readiness check로 항상 등록해야 한다. DMS assembly의 `check_on_startup`은 `False`로 고정해 network check를 중복 실행하지 않으며, FastAPI managed-resource startup check가 startup/readiness 경계를 소유한다. service-runtime의 failure mode·retry 설정이 DMS check에 자동 적용된다고 가정해서는 안 된다. |
 | SRS-STO-006 | 원본 filename, `created_by`, 사용자 정의 metadata는 선택된 document metadata store에 보관하고 MinIO object metadata에는 저장하지 않아야 한다. |
 | SRS-STO-007 | 선택된 metadata store는 object를 찾기 위한 내부 `storage_key`를 보관할 수 있으나 일반 API response에 노출해서는 안 된다. |
 | SRS-STO-008 | 로컬 개발에서 `DMS_METADATA_BACKEND=sqlite`를 선택할 수 있어야 하며 `SQLITE_PATH`를 필수로, `SQLITE_READONLY`, `SQLITE_ENABLE_WAL`, `SQLITE_BUSY_TIMEOUT_MS`, `SQLITE_CHECK_SAME_THREAD`, `SQLITE_ECHO`를 선택 설정으로 받아야 한다. SQLite는 metadata store만 대체하므로 MinIO는 계속 필수다. 운영·통합 release gate는 PostgreSQL을 사용한다. |
@@ -54,9 +55,10 @@
 | SRS-CFG-003 | `ROOT_PATH`, `TOKEN_URL`, `CORS_ORIGINS`, `CORS_CREDENTIALS`, `DOCMESH_HEALTHCHECK_ENABLED`, `READINESS_PARALLEL`, `READINESS_TIMEOUT_SECONDS`, `READINESS_OVERALL_TIMEOUT_SECONDS`는 배포 환경별로 명시할 수 있어야 한다. `ROOT_PATH`는 ASGI root path이고 `TOKEN_URL`은 OpenAPI OAuth2 URL이며 실제 `/token` route를 변경하지 않는다. |
 | SRS-CFG-004 | DMS SDK의 metadata store·MinIO 조립과 health 정책은 `DOCMESH_SERVICES` 및 `READINESS_REQUIRED_SERVICES`로 대체하거나 중복 조립해서는 안 된다. DMS aggregate health는 managed-resource readiness에, FastAPI service client health는 service-runtime readiness에 연결해야 한다. |
 | SRS-CFG-005 | 공통 runtime 보안 판정은 `DOCMESH_ENV`, 선택 `DOCMESH_SECURITY_MODE`, `DOCMESH_PRODUCTION_ALIASES`를 사용해야 한다. 명시한 security mode는 환경 alias 판정보다 우선하며 production 저장소 TLS guardrail을 활성화해야 한다. |
-| SRS-CFG-006 | FastAPI service runtime은 `DOCMESH_SERVICES`, `READINESS_REQUIRED_SERVICES`, `DOCMESH_SERVICE_ALTERNATIVES`, `DOCMESH_STARTUP_FAILURE_MODE`, `DOCMESH_STARTUP_HEALTHCHECK_ATTEMPTS`, `DOCMESH_STARTUP_HEALTHCHECK_RETRY_DELAY_SECONDS`를 지원해야 한다. required service는 enabled service에 포함되어야 하며 대안 group 형식은 fastapi-core v0.6.0 parser 계약을 따라야 한다. 이 failure/retry 정책은 DMS managed-resource startup check에 자동 적용되지 않는다. |
+| SRS-CFG-006 | FastAPI service runtime은 `DOCMESH_SERVICES`, `READINESS_REQUIRED_SERVICES`, `DOCMESH_SERVICE_ALTERNATIVES`, `DOCMESH_STARTUP_FAILURE_MODE`, `DOCMESH_STARTUP_HEALTHCHECK_ATTEMPTS`, `DOCMESH_STARTUP_HEALTHCHECK_RETRY_DELAY_SECONDS`를 지원해야 한다. required service는 enabled service에 포함되어야 하며 대안 group 형식은 fastapi-core v0.7.0 parser 계약을 따라야 한다. 이 failure/retry 정책은 DMS managed-resource startup check에 자동 적용되지 않는다. |
 | SRS-CFG-007 | Keycloak의 `KEYCLOAK_AUDIENCE`, `KEYCLOAK_REQUEST_TIMEOUT_SECONDS`, `KEYCLOAK_MAX_RETRIES`, `KEYCLOAK_JWKS_CACHE_TTL_SECONDS`를 배포별로 조정할 수 있어야 하며 client secret은 외부 secret으로 주입해야 한다. |
 | SRS-CFG-008 | `.env.example`은 자동으로 로드되는 설정 파일이 아니라 배포 template이어야 한다. 실행 환경은 해당 값을 process environment 또는 secret mechanism으로 명시적으로 주입해야 한다. |
+| SRS-CFG-009 | host adapter는 `DMS_CONFIGURATION_STRICT`를 선택적으로 받아야 하며 기본값은 `false`여야 한다. 값은 `true` 또는 `false`만 허용하고, `true`일 때 `docmesh_config.diagnose_services(..., selection_mode="strict")`로 PostgreSQL·SQLite backend의 동시 선택과 필수 MinIO bucket 누락을 client 생성 전에 진단해야 한다. 진단 실패와 잘못된 boolean 값은 `ConfigError`로 startup에 전파해야 한다. |
 
 ### 3.3 인증과 권한
 
@@ -125,7 +127,7 @@ HTTP 공개 metadata에는 최소 `document_id`, `original_filename`, `content_t
 | ID | 요구사항 |
 | --- | --- |
 | SRS-ERR-001 | validation, payload too large, document not found 또는 deleted, duplicate, configuration, storage, consistency 오류는 `DomainModule.error_mappers`의 `ErrorMapperSpec`으로 안정된 HTTP status와 기계 판독 가능한 code에 매핑하고, `create_app(error_renderer=...)`에 전달한 제품 renderer로 아래 envelope를 생성해야 한다. 크기 초과는 413, 진행 중인 멱등 요청은 425를 사용하며 fastapi-core 기본 Problem Detail renderer에 의존해서는 안 된다. |
-| SRS-ERR-002 | 정의되지 않은 예외는 제품 handler/renderer에서 내부 구현 정보를 노출하지 않고 `INTERNAL_ERROR`로 반환해야 한다. |
+| SRS-ERR-002 | `map_dms_error`는 예외 type의 MRO에서 가장 구체적인 매핑을 선택해야 하며, 등록되지 않은 `dms.DmsError` 하위 예외는 base `dms.DmsError` 매핑을 통해 내부 구현 정보를 노출하지 않고 `INTERNAL_ERROR`로 반환해야 한다. DMS 계층 밖의 정의되지 않은 예외도 같은 안전한 제품 오류로 반환해야 한다. |
 | SRS-ERR-003 | object 저장 후 metadata 저장이 실패하면 SDK cleanup을 방해해서는 안 되며 cleanup 실패의 `ConsistencyError`는 별도 오류 code와 error-level log로 기록해야 한다. |
 | SRS-ERR-004 | response body와 로그에는 문서 본문, access token, secret, password, 전체 DSN, `storage_key`, 내부 stack trace를 포함해서는 안 된다. |
 | SRS-OPS-001 | 서비스는 `GET /health/liveness`에서 정상 프로세스에 200과 `status=ok`를 반환해야 한다. |
@@ -140,12 +142,12 @@ HTTP 공개 metadata에는 최소 `document_id`, `original_filename`, `content_t
 | ID | 요구사항 |
 | --- | --- |
 | SRS-NFR-001 | 기본 다운로드 경로는 전체 object를 애플리케이션 메모리에 적재하지 않는 streaming을 지원해야 한다. |
-| SRS-NFR-002 | 서비스는 정상 종료, resource factory 실패 rollback, 역순 shutdown, streaming 완료·예외·연결 종료에서 resource close를 보장해야 한다. resource close 실패가 있어도 service runtime close를 시도해야 한다. |
+| SRS-NFR-002 | 서비스는 정상 종료, resource factory 실패 rollback, 역순 shutdown, streaming 완료·예외·연결 종료에서 resource close를 보장해야 한다. resource close 실패가 있어도 service runtime close를 시도해야 하며, DMS rollback과 host rollback의 중복 close 호출은 client별 한 번으로 수렴해야 한다. |
 | SRS-NFR-003 | API contract test는 성공 응답, custom 오류 envelope, 인증·권한, auth router opt-in/out, content type, `Content-Disposition`, 유효·무효 correlation ID, required/optional readiness 상태를 검증해야 한다. |
 | SRS-NFR-004 | integration test는 실제 PostgreSQL 및 MinIO를 사용해 upload, metadata 조회, download, soft/hard delete, health, startup failure를 검증해야 한다. |
 | SRS-NFR-005 | 실패 주입 test는 metadata 저장 실패 뒤 object cleanup, cleanup 실패에 따른 consistency 오류, object 누락 consistency 오류를 검증해야 한다. |
 | SRS-NFR-006 | route, dependency, exception mapper, metadata·object store, lifespan은 테스트에서 독립적으로 교체 또는 검증할 수 있어야 한다. |
-| SRS-NFR-007 | 서비스는 Python 3.11 이상과 저장소에 고정된 `dms`, `fastapi-core`, `docmesh-py-core` 조합에서 테스트를 통과해야 한다. |
+| SRS-NFR-007 | 서비스는 Python 3.11 이상과 저장소에 고정된 `dms`, `docmesh-config`, `fastapi-core`, `docmesh-py-core` 조합에서 테스트를 통과해야 한다. |
 | SRS-NFR-008 | OpenAPI 문서는 보호된 route의 인증 방식, 권한 요구사항, request/response schema, status code, 오류 code를 포함해야 한다. |
 
 ### 3.8 현재 자동화 검증 상태
@@ -154,7 +156,7 @@ HTTP 공개 metadata에는 최소 `document_id`, `original_filename`, `content_t
 
 | 관련 요구사항 | 현재 검증 상태 | 미검증 범위 |
 | --- | --- | --- |
-| SRS-NFR-002 | 부분 충족 | streaming 정상 완료와 client disconnect close는 검증하지만 chunk iterator 자체 예외 경로의 close는 별도 테스트가 없다. |
+| SRS-NFR-002 | 부분 충족 | DMS factory rollback에서 metadata·MinIO client의 중복 close 방지와 streaming 정상 완료·client disconnect close는 검증하지만 chunk iterator 자체 예외 경로의 close는 별도 테스트가 없다. |
 | SRS-NFR-004 | 부분 충족 | 실제 PostgreSQL·MinIO integration test는 upload, metadata/download, hard delete, health를 검증한다. 실제 저장소 soft delete와 startup failure는 검증하지 않으며 startup factory failure는 unit/API 수준에서만 검증한다. |
 | SRS-NFR-005 | 미충족 | metadata 저장 실패 뒤 object cleanup, cleanup 실패 consistency 오류, object 누락 consistency 오류의 application-level 실패 주입 테스트가 없다. |
 
