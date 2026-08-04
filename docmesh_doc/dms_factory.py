@@ -99,10 +99,7 @@ def _close_on_failure(
         )
 
 
-def create_dms_sdk(
-    *,
-    check_on_startup: bool = False,
-) -> dms.DefaultDocumentManagementSDK:
+def create_dms_sdk() -> dms.DefaultDocumentManagementSDK:
     """Create the DMS SDK from host-owned configuration and clients.
 
     ``dms`` deliberately does not read process environment variables. This host
@@ -145,7 +142,9 @@ def create_dms_sdk(
         plan = dms.DmsAssemblyPlan(
             metadata_backend=backend,
             strict_configuration=strict,
-            check_on_startup=check_on_startup,
+            # FastAPI's required ManagedResource owns the startup/readiness
+            # check; do not run a duplicate network check during assembly.
+            check_on_startup=False,
         )
         return dms.create_sdk_from_clients(
             engine=metadata_client.client,

@@ -136,7 +136,7 @@ def test_factory_does_not_close_clients_twice_after_dms_rolls_back(
     monkeypatch.setattr(dms, "create_sdk_from_clients", fail_after_dms_rollback)
 
     with pytest.raises(RuntimeError, match="DMS assembly failed"):
-        dms_factory.create_dms_sdk(check_on_startup=True)
+        dms_factory.create_dms_sdk()
 
     assert metadata_client.close_calls == 1
     assert minio_client.close_calls == 1
