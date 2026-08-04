@@ -9,12 +9,11 @@ def _error(status: int, code: str, detail: str) -> ErrorMapping:
 
 
 ERRORS = {
+    dms.DmsError: _error(500, "INTERNAL_ERROR", "An internal error occurred."),
     dms.PayloadTooLargeError: _error(
         413, "DOCUMENT_TOO_LARGE", "The document exceeds the configured size limit."
     ),
-    dms.ValidationError: _error(
-        400, "VALIDATION_ERROR", "The request is invalid."
-    ),
+    dms.ValidationError: _error(400, "VALIDATION_ERROR", "The request is invalid."),
     dms.DocumentNotFoundError: _error(
         404, "DOCUMENT_NOT_FOUND", "Document was not found."
     ),
@@ -83,13 +82,13 @@ def render_error(request: Request, mapping: ErrorMapping) -> JSONResponse:
 
 
 def map_dms_error(_request: Request, exc: Exception) -> ErrorMapping:
-    for error_type, mapping in ERRORS.items():
-        if isinstance(exc, error_type):
-            return mapping
-    return ErrorMapping(
-        status_code=500,
-        detail="An internal error occurred.",
-        code="INTERNAL_ERROR",
+    return next(
+        (
+            ERRORS[error_type]
+            for error_type in type(exc).__mro__
+            if error_type in ERRORS
+        ),
+        ERRORS[dms.DmsError],
     )
 
 

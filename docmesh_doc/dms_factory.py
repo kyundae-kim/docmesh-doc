@@ -31,21 +31,12 @@ def _metadata_backend() -> str:
 
 
 def _strict_configuration() -> bool:
-    value = _environment_value("DMS_CONFIGURATION_STRICT")
-    if value is None:
-        return False
-    if value.lower() not in {"true", "false"}:
+    value = (_environment_value("DMS_CONFIGURATION_STRICT") or "false").lower()
+    if value not in {"true", "false"}:
         raise docmesh_config.ConfigError(
             "DMS_CONFIGURATION_STRICT: expected true or false"
         )
-    return value.lower() == "true"
-
-
-def _reject_legacy_dsn() -> None:
-    if _environment_value("POSTGRES_DSN") is not None:
-        raise docmesh_config.ConfigError(
-            "POSTGRES_DSN is not supported; configure the individual POSTGRES_* fields"
-        )
+    return value == "true"
 
 
 def _diagnose_strict_configuration() -> None:
@@ -110,15 +101,17 @@ def create_dms_sdk() -> dms.DefaultDocumentManagementSDK:
 
     backend = _metadata_backend()
     strict = _strict_configuration()
-    _reject_legacy_dsn()
+    if _environment_value("POSTGRES_DSN") is not None:
+        raise docmesh_config.ConfigError(
+            "POSTGRES_DSN is not supported; configure the individual POSTGRES_* fields"
+        )
     if strict:
         _diagnose_strict_configuration()
 
-    services = {Service.MINIO}
-    if backend == "postgresql":
-        services.add(Service.POSTGRES)
-    else:
-        services.add(Service.SQLITE)
+    services = {
+        Service.MINIO,
+        Service.POSTGRES if backend == "postgresql" else Service.SQLITE,
+    }
 
     configs = docmesh_config.load_service_configs(services=services)
     minio_config = configs.require_minio()
@@ -126,14 +119,11 @@ def create_dms_sdk() -> dms.DefaultDocumentManagementSDK:
     close_callbacks: list[Callable[[], object]] = []
 
     try:
-        if backend == "postgresql":
-            metadata_client = docmesh_py_core.create_postgres_client(
-                configs.require_postgres()
-            )
-        else:
-            metadata_client = docmesh_py_core.create_sqlite_client(
-                configs.require_sqlite()
-            )
+        metadata_client = (
+            docmesh_py_core.create_postgres_client(configs.require_postgres())
+            if backend == "postgresql"
+            else docmesh_py_core.create_sqlite_client(configs.require_sqlite())
+        )
         close_callbacks.append(_close_once(metadata_client.close))
 
         minio_client = docmesh_py_core.create_minio_client(minio_config)
