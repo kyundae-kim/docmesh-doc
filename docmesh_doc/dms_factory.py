@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 import os
 
 import dms
@@ -67,14 +68,28 @@ def _diagnose_strict_configuration() -> None:
     raise docmesh_config.ConfigError("\n".join(messages))
 
 
+def _close_once(callback: Callable[[], object]) -> Callable[[], object]:
+    closed = False
+
+    def close() -> object:
+        nonlocal closed
+        if closed:
+            return None
+        result = callback()
+        closed = True
+        return result
+
+    return close
+
+
 def _close_on_failure(
-    clients: list[docmesh_py_core.ServiceClientWrapper[object]],
+    close_callbacks: list[Callable[[], object]],
     error: BaseException,
 ) -> None:
     failures: list[BaseException] = []
-    for client in reversed(clients):
+    for close_callback in reversed(close_callbacks):
         try:
-            client.close()
+            close_callback()
         except BaseException as close_error:  # pragma: no cover - defensive cleanup
             failures.append(close_error)
     if failures:
@@ -111,7 +126,7 @@ def create_dms_sdk(
     configs = docmesh_config.load_service_configs(services=services)
     minio_config = configs.require_minio()
     minio_bucket = docmesh_config.require_minio_bucket(minio_config)
-    clients: list[docmesh_py_core.ServiceClientWrapper[object]] = []
+    close_callbacks: list[Callable[[], object]] = []
 
     try:
         if backend == "postgresql":
@@ -122,10 +137,10 @@ def create_dms_sdk(
             metadata_client = docmesh_py_core.create_sqlite_client(
                 configs.require_sqlite()
             )
-        clients.append(metadata_client)
+        close_callbacks.append(_close_once(metadata_client.close))
 
         minio_client = docmesh_py_core.create_minio_client(minio_config)
-        clients.append(minio_client)
+        close_callbacks.append(_close_once(minio_client.close))
 
         plan = dms.DmsAssemblyPlan(
             metadata_backend=backend,
@@ -136,9 +151,9 @@ def create_dms_sdk(
             engine=metadata_client.client,
             minio_client=minio_client.client,
             bucket_name=minio_bucket,
-            close_callbacks=(metadata_client.close, minio_client.close),
+            close_callbacks=tuple(close_callbacks),
             plan=plan,
         )
     except BaseException as error:
-        _close_on_failure(clients, error)
+        _close_on_failure(close_callbacks, error)
         raise

@@ -100,3 +100,43 @@ def test_factory_rejects_unknown_backend(monkeypatch: pytest.MonkeyPatch) -> Non
 
     with pytest.raises(dms.ConfigurationError, match="DMS_METADATA_BACKEND"):
         dms_factory.create_dms_sdk()
+
+
+def test_factory_does_not_close_clients_twice_after_dms_rolls_back(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _set_sqlite_environment(monkeypatch)
+
+    class RecordingWrapper:
+        def __init__(self) -> None:
+            self.client = object()
+            self.close_calls = 0
+
+        def close(self) -> None:
+            self.close_calls += 1
+
+    metadata_client = RecordingWrapper()
+    minio_client = RecordingWrapper()
+    monkeypatch.setattr(
+        dms_factory.docmesh_py_core,
+        "create_sqlite_client",
+        lambda _config: metadata_client,
+    )
+    monkeypatch.setattr(
+        dms_factory.docmesh_py_core,
+        "create_minio_client",
+        lambda _config: minio_client,
+    )
+
+    def fail_after_dms_rollback(**kwargs):
+        for callback in kwargs["close_callbacks"]:
+            callback()
+        raise RuntimeError("DMS assembly failed")
+
+    monkeypatch.setattr(dms, "create_sdk_from_clients", fail_after_dms_rollback)
+
+    with pytest.raises(RuntimeError, match="DMS assembly failed"):
+        dms_factory.create_dms_sdk(check_on_startup=True)
+
+    assert metadata_client.close_calls == 1
+    assert minio_client.close_calls == 1
