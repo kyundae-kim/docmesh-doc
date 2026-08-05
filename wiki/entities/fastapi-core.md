@@ -1,7 +1,7 @@
 ---
 title: fastapi-core
 created: 2026-07-11
-updated: 2026-08-02
+updated: 2026-08-04
 type: entity
 tags: [fastapi-core, fastapi, api, integration, architecture]
 sources: [raw/articles/fastapi-core-api-v0.1.6.md, raw/articles/fastapi-core-api-main.md, raw/articles/fastapi-core-api-v0.3.0.md, raw/articles/fastapi-core-wiki-api-reference.md, raw/articles/fastapi-core-wiki-api-reference-v0.5.0.md, raw/articles/fastapi-core-wiki-api-reference-v0.6.0.md, raw/articles/fastapi-core-wiki-api-reference-v0.7.0.md, raw/articles/fastapi-core-config-v0.1.6.md, raw/articles/fastapi-core-config-v0.2.0.md, raw/articles/fastapi-core-config-v0.3.0.md, raw/articles/fastapi-core-wiki-configuration.md, raw/articles/fastapi-core-wiki-configuration-v0.5.0.md, raw/articles/fastapi-core-wiki-configuration-v0.6.0.md, raw/articles/fastapi-core-wiki-configuration-v0.7.0.md, raw/articles/fastapi-core-env-example-v0.4.0.md, raw/articles/fastapi-core-env-example-v0.5.0.md, raw/articles/fastapi-core-env-example-v0.6.0.md, raw/articles/fastapi-core-env-example-v0.7.0.md, raw/articles/fastapi-core-examples-v0.1.6.md, raw/articles/fastapi-core-examples-v0.2.0.md, raw/articles/fastapi-core-examples-v0.3.0.md, raw/articles/fastapi-core-wiki-examples.md, raw/articles/fastapi-core-wiki-examples-v0.5.0.md, raw/articles/fastapi-core-wiki-examples-v0.6.0.md, raw/articles/fastapi-core-wiki-examples-v0.7.0.md, raw/articles/docmesh-config-wiki-api-reference-v0.1.0.md, raw/articles/docmesh-config-wiki-configuration-v0.1.0.md, raw/articles/docmesh-config-wiki-examples-v0.1.0.md, raw/articles/docmesh-config-env-example-v0.1.0.md]
@@ -65,6 +65,10 @@ v0.5.0 Wiki Examples는 service-free app, explicit settings cache control, typed
 v0.6.0 reference는 `fastapi_core.testing`에 health/auth/module/OpenAPI contract assertion과 isolated environment helper를 열거한다. 현재 설치된 v0.7.0에서 호환 helper export를 확인했으며 adapter는 기존 health/auth assertion에 module/OpenAPI contract를 추가했다. ^[raw/articles/fastapi-core-wiki-api-reference-v0.6.0.md] ^[raw/articles/fastapi-core-wiki-api-reference-v0.7.0.md]
 
 v0.6.0 Examples는 module 조립, `routers=` 충돌 방지, framework-owned lifecycle 순서, `test_environment` 및 OpenAPI/module contract assertion을 실행 패턴으로 제시한다. 현재 v0.7.0 설치본에서 이 표면을 확인했고 DMS adapter는 module-first 조립과 resource lifecycle을 채택했다. ^[raw/articles/fastapi-core-wiki-examples-v0.6.0.md] ^[raw/articles/fastapi-core-wiki-examples-v0.7.0.md]
+
+## Consumer source minimization
+
+현재 DMS consumer는 `DomainModule`과 `ManagedStreamingResponse`는 사용하지만 `ResourceBinding`, module `TransportPolicy`, `ExceptionMappingTable`, `create_error_renderer`, `invoke_resource`, `ApplicationContractProfile`은 부분적으로만 사용한다. 이 공개 표면을 채택하면 resource dependency drift, validation/OpenAPI drift, 수동 error renderer/MRO 순회, sync SDK thread-pool glue와 반복 contract assertion을 줄일 수 있다. 제품별 DMS storage assembly·오류 code·권한·HTTP schema는 [[fastapi-core-consumer-source-minimization]]에서 분리된 bridge/product policy로 남긴다. ^[raw/articles/fastapi-core-wiki-api-reference-v0.7.0.md] ^[raw/articles/fastapi-core-wiki-examples-v0.7.0.md]
 
 ## Version note
 

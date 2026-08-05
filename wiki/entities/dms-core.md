@@ -1,7 +1,7 @@
 ---
 title: dms-core
 created: 2026-07-11
-updated: 2026-08-02
+updated: 2026-08-04
 type: entity
 tags: [dms-core, dms, document, metadata, storage, api]
 sources: [raw/articles/dms-core-api-v0.2.0.md, raw/articles/dms-core-api-v0.3.0.md, raw/articles/dms-core-wiki-api-reference-v0.7.0.md, raw/articles/dms-core-wiki-configuration-v0.7.0.md, raw/articles/dms-core-wiki-examples-v0.7.0.md, raw/articles/dms-core-config-v0.2.0.md, raw/articles/dms-core-config-v0.3.0.md, raw/articles/dms-core-env-example-v0.3.0.md, raw/articles/dms-core-examples-v0.2.0.md, raw/articles/dms-core-examples-v0.3.0.md, raw/articles/dms-core-messaging-v0.2.0.md, raw/articles/docmesh-config-wiki-api-reference-v0.1.0.md, raw/articles/docmesh-config-wiki-configuration-v0.1.0.md, raw/articles/docmesh-config-wiki-examples-v0.1.0.md, raw/articles/docmesh-config-env-example-v0.1.0.md, raw/articles/docmesh-py-core-wiki-api-reference-v0.6.0.md, raw/articles/docmesh-py-core-wiki-configuration-v0.6.0.md, raw/articles/docmesh-py-core-wiki-examples-v0.6.0.md, raw/articles/docmesh-py-core-env-example-v0.6.0.md]
@@ -54,6 +54,10 @@ v0.7.0 Examples는 public/internal metadata, cursor pagination, reset, recovery 
 이 위키의 DMS 배포 모델에서는 [[fastapi-core]]가 HTTP application layer, `dms-core`가 문서 도메인/로직 SDK 역할을 맡는다. FastAPI lifecycle, state, readiness의 통합 경계는 [[fastapi-core-app-assembly]]에서 설계해야 하며, 이 API source만으로 두 패키지의 직접 코드 통합 계약이 존재한다고 단정하지는 않는다.
 
 v0.7.0 Configuration은 호스트가 환경·secret을 읽고 SQLAlchemy Engine/MinIO client 또는 storage component를 먼저 만든 뒤 DMS factory에 주입하도록 명시한다. 이 workspace는 그 경계를 `docmesh_doc.dms_factory`와 `fastapi-core`의 required managed resource로 구현한다. FastAPI 통합은 DMS가 환경을 다시 읽는 경로가 아니라 [[fastapi-core-app-assembly]]의 resource/lifespan 경계에서 ownership·health·close를 연결한다. ^[raw/articles/dms-core-wiki-configuration-v0.7.0.md]
+
+## Consumer source minimization
+
+v0.7.0의 source minimization 개선점은 환경 factory나 FastAPI 결합을 DMS에 추가하는 것이 아니라, `DmsOperationContext`·public metadata·close-safe stream·transport-neutral error descriptor를 host bridge가 재사용하도록 하는 데 있다. config/client assembly와 HTTP 제품 정책은 별도 integration boundary로 유지해야 한다. 상세 우선순위와 acceptance tests는 [[dms-core-consumer-source-minimization]]에 정리한다.
 
 ## Source
 

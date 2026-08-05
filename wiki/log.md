@@ -460,3 +460,34 @@
 - Layer 2 health: no broken wikilinks, orphan pages, index omissions, invalid tags, hash drift, or pages over 200 lines.
 - `raw/articles/dms-core-wiki-api-reference-v0.7.0.md`, `raw/articles/dms-core-wiki-configuration-v0.7.0.md`, and `raw/articles/dms-core-wiki-examples-v0.7.0.md` use literal escaped `\\n` delimiters instead of newline frontmatter delimiters. Their stored body hashes match, so the immutable raw sources were not edited; re-capture is required if machine-readable raw frontmatter is needed.
 - `concepts/fastapi-core-configuration.md` remains marked `contested: true` for its documented configuration boundary and requires user review.
+
+## [2026-08-04] query | docmesh-config consumer source minimization
+- Runtime evidence: installed `docmesh-config 0.1.0`, `docmesh-py-core 0.6.0`, `dms 0.7.0`, and `fastapi-core 0.7.0`; `load_service_configs()` accepts only a service set while `diagnose_services()` separately accepts a `RuntimePlan`.
+- Consumer evidence: `docmesh_doc/dms_factory.py` is 148 lines and manually repeats environment parsing, plan diagnosis, backend service selection, client injection, and rollback/close handling.
+- Created: `queries/docmesh-config-consumer-source-minimization.md`.
+- Updated: `entities/docmesh-config.md`, `index.md`, and `log.md`.
+- Verification: SQLite/MinIO complete diagnosis and strict PostgreSQL/SQLite ambiguity diagnosis passed; `uv run pytest -q` reported `66 passed, 1 skipped` with one upstream Starlette/httpx2 warning.
+
+## [2026-08-04] query | docmesh-py-core consumer source minimization
+- Runtime evidence: installed `docmesh-py-core 0.6.0` already exposes `assemble_services()`, `assemble_service_runtime()`, typed `ServiceBundle.require_client()`, and idempotent container close; `dms.create_sdk_from_clients()` accepts caller close callbacks.
+- Consumer evidence: `docmesh_doc/dms_factory.py` is 148 lines and its 56-line `create_dms_sdk()` directly calls three py-core factories, unwraps `.client`, and reimplements rollback/close ownership.
+- Runtime probe: a SQLite/MinIO `ServiceBundle` was injected into DMS with `close_callbacks=(bundle.close,)`; sync SDK close, repeated close, async runtime close, and typed Engine lookup succeeded. The low-level false health probe currently returns success and is recorded as a proposed adapter improvement.
+- Created: `queries/docmesh-py-core-consumer-source-minimization.md`.
+- Updated: `entities/docmesh-py-core.md`, `index.md`, and `log.md`.
+- Immutable `raw/` sources were not modified.
+
+## [2026-08-04] query | fastapi-core consumer source minimization
+- Runtime evidence: installed `fastapi-core 0.7.0` exposes `ResourceBinding`, `TransportPolicy`, `ExceptionMappingTable`, `create_error_renderer`, `invoke_resource`, `ManagedStreamingResponse`, and `ApplicationContractProfile`; probes confirmed worker-thread invocation, reverse resource close, rollback, strict false/`.ok` readiness handling, and 400/OpenAPI policy alignment.
+- Consumer evidence: FastAPI-specific source is 341 lines across `application.py`, `router.py`, `errors.py`, `dependencies.py`, `schemas.py`, and `main.py`; the most repetitive mechanics are resource descriptor/dependency pairing, error MRO/renderer code, router response metadata, direct thread-pool invocation, and distributed contract assertions.
+- Package-neutral recommendation: adopt existing ResourceBinding, module TransportPolicy, error table/renderer, invoke_resource, and contract profile before adding upstream API; keep DMS storage assembly and product HTTP policy outside `fastapi-core`.
+- Created: `queries/fastapi-core-consumer-source-minimization.md`.
+- Updated: `entities/fastapi-core.md`, `index.md`, and `log.md`.
+- Immutable `raw/` sources were not modified.
+
+## [2026-08-04] query | dms-core consumer source minimization
+- Runtime evidence: installed `dms 0.7.0` exposes client/component factories, `DmsAssemblyPlan`, scoped operation context, public metadata projection, close-safe streams, feature protocols, and transport-neutral error descriptors; `recommended_http_error` was probed for deleted/configuration policy differences.
+- Consumer evidence: host assembly is 148 lines (`create_dms_sdk()` is 56 lines); the DMS HTTP adapter is 364 lines; the measured two-layer surface is 512 lines. Repetition crosses DMS domain primitives, py-core/config/FastAPI bridges, and product policy.
+- Recommendation: use existing DMS primitives first; keep environment/client assembly and HTTP lifecycle in explicit bridge modules; consider additive streaming checksum/idempotency and bounded unknown-size input only after safety contracts are specified.
+- Created: `queries/dms-core-consumer-source-minimization.md`.
+- Updated: `entities/dms-core.md`, `concepts/dms-core-usage-patterns.md`, `index.md`, and `log.md`.
+- Verification: `uv run pytest -q` returned `66 passed, 1 skipped, 1 warning`. Immutable `raw/` sources were not modified.

@@ -1,7 +1,7 @@
 ---
 title: docmesh-py-core
 created: 2026-07-11
-updated: 2026-08-02
+updated: 2026-08-04
 type: entity
 tags: [dms-core, integration, configuration, dependency, security]
 sources: [raw/articles/fastapi-core-api-v0.1.6.md, raw/articles/fastapi-core-config-v0.1.6.md, raw/articles/fastapi-core-messaging-v0.1.6.md, raw/articles/docmesh-config-wiki-api-reference-v0.1.0.md, raw/articles/docmesh-config-wiki-configuration-v0.1.0.md, raw/articles/docmesh-config-wiki-examples-v0.1.0.md, raw/articles/docmesh-config-env-example-v0.1.0.md, raw/articles/docmesh-py-core-wiki-api-reference-v0.6.0.md, raw/articles/docmesh-py-core-wiki-configuration-v0.6.0.md, raw/articles/docmesh-py-core-wiki-examples-v0.6.0.md, raw/articles/docmesh-py-core-env-example-v0.6.0.md]
@@ -50,6 +50,10 @@ v0.6.0 source set은 `docmesh_config.RuntimePlan`을 `docmesh_py_core` lifecycle
 메시징 세부 연결값은 이 의존성의 `ServiceConfigs`에서 해석되고, `fastapi-core`는 NATS를 서비스 선택·readiness·lifecycle 확장 지점으로 다룬다. 자세한 경계는 [[fastapi-core-messaging-integration]]에 정리한다. ^[raw/articles/fastapi-core-messaging-v0.1.6.md]
 
 동기/비동기 assembly, FastAPI lifespan, selective service loading, health endpoint, NATS builder, Keycloak direct integration의 upstream 실행 예시는 [[docmesh-py-core-usage-patterns]]에 정리한다. 이 consumer는 DMS storage assembly에 필요한 동기 PostgreSQL/SQLite·MinIO wrapper factory만 명시적으로 사용하고, py-core의 generic service runtime이 DMS SDK를 자동 생성한다고 가정하지 않는다. ^[raw/articles/docmesh-py-core-wiki-examples-v0.6.0.md]
+
+## Consumer source minimization
+
+현재 consumer의 py-core 반복은 개별 factory 자체보다 typed bundle에서 DMS raw client로 ownership을 넘기는 glue에 집중된다. `assemble_services()`와 `ServiceBundle.require_client()`를 canonical bridge pattern으로 사용하면 직접 factory 호출과 수동 rollback/close helper를 줄일 수 있다. 상세 우선순위와 health/lease 경계는 [[docmesh-py-core-consumer-source-minimization]]에 기록한다.
 
 ## Source
 

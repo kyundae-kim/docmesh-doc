@@ -1,7 +1,7 @@
 ---
 title: docmesh-config
 created: 2026-08-02
-updated: 2026-08-02
+updated: 2026-08-04
 type: entity
 tags: [configuration, dependency, integration, security, testing]
 sources: [raw/articles/docmesh-config-wiki-api-reference-v0.1.0.md, raw/articles/docmesh-config-wiki-configuration-v0.1.0.md, raw/articles/docmesh-config-wiki-examples-v0.1.0.md, raw/articles/docmesh-config-env-example-v0.1.0.md, raw/articles/docmesh-py-core-wiki-api-reference-v0.6.0.md, raw/articles/docmesh-py-core-wiki-configuration-v0.6.0.md, raw/articles/docmesh-py-core-wiki-examples-v0.6.0.md, raw/articles/docmesh-py-core-env-example-v0.6.0.md]
@@ -43,6 +43,10 @@ confidence: medium
 예제는 SQLite 단독 로드, 환경에 존재하는 서비스만 선택 로드, 대안 서비스의 strict 진단, runtime metadata 생성, MinIO bucket 요구, 구조화 오류 처리, production transport 정책과 secret-safe 출력까지를 보여 준다. 예제는 외부 서비스에 연결하지 않으며, `.env.example`도 필요한 block을 복사한 뒤 배포기가 명시적으로 환경변수로 주입하는 template이다. ^[raw/articles/docmesh-config-wiki-examples-v0.1.0.md] ^[raw/articles/docmesh-config-env-example-v0.1.0.md]
 
 `docmesh-py-core`의 settings/client assembly와 `fastapi-core`의 application lifecycle을 연결하려면 버전이 맞는 패키지의 실제 exports·signatures와 소비 adapter 테스트를 별도로 확인해야 한다. 현재 wiki의 관련 경계는 [[docmesh-py-core]], [[docmesh-py-core-usage-patterns]], [[fastapi-core-app-assembly]]를 함께 읽는다.
+
+## Consumer source minimization
+
+현재 consumer의 주요 반복은 설정 모델이 아니라 `RuntimePlan` 진단·`ServiceConfigs` loading·DMS client injection을 연결하는 adapter glue다. `docmesh-config`에 plan-aware resolved configuration과 structured diagnosis promotion을 additive API로 추가할 후보 및 DMS/FastAPI policy를 generic layer로 옮기지 않는 경계는 [[docmesh-config-consumer-source-minimization]]에 정리한다.
 
 ## Sources
 

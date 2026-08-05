@@ -1,7 +1,7 @@
 ---
 title: dms-core usage patterns
 created: 2026-07-11
-updated: 2026-08-02
+updated: 2026-08-04
 type: concept
 tags: [dms-core, dms, document, storage, workflow, testing, integration]
 sources: [raw/articles/dms-core-api-v0.2.0.md, raw/articles/dms-core-api-v0.3.0.md, raw/articles/dms-core-wiki-api-reference-v0.7.0.md, raw/articles/dms-core-wiki-configuration-v0.7.0.md, raw/articles/dms-core-wiki-examples-v0.7.0.md, raw/articles/dms-core-config-v0.2.0.md, raw/articles/dms-core-config-v0.3.0.md, raw/articles/dms-core-examples-v0.2.0.md, raw/articles/dms-core-examples-v0.3.0.md]
@@ -26,6 +26,8 @@ v0.7.0에서는 known-size sync binary stream만 직접 upload 입력으로 공�
 v0.7.0 Examples는 `DmsAssemblyPlan`의 access policy와 operation observer, `scoped(context)` facade, `ManagedResource` reverse cleanup, reset/recovery plan, 기능별 runtime-checkable protocol, structured error descriptor와 HTTP 권고 변환을 host integration contract로 보여 준다. 일반 결과에는 `storage_key`를 넣지 않고 internal metadata/recovery 경로에서만 관리한다. ^[raw/articles/dms-core-wiki-api-reference-v0.7.0.md] ^[raw/articles/dms-core-wiki-examples-v0.7.0.md]
 
 현재 adapter는 inline content와 attachment download 모두 `get_document_content_stream()`을 사용하고 하나의 context-managed response 경계에서 chunk를 전달한다. caller가 지정하는 read buffer는 1 byte~8 MiB로 제한해 전체 object 적재와 비정상적으로 큰 단일 read를 피한다. 통합 테스트는 실제 PostgreSQL·MinIO 문서를 fixture cleanup으로 제거하며 marker selection과 root-path-aware `Location`을 검증한다. 적용 범위와 후속 후보는 [[dms-application-optimization]]에 기록한다.
+
+소비자 source를 더 줄일 때는 DMS가 환경변수나 FastAPI를 소유하도록 확장하기보다 scoped facade, `delete_document(...)`, `error_descriptor(...)`, stream cleanup primitive를 host bridge에서 재사용한다. config/client assembly와 제품 HTTP 정책을 분리하는 판단은 [[dms-core-consumer-source-minimization]]에 기록한다.
 
 ## Assembly choices
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from types import SimpleNamespace
 
 import dms
 import docmesh_config
@@ -49,7 +50,7 @@ def test_factory_assembles_sqlite_clients_and_injects_them_into_dms(
     assert plan.metadata_backend == "sqlite"
     assert plan.strict_configuration is True
     assert plan.check_on_startup is False
-    assert len(captured["close_callbacks"]) == 2
+    assert len(captured["close_callbacks"]) == 1
 
     for callback in captured["close_callbacks"]:
         callback()
@@ -107,25 +108,40 @@ def test_factory_does_not_close_clients_twice_after_dms_rolls_back(
 ) -> None:
     _set_sqlite_environment(monkeypatch)
 
-    class RecordingWrapper:
+    class RecordingClient:
         def __init__(self) -> None:
-            self.client = object()
             self.close_calls = 0
 
         def close(self) -> None:
             self.close_calls += 1
 
-    metadata_client = RecordingWrapper()
-    minio_client = RecordingWrapper()
+    metadata_client = RecordingClient()
+    minio_client = RecordingClient()
+
+    class Bundle:
+        def __init__(self) -> None:
+            self.configs = SimpleNamespace(
+                require_minio=lambda: SimpleNamespace(bucket="documents")
+            )
+            self._closed = False
+
+        def require_client(self, service, _expected_type):
+            if service is dms_factory.Service.MINIO:
+                return minio_client
+            return metadata_client
+
+        def close(self) -> None:
+            if self._closed:
+                return
+            self._closed = True
+            metadata_client.close()
+            minio_client.close()
+
+    bundle = Bundle()
     monkeypatch.setattr(
         dms_factory.docmesh_py_core,
-        "create_sqlite_client",
-        lambda _config: metadata_client,
-    )
-    monkeypatch.setattr(
-        dms_factory.docmesh_py_core,
-        "create_minio_client",
-        lambda _config: minio_client,
+        "assemble_services",
+        lambda *, plan: bundle,
     )
 
     def fail_after_dms_rollback(**kwargs):

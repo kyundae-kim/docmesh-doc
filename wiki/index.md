@@ -1,7 +1,7 @@
 # Wiki Index
 
 > DMS를 `dms-core` 로직 코어와 `fastapi-core` FastAPI 컴포넌트로 구성하여 배포하기 위한 지식 카탈로그.
-> Last updated: 2026-08-02 | Total pages: 18
+> Last updated: 2026-08-04 | Total pages: 22
 
 ## Entities
 <!-- Alphabetical within section -->
@@ -27,5 +27,9 @@
 ## Comparisons
 
 ## Queries
+- [[docmesh-config-consumer-source-minimization]] — `RuntimePlan`/configuration resolution과 DMS host bridge를 분리해 소비자 adapter source를 줄이는 개선안.
+- [[docmesh-py-core-consumer-source-minimization]] — 기존 `ServiceBundle`을 외부 DMS owner bridge에 연결하고 lease·health·close 계약을 개선하는 우선순위.
 - [[dms-application-optimization]] — v0.6 동기 stream을 inline/download에 공통 적용하고 buffer 상한과 통합 cleanup을 강화한 검토.
+- [[dms-core-consumer-source-minimization]] — v0.7 DMS의 기존 domain primitive 활용, streaming upload 후보와 host/FastAPI bridge 경계를 구분한 개선안.
 - [[fastapi-core-application-optimization]] — v0.6 module 조립을 유지하면서 root path, OpenAPI 오류 계약과 contract test를 정합화한 적용 검토.
+- [[fastapi-core-consumer-source-minimization]] — `ResourceBinding`/`TransportPolicy`/error table/invocation/contract profile을 사용해 FastAPI consumer 반복 source를 줄이는 개선안.

@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 import os
 
 import dms
 import docmesh_config
 import docmesh_py_core
 from docmesh_config import Service
+from minio import Minio
+from sqlalchemy.engine import Engine
 
 
 _METADATA_BACKENDS = {"postgresql", "sqlite"}
@@ -59,37 +60,6 @@ def _diagnose_strict_configuration() -> None:
     raise docmesh_config.ConfigError("\n".join(messages))
 
 
-def _close_once(callback: Callable[[], object]) -> Callable[[], object]:
-    closed = False
-
-    def close() -> object:
-        nonlocal closed
-        if closed:
-            return None
-        result = callback()
-        closed = True
-        return result
-
-    return close
-
-
-def _close_on_failure(
-    close_callbacks: list[Callable[[], object]],
-    error: BaseException,
-) -> None:
-    failures: list[BaseException] = []
-    for close_callback in reversed(close_callbacks):
-        try:
-            close_callback()
-        except BaseException as close_error:  # pragma: no cover - defensive cleanup
-            failures.append(close_error)
-    if failures:
-        error.add_note(
-            "DMS client cleanup failed during assembly: "
-            + "; ".join(type(item).__name__ for item in failures)
-        )
-
-
 def create_dms_sdk() -> dms.DefaultDocumentManagementSDK:
     """Create the DMS SDK from host-owned configuration and clients.
 
@@ -108,27 +78,20 @@ def create_dms_sdk() -> dms.DefaultDocumentManagementSDK:
     if strict:
         _diagnose_strict_configuration()
 
-    services = {
-        Service.MINIO,
-        Service.POSTGRES if backend == "postgresql" else Service.SQLITE,
-    }
-
-    configs = docmesh_config.load_service_configs(services=services)
-    minio_config = configs.require_minio()
-    minio_bucket = docmesh_config.require_minio_bucket(minio_config)
-    close_callbacks: list[Callable[[], object]] = []
-
-    try:
-        metadata_client = (
-            docmesh_py_core.create_postgres_client(configs.require_postgres())
-            if backend == "postgresql"
-            else docmesh_py_core.create_sqlite_client(configs.require_sqlite())
+    metadata_service = (
+        Service.POSTGRES if backend == "postgresql" else Service.SQLITE
+    )
+    bundle = docmesh_py_core.assemble_services(
+        plan=docmesh_config.RuntimePlan(
+            services=(metadata_service.required(), Service.MINIO.required()),
+            healthcheck=docmesh_config.HealthcheckPolicy(on_startup=False),
+            minio_bucket_required=True,
         )
-        close_callbacks.append(_close_once(metadata_client.close))
-
-        minio_client = docmesh_py_core.create_minio_client(minio_config)
-        close_callbacks.append(_close_once(minio_client.close))
-
+    )
+    try:
+        minio_bucket = docmesh_config.require_minio_bucket(
+            bundle.configs.require_minio()
+        )
         plan = dms.DmsAssemblyPlan(
             metadata_backend=backend,
             strict_configuration=strict,
@@ -137,12 +100,18 @@ def create_dms_sdk() -> dms.DefaultDocumentManagementSDK:
             check_on_startup=False,
         )
         return dms.create_sdk_from_clients(
-            engine=metadata_client.client,
-            minio_client=minio_client.client,
+            engine=bundle.require_client(metadata_service, Engine),
+            minio_client=bundle.require_client(Service.MINIO, Minio),
             bucket_name=minio_bucket,
-            close_callbacks=tuple(close_callbacks),
+            close_callbacks=(bundle.close,),
             plan=plan,
         )
     except BaseException as error:
-        _close_on_failure(close_callbacks, error)
+        try:
+            bundle.close()
+        except BaseException as close_error:  # pragma: no cover - defensive cleanup
+            error.add_note(
+                "DMS client cleanup failed during assembly: "
+                + type(close_error).__name__
+            )
         raise

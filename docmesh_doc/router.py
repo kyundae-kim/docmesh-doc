@@ -2,9 +2,8 @@ from typing import Annotated, Any, Literal
 
 import dms
 from fastapi import APIRouter, Depends, File, Form, Query, Request, Response, UploadFile
-from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import StreamingResponse
-from fastapi_core import ManagedStreamingResponse
+from fastapi_core import ManagedStreamingResponse, invoke_resource
 from fastapi_core.dependencies import get_current_user
 from pydantic import Json
 
@@ -45,7 +44,6 @@ router = APIRouter(
     tags=["documents"],
     dependencies=[Depends(get_current_user)],
     responses={
-        400: {"model": ErrorResponse, "description": "Invalid request"},
         "default": {"model": ErrorResponse, "description": "Request failed"},
     },
 )
@@ -125,5 +123,8 @@ async def delete_document(
 ):
     if hard:
         await require_hard_delete(current_user=user)
-    delete = sdk.hard_delete_document if hard else sdk.soft_delete_document
-    return await run_in_threadpool(delete, document_id)
+    return await invoke_resource(
+        sdk.delete_document,
+        document_id,
+        hard_delete=hard,
+    )
