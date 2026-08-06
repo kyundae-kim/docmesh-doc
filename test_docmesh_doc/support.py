@@ -134,6 +134,12 @@ class FakeSDK:
             status=dms.DocumentStatus.DELETED,
         )
 
+    def delete_document(self, document_id, *, hard_delete=False):
+        delete = (
+            self.hard_delete_document if hard_delete else self.soft_delete_document
+        )
+        return delete(document_id)
+
     def check_health(self):
         return dms.HealthStatus(ok=True, services=[], checked_at=NOW)
 

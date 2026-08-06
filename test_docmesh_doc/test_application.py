@@ -11,12 +11,13 @@ from fastapi_core.testing import (
     assert_openapi_contract,
 )
 
+import docmesh_doc.application as application
 from docmesh_doc.application import create_application
 from docmesh_doc.dependencies import DMS_RESOURCE
 from test_docmesh_doc.support import NOW, FakeSDK, client_for
 
 
-def test_application_delegates_process_environment_loading_to_dms(monkeypatch):
+def test_application_uses_the_host_owned_dms_factory(monkeypatch):
     sdk = FakeSDK()
     create_calls = 0
     monkeypatch.setenv("DMS_METADATA_BACKEND", "postgresql")
@@ -28,12 +29,7 @@ def test_application_delegates_process_environment_loading_to_dms(monkeypatch):
         create_calls += 1
         return sdk
 
-    monkeypatch.setattr(
-        dms,
-        "diagnose_environment",
-        lambda _environment: pytest.fail("application must delegate diagnosis to DMS"),
-    )
-    monkeypatch.setattr(dms, "create_sdk_from_environment", create_sdk)
+    monkeypatch.setattr(application, "create_dms_sdk", create_sdk)
     app = create_application(
         config=AppConfig(enabled_services=[], required_services=[]),
         include_auth_router=False,
@@ -168,7 +164,7 @@ def test_sdk_environment_failure_aborts_application_startup(monkeypatch):
     def failing_create_dms_sdk():
         raise RuntimeError("SDK startup failed")
 
-    monkeypatch.setattr(dms, "create_sdk_from_environment", failing_create_dms_sdk)
+    monkeypatch.setattr(application, "create_dms_sdk", failing_create_dms_sdk)
     app = create_application(
         config=AppConfig(enabled_services=[], required_services=[]),
         include_auth_router=False,

@@ -1,17 +1,20 @@
 from __future__ import annotations
 
+from contextlib import ExitStack
 import os
 import time
 from collections.abc import Iterator
 from uuid import uuid4
 
 import dms
+import docmesh_config
+import docmesh_py_core
 import pytest
 from fastapi.testclient import TestClient
 from fastapi_core.config import AppConfig
 from fastapi_core.schemas import UserInfo
-from minio import Minio
-from sqlalchemy import URL, create_engine, text
+from docmesh_config import Service
+from sqlalchemy import text
 
 from docmesh_doc.application import create_application
 from docmesh_doc.dependencies import DMS_RESOURCE
@@ -59,32 +62,26 @@ def integration_env() -> dict[str, str]:
 
 @pytest.fixture(scope="session", autouse=True)
 def prepare_integration_services(integration_env: dict[str, str]) -> Iterator[None]:
-    engine = create_engine(
-        URL.create(
-            "postgresql+psycopg",
-            username=integration_env["POSTGRES_USER"],
-            password=integration_env["POSTGRES_PASSWORD"],
-            host=integration_env["POSTGRES_HOST"],
-            port=int(integration_env["POSTGRES_PORT"]),
-            database=integration_env["POSTGRES_DB"],
-        )
+    configs = docmesh_config.load_service_configs(
+        services=(Service.POSTGRES, Service.MINIO)
     )
-    with engine.connect() as connection:
-        connection.execute(text("SELECT 1"))
+    postgres_config = configs.require_postgres()
+    minio_config = configs.require_minio()
+    bucket = docmesh_config.require_minio_bucket(minio_config)
 
-    minio = Minio(
-        integration_env["MINIO_ENDPOINT"],
-        access_key=integration_env["MINIO_ACCESS_KEY"],
-        secret_key=integration_env["MINIO_SECRET_KEY"],
-        secure=integration_env.get("MINIO_SECURE", "false").lower() == "true",
-    )
-    bucket = integration_env["MINIO_BUCKET"]
-    if not minio.bucket_exists(bucket):
-        minio.make_bucket(bucket)
+    with ExitStack() as stack:
+        postgres = docmesh_py_core.create_postgres_client(postgres_config)
+        stack.callback(postgres.close)
+        minio = docmesh_py_core.create_minio_client(minio_config)
+        stack.callback(minio.close)
 
-    yield
+        with postgres.client.connect() as connection:
+            connection.execute(text("SELECT 1"))
 
-    engine.dispose()
+        if not minio.client.bucket_exists(bucket):
+            minio.client.make_bucket(bucket)
+
+        yield
 
 
 @pytest.fixture

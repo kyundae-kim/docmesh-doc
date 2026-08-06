@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import dms
+
 from test_docmesh_doc.support import FakeSDK, client_for
 
 
@@ -11,6 +13,21 @@ def test_sdk_not_found_uses_documented_error_envelope():
     assert response.status_code == 404
     assert response.json()["error"]["code"] == "DOCUMENT_NOT_FOUND"
     assert response.json()["error"]["correlation_id"] == response.headers["X-Correlation-ID"]
+
+
+def test_sdk_error_mapping_uses_dms_exception_mro():
+    class DerivedNotFoundError(dms.DocumentNotFoundError):
+        pass
+
+    class DerivedErrorSDK(FakeSDK):
+        def get_document_metadata(self, document_id):
+            raise DerivedNotFoundError(document_id)
+
+    with client_for(DerivedErrorSDK()) as client:
+        response = client.get("/documents/missing")
+
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "DOCUMENT_NOT_FOUND"
 
 
 def test_framework_http_errors_use_documented_error_envelope():

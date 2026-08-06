@@ -1,10 +1,10 @@
 ---
 title: fastapi-core application assembly
 created: 2026-07-11
-updated: 2026-07-26
+updated: 2026-08-02
 type: concept
 tags: [fastapi, fastapi-core, architecture, deployment, configuration, observability]
-sources: [raw/articles/fastapi-core-api-v0.1.6.md, raw/articles/fastapi-core-api-v0.3.0.md, raw/articles/fastapi-core-wiki-api-reference.md, raw/articles/fastapi-core-wiki-api-reference-v0.5.0.md, raw/articles/fastapi-core-wiki-api-reference-v0.6.0.md, raw/articles/fastapi-core-config-v0.1.6.md, raw/articles/fastapi-core-config-v0.2.0.md, raw/articles/fastapi-core-config-v0.3.0.md, raw/articles/fastapi-core-wiki-configuration.md, raw/articles/fastapi-core-wiki-configuration-v0.5.0.md, raw/articles/fastapi-core-env-example-v0.4.0.md, raw/articles/fastapi-core-env-example-v0.5.0.md, raw/articles/fastapi-core-env-example-v0.6.0.md, raw/articles/fastapi-core-examples-v0.1.6.md, raw/articles/fastapi-core-examples-v0.2.0.md, raw/articles/fastapi-core-examples-v0.3.0.md, raw/articles/fastapi-core-wiki-examples.md, raw/articles/fastapi-core-wiki-examples-v0.5.0.md, raw/articles/fastapi-core-wiki-examples-v0.6.0.md, raw/articles/fastapi-core-messaging-v0.1.6.md, raw/articles/fastapi-core-messaging-v0.2.0.md, raw/articles/dms-core-wiki-api-reference-v0.4.0.md, raw/articles/dms-core-wiki-api-reference-v0.5.0.md, raw/articles/dms-core-wiki-api-reference-v0.6.0.md, raw/articles/dms-core-wiki-examples-v0.4.0.md, raw/articles/dms-core-wiki-examples-v0.6.0.md]
+sources: [raw/articles/fastapi-core-api-v0.1.6.md, raw/articles/fastapi-core-api-v0.3.0.md, raw/articles/fastapi-core-wiki-api-reference.md, raw/articles/fastapi-core-wiki-api-reference-v0.5.0.md, raw/articles/fastapi-core-wiki-api-reference-v0.6.0.md, raw/articles/fastapi-core-wiki-api-reference-v0.7.0.md, raw/articles/fastapi-core-config-v0.1.6.md, raw/articles/fastapi-core-config-v0.2.0.md, raw/articles/fastapi-core-config-v0.3.0.md, raw/articles/fastapi-core-wiki-configuration.md, raw/articles/fastapi-core-wiki-configuration-v0.5.0.md, raw/articles/fastapi-core-wiki-configuration-v0.6.0.md, raw/articles/fastapi-core-wiki-configuration-v0.7.0.md, raw/articles/fastapi-core-env-example-v0.4.0.md, raw/articles/fastapi-core-env-example-v0.5.0.md, raw/articles/fastapi-core-env-example-v0.6.0.md, raw/articles/fastapi-core-env-example-v0.7.0.md, raw/articles/fastapi-core-examples-v0.1.6.md, raw/articles/fastapi-core-examples-v0.2.0.md, raw/articles/fastapi-core-examples-v0.3.0.md, raw/articles/fastapi-core-wiki-examples.md, raw/articles/fastapi-core-wiki-examples-v0.5.0.md, raw/articles/fastapi-core-wiki-examples-v0.6.0.md, raw/articles/fastapi-core-wiki-examples-v0.7.0.md, raw/articles/fastapi-core-messaging-v0.1.6.md, raw/articles/fastapi-core-messaging-v0.2.0.md, raw/articles/dms-core-wiki-api-reference-v0.7.0.md, raw/articles/dms-core-wiki-configuration-v0.7.0.md, raw/articles/dms-core-wiki-examples-v0.7.0.md, raw/articles/docmesh-config-wiki-api-reference-v0.1.0.md, raw/articles/docmesh-config-wiki-configuration-v0.1.0.md, raw/articles/docmesh-config-wiki-examples-v0.1.0.md, raw/articles/docmesh-config-env-example-v0.1.0.md, raw/articles/docmesh-py-core-wiki-api-reference-v0.6.0.md, raw/articles/docmesh-py-core-wiki-configuration-v0.6.0.md, raw/articles/docmesh-py-core-wiki-examples-v0.6.0.md, raw/articles/docmesh-py-core-env-example-v0.6.0.md]
 confidence: medium
 ---
 
@@ -20,9 +20,13 @@ GitHub Wiki snapshot은 `app.state.settings`와 `app.state.service_clients`도 �
 
 v0.5.0 Wiki API reference도 같은 state 모델과 `create_app(config, runtime, lifespan, include_auth_router, resources, error_renderer)` 조립 경계를 기록하며 auth router opt-in의 기본값은 `False`다. 설치된 v0.5.0은 이 public signature/state를 제공한다. `docmesh_doc.create_application`은 자신의 기본값 `True`를 `create_app`에 명시 전달하므로 auth route 포함 정책을 adapter가 결정한다. ^[raw/articles/fastapi-core-wiki-api-reference-v0.5.0.md]
 
-v0.6.0 API reference는 `routers`, `modules`, `error_mappers`, `auth_provider`를 `create_app`의 명시적 조립 입력으로 추가하고 `DomainModule`이 router·dependency·resource·readiness·error mapper를 한 이름 아래 묶는다고 문서화한다. 설치된 `fastapi-core 0.6.0`에서 이 signature를 확인했고 DMS adapter는 `documents` module에 router, required DMS resource와 DMS/validation error mapper를 함께 등록한다. module contract와 auth-provider 주입 경계도 테스트한다. ^[raw/articles/fastapi-core-wiki-api-reference-v0.6.0.md]
+v0.6.0 API reference는 `routers`, `modules`, `error_mappers`, `auth_provider`를 `create_app`의 명시적 조립 입력으로 추가했고, 현재 v0.7.0 설치본에서도 같은 module-first surface를 확인했다. DMS adapter는 `documents` module에 router, required DMS resource와 DMS/validation error mapper를 함께 등록한다. module contract와 auth-provider 주입 경계도 테스트한다. ^[raw/articles/fastapi-core-wiki-api-reference-v0.6.0.md] ^[raw/articles/fastapi-core-wiki-api-reference-v0.7.0.md]
 
 v0.6.0 Examples는 framework가 runtime/resource를 사용자 lifespan보다 먼저 시작하고 종료 시 사용자 lifespan → resource → runtime 순으로 정리한다고 보인다. 현재 adapter는 package-owned module resource lifecycle로 이 순서를 유지하며 정상 close, startup factory 실패와 shutdown close 실패 테스트를 통과한다. ^[raw/articles/fastapi-core-wiki-examples-v0.6.0.md]
+
+v0.7.0 API는 `create_app`을 explicit `routers`/`modules`/`resources`/error-mapper 입력과 `DomainModule`/`TransportPolicy` policy로 확장하고, framework가 user lifespan을 runtime/resource cleanup으로 감싸는 state/lifecycle contract를 명시한다. `ResourceBinding`은 typed dependency·health·reverse shutdown·startup rollback을 하나의 registry에 묶고, `ManagedStreamingResponse`는 producer exception/disconnect/cancellation에서도 resource close를 정확히 한 번 수행한다. ^[raw/articles/fastapi-core-wiki-api-reference-v0.7.0.md]
+
+v0.7.0 Examples는 module route에만 validation/security/error/OpenAPI policy를 적용하고, `include_auth_router=False` service-free app을 기본 smoke test로 삼으며, `assert_application_contract`로 path/method/status/security/schema와 synthetic 422 제거를 의미 기반 검증한다. 현재 source의 `DomainModule` 조립 모양과 설치 runtime이 일치하며, `test_application.py`가 auth opt-in/out·module·OpenAPI·startup/shutdown lifecycle을 검증한다. ^[raw/articles/fastapi-core-wiki-examples-v0.7.0.md] ^[raw/articles/fastapi-core-env-example-v0.7.0.md]
 
 소비 애플리케이션은 route reverse lookup으로 업로드 `Location`을 생성해 `AppConfig.root_path`를 보존하고, document module router에 제품 오류 envelope의 OpenAPI response를 선언한다. `assert_openapi_contract`는 document path·method·OAuth2 scheme·operation-ID 및 schema reference를 검증하며, 별도 assertion은 runtime의 400 validation 계약과 생성 문서가 일치하고 기본 422가 남지 않음을 확인한다. 세부 검토는 [[fastapi-core-application-optimization]]에 기록한다. ^[raw/articles/fastapi-core-wiki-examples-v0.6.0.md]
 
@@ -37,6 +41,14 @@ v0.5.0 configuration reference는 동일한 assembly boundary에 startup failure
 GitHub Wiki Examples는 `create_app()`이 runtime/managed resource를 사용자 lifespan 바깥에서 소유하므로 사용자 shutdown 오류에도 공통 정리를 시도한다고 예시로 확인한다. 일반 DMS app은 `create_app(resources=...)`에 맡기고, 직접 `build_lifespan` 또는 router-only assembly를 선택하면 readiness registry, runtime state, middleware, error handler를 직접 구성해야 한다. ^[raw/articles/fastapi-core-wiki-examples.md]
 
 v0.5.0 Wiki Examples는 `ResourceKey` 기반 typed resource와 `get_resource(name)`을 같은 registry 경계에서 사용하는 예를 제공하며, framework-owned lifecycle이 startup·healthcheck·역순 close를 담당한다고 설명한다. 현재 adapter의 `ManagedResource(name="dms", ...)`, error mapper, explicit auth-router forwarding은 설치된 v0.5.0 signatures로 확인된다. 설치본은 health/auth contract helper를 제공하지만 v0.6.0의 module/OpenAPI test helper는 아직 없으므로, 후자는 upgrade 전 보류한다. ^[raw/articles/fastapi-core-wiki-examples-v0.5.0.md] ^[raw/articles/fastapi-core-wiki-api-reference-v0.6.0.md]
+
+## docmesh-config plan boundary
+
+`docmesh-config`의 `RuntimePlan`과 `HealthcheckPolicy`는 FastAPI가 소비할 수 있는 선택/정책 metadata를 표현하지만 `create_app(...)`의 `AppConfig`, managed resource, readiness registry 또는 framework-owned lifecycle을 대체하지 않는다. 현재 source set만으로 이 plan이 DMS resource나 FastAPI runtime에 자동 주입된다고 단정하지 않고, 소비 adapter의 explicit bridge와 version-aligned tests가 필요하다. [[docmesh-config-runtime-plan]]과 [[fastapi-core-configuration]]을 함께 참조한다. ^[raw/articles/docmesh-config-wiki-api-reference-v0.1.0.md] ^[raw/articles/docmesh-config-wiki-examples-v0.1.0.md]
+
+## v0.6 docmesh-py-core hosting boundary
+
+v0.6.0 source set은 `docmesh_config.RuntimePlan` → `docmesh_py_core.service_lifespan` package bridge와 generic FastAPI `app.state.services` consumer pattern을 확인한다. 이는 `fastapi-core` `create_app`의 module/resource/error-mapper contract나 DMS resource 자동 주입을 대체하지 않는다. 이 wiki는 package bridge를 [[docmesh-py-core-v060-runtime-contract]]에, FastAPI hosting contract를 이 페이지에 각각 보존한다. ^[raw/articles/docmesh-py-core-wiki-api-reference-v0.6.0.md] ^[raw/articles/docmesh-py-core-wiki-examples-v0.6.0.md]
 
 ## Readiness policy
 
@@ -56,15 +68,13 @@ package 기본 client 외 DMS SDK aggregate check 같은 추가 자원은 `Manag
 
 DMS SDK를 HTTP 서비스에 붙일 때는 [[dms-core]]의 생성·health·close 흐름을 custom lifespan/state 경계에 배치하는 방안을 검토한다. 그 lifecycle과 정합성 규칙은 [[dms-core-document-lifecycle]]에 정리한다.
 
-DMS v0.4.0의 내부 `storage_key`는 HTTP 공개 계약이 아니므로 route 응답은 `public_metadata(...)` 또는 동일한 allowlist schema를 적용해야 한다. 목록 API를 cursor 방식으로 노출할 때는 SDK의 불투명 `next_cursor`와 상태 필터 결합을 보존하고, offset·cursor 계약을 한 endpoint에서 모호하게 섞지 않는다. 현재 프로젝트는 `dms 0.4.0`을 설치하고 `storage_key` 없는 response model을 사용하므로 이 경계는 runtime과 application adapter 양쪽에서 확인된다. ^[raw/articles/dms-core-wiki-api-reference-v0.4.0.md]
+DMS v0.7.0 API reference의 `recommended_http_error(...)`는 stable DMS error를 host transport response로 투영하는 권고 모델을 제공한다. 제품은 기존 error envelope/code를 유지하므로 helper body를 그대로 반환하지 않고 권고 status를 adapter mapper에 반영한다. payload-size 413과 진행 중 멱등 요청의 status projection은 제품 route contract에서 별도로 검증한다. ^[raw/articles/dms-core-wiki-api-reference-v0.7.0.md]
 
-DMS v0.5.0 Wiki API reference는 public metadata를 기본 조회/list 결과로 만들고 internal metadata를 별도 accessor에 한정하는 migration을 문서화한다. 현재 설치된 DMS v0.4.0은 아직 internal metadata를 반환하므로, adapter의 allowlist response model을 유지한다. `create_sdk_from_service_configs`도 v0.5.0 source에만 있으므로 FastAPI runtime/service settings와 DMS storage assembly를 직접 연결했다고 가정하지 않는다. ^[raw/articles/dms-core-wiki-api-reference-v0.5.0.md]
+DMS v0.7.0 Examples는 `recommended_http_error(...)`가 host transport convenience이며 DMS exception 자체에 HTTP status를 추가하지 않는다고 명확히 한다. 현재 FastAPI error renderer는 제품 envelope를 유지하고 payload-size 및 retryable idempotency 오류를 제품 정책에 맞게 매핑한다. ^[raw/articles/dms-core-wiki-examples-v0.7.0.md]
 
-DMS v0.6.0 API reference의 `recommended_http_error(...)`는 설치된 `dms 0.6.0`에서 확인되었다. 제품은 기존 error envelope/code를 유지하므로 helper body를 그대로 반환하지 않고 같은 권고 status를 adapter mapper에 반영한다. payload-size 413과 안전한 고정 메시지는 route test로 검증했고, 진행 중 멱등 요청은 425로 맞췄다. ^[raw/articles/dms-core-wiki-api-reference-v0.6.0.md]
+v0.7.0 DMS Configuration은 host가 environment/secret을 읽고 Engine·MinIO client 또는 storage component를 만든 뒤 SDK factory에 주입한다고 명시한다. 이 workspace는 `docmesh_config.load_service_configs` → `docmesh_py_core.create_*_client` → `dms.create_sdk_from_clients` 순서를 `dms_factory.py`에 구현하고, 반환 SDK를 FastAPI required `ManagedResource`에 등록한다. FastAPI app은 이 host-owned assembly를 resource/lifespan에 연결하지만, DMS public API 자체에 environment factory·standalone HTTP server·broker integration이 있다고 가정하지 않는다. ^[raw/articles/dms-core-wiki-configuration-v0.7.0.md] ^[raw/articles/dms-core-wiki-api-reference-v0.7.0.md]
 
-DMS v0.6.0 Examples는 `recommended_http_error(...)`가 host transport convenience이며 DMS exception 자체에 HTTP status를 추가하지 않는다고 명확히 한다. 현재 FastAPI error renderer는 제품 envelope를 유지하고 413 payload-size의 safe mapping을 route test로 검증한다. retryable idempotency-in-progress는 권고 status 425로 매핑한다. ^[raw/articles/dms-core-wiki-examples-v0.6.0.md]
-
-v0.4.0부터 권장된 HTTP-facing 흐름은 `public_metadata()`, cursor의 `has_more`/`next_cursor`, 명시적 soft/hard 삭제다. 현재 project adapter는 allowlist page response로 `storage_key`를 제외하고 `cursor`, `limit`, `status`를 v0.6.0 기본 `list_documents`에 전달하며 명시적 soft/hard delete method를 사용한다. ^[raw/articles/dms-core-wiki-examples-v0.4.0.md] ^[raw/articles/dms-core-wiki-api-reference-v0.6.0.md]
+v0.7.0 API/Examples는 public metadata, cursor continuation, explicit soft/hard delete를 HTTP-facing adapter가 명확히 project해야 함을 보여준다. 현재 project adapter는 allowlist page response로 `storage_key`를 제외하고 `cursor`, `limit`, `status`를 v0.7.0 기본 `list_documents`에 전달하며 명시적 soft/hard delete method를 사용한다. ^[raw/articles/dms-core-wiki-api-reference-v0.7.0.md] ^[raw/articles/dms-core-wiki-examples-v0.7.0.md]
 
 ## Open questions
 
@@ -79,24 +89,32 @@ v0.4.0부터 권장된 HTTP-facing 흐름은 `public_metadata()`, cursor의 `has
 - `raw/articles/fastapi-core-wiki-api-reference.md`
 - `raw/articles/fastapi-core-wiki-api-reference-v0.5.0.md`
 - `raw/articles/fastapi-core-wiki-api-reference-v0.6.0.md`
+- `raw/articles/fastapi-core-wiki-api-reference-v0.7.0.md`
 - `raw/articles/fastapi-core-config-v0.1.6.md`
 - `raw/articles/fastapi-core-config-v0.2.0.md`
 - `raw/articles/fastapi-core-config-v0.3.0.md`
 - `raw/articles/fastapi-core-wiki-configuration.md`
 - `raw/articles/fastapi-core-wiki-configuration-v0.5.0.md`
+- `raw/articles/fastapi-core-wiki-configuration-v0.7.0.md`
 - `raw/articles/fastapi-core-env-example-v0.4.0.md`
 - `raw/articles/fastapi-core-env-example-v0.5.0.md`
 - `raw/articles/fastapi-core-env-example-v0.6.0.md`
+- `raw/articles/fastapi-core-env-example-v0.7.0.md`
 - `raw/articles/fastapi-core-examples-v0.1.6.md`
 - `raw/articles/fastapi-core-examples-v0.2.0.md`
 - `raw/articles/fastapi-core-examples-v0.3.0.md`
 - `raw/articles/fastapi-core-wiki-examples.md`
 - `raw/articles/fastapi-core-wiki-examples-v0.5.0.md`
 - `raw/articles/fastapi-core-wiki-examples-v0.6.0.md`
+- `raw/articles/fastapi-core-wiki-examples-v0.7.0.md`
 - `raw/articles/fastapi-core-messaging-v0.1.6.md`
 - `raw/articles/fastapi-core-messaging-v0.2.0.md`
-- `raw/articles/dms-core-wiki-api-reference-v0.4.0.md`
-- `raw/articles/dms-core-wiki-api-reference-v0.5.0.md`
-- `raw/articles/dms-core-wiki-api-reference-v0.6.0.md`
-- `raw/articles/dms-core-wiki-examples-v0.4.0.md`
-- `raw/articles/dms-core-wiki-examples-v0.6.0.md`
+- `raw/articles/dms-core-wiki-examples-v0.7.0.md`
+- `raw/articles/docmesh-config-wiki-api-reference-v0.1.0.md`
+- `raw/articles/docmesh-config-wiki-configuration-v0.1.0.md`
+- `raw/articles/docmesh-config-wiki-examples-v0.1.0.md`
+- `raw/articles/docmesh-config-env-example-v0.1.0.md`
+- `raw/articles/docmesh-py-core-wiki-api-reference-v0.6.0.md`
+- `raw/articles/docmesh-py-core-wiki-configuration-v0.6.0.md`
+- `raw/articles/docmesh-py-core-wiki-examples-v0.6.0.md`
+- `raw/articles/docmesh-py-core-env-example-v0.6.0.md`

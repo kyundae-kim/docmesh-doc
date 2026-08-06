@@ -3,8 +3,8 @@
 | 항목 | 내용 |
 | --- | --- |
 | 제품명 | DocMesh Document Service |
-| 대상 릴리스 | MVP |
-| 최종 코드 대조일 | 2026-07-27 |
+| 대상 릴리스 | v0.4.0 |
+| 최종 코드 대조일 | 2026-08-04 |
 | 제품 정의 | `dms-core` 문서 관리 기능을 `fastapi-core`로 조립해 제공하는 HTTP Document Management Service |
 
 ## 1. 목적
@@ -19,7 +19,7 @@ DocMesh Document Service의 목적은 업무 시스템이 파일 저장소와 �
 - **`fastapi-core`**는 애플리케이션 factory, 공통 health, 선택적 인증 router, 설정, typed resource, readiness, lifecycle과 오류 rendering 확장점을 제공한다.
 - **DocMesh Document Service**는 두 컴포넌트를 조립하여 배포 가능한 HTTP 서비스로 제공한다.
 
-문서 본문 저장소는 모든 구성에서 MinIO를 사용한다. 문서 메타데이터 저장소는 운영·통합 기준인 PostgreSQL과 로컬 개발용 SQLite를 지원하며 기본 배포 template은 PostgreSQL을 명시적으로 선택한다. 애플리케이션은 backend 구현을 직접 생성하지 않고 DMS 환경 factory에 선택·검증·조립을 위임한다.
+문서 본문 저장소는 모든 구성에서 MinIO를 사용한다. 문서 메타데이터 저장소는 운영·통합 기준인 PostgreSQL과 로컬 개발용 SQLite를 지원하며 기본 배포 template은 PostgreSQL을 명시적으로 선택한다. 애플리케이션의 host adapter는 `docmesh-config`로 선택·검증하고 `docmesh-py-core`로 client를 만든 뒤, DMS v0.7의 client factory에 주입한다. DMS SDK 자체는 환경변수에서 client를 만들지 않는다.
 
 ## 2. 제품 목표
 
@@ -60,7 +60,7 @@ DocMesh Document Service의 목적은 업무 시스템이 파일 저장소와 �
 | ID | 요구사항 | 우선순위 | 수용 기준 |
 | --- | --- | --- | --- |
 | FR-APP-001 | 서비스는 `fastapi-core.create_app(...)`으로 FastAPI 애플리케이션을 생성하고 제품 factory에서 인증 router 포함 여부와 제품 오류 renderer를 명시해야 한다. | Must | 공통 health와 typed resource를 포함해 기동하며 기본 제품 앱은 `/token`, `/user`를 포함한다. |
-| FR-APP-002 | DMS SDK는 `ManagedResource` lifecycle에서 한 번 생성하고 종료 시 역순 close해야 한다. | Must | 생성 중 실패한 resource의 rollback, 정상 종료, 모든 close 시도와 close 실패 전파가 검증된다. |
+| FR-APP-002 | DMS SDK는 `ManagedResource` lifecycle에서 한 번 생성하고 종료 시 역순 close해야 한다. | Must | 생성 중 실패한 resource의 rollback, 정상 종료, 모든 close 시도와 close 실패 전파가 검증되며, DMS rollback과 host rollback이 같은 client close를 중복 호출하지 않는다. |
 | FR-APP-003 | DMS route는 SDK 구현체를 직접 생성하지 않고 typed `ResourceKey` dependency로 SDK를 획득해야 한다. | Must | 동일 key로 resource를 등록·주입하고 미준비 resource 접근은 503으로 응답한다. |
 | FR-APP-004 | 서비스는 liveness와 readiness endpoint를 제공해야 한다. | Must | liveness는 프로세스 생존을 반환하고, 필수 의존성 실패는 readiness 503, 선택 의존성만 실패하면 200 degraded를 반환한다. |
 | FR-SEC-001 | 모든 문서 작업 route는 인증된 사용자만 접근할 수 있어야 한다. | Must | 인증되지 않은 요청은 문서 작업을 수행하지 못한다. |
@@ -78,7 +78,7 @@ DocMesh Document Service의 목적은 업무 시스템이 파일 저장소와 �
 | FR-DOC-006 | 대용량 문서 다운로드는 streaming으로 제공해야 한다. | Must | inline 조회와 attachment download 모두 전체 본문을 애플리케이션 메모리에 적재하지 않고 chunk 단위로 전송하며, attachment download의 기본 chunk는 64 KiB이고 공개 상한은 8 MiB다. |
 | FR-DOC-007 | 서비스는 soft delete를 제공해야 한다. | Must | 본문을 삭제하고 metadata를 `deleted` 상태로 보존하며 단건 metadata·콘텐츠·다운로드를 차단한다. 상태 filter를 사용하는 목록은 삭제 상태를 조회할 수 있다. |
 | FR-DOC-008 | 권한 있는 사용자에게 hard delete를 제공해야 한다. | Must | object와 metadata가 제거되거나 식별 가능한 오류가 반환된다. |
-| FR-DOC-009 | filename, 작성자, 사용자 정의 metadata, checksum은 document metadata로 관리해야 한다. | Must | multipart `metadata`는 JSON object만 허용하고, 업로드 시 제공·파생된 정보가 metadata 조회에서 확인된다. |
+| FR-DOC-009 | filename, 작성자, 사용자 정의 metadata, checksum은 document metadata로 관리해야 한다. | Must | multipart `metadata`는 JSON object만 허용하고, DMS가 stream 본문에서 파생한 checksum과 업로드 정보가 metadata 조회에서 확인된다. v0.7 stream request에는 client-supplied checksum field를 전달하지 않는다. |
 | FR-DOC-010 | 원본 filename과 작성자 정보는 MinIO object metadata가 아닌 document metadata에 저장해야 한다. | Must | object metadata에 업무 metadata가 기록되지 않는다. |
 
 ### 4.3 오류, 정합성 및 운영
@@ -90,11 +90,12 @@ DocMesh Document Service의 목적은 업무 시스템이 파일 저장소와 �
 | FR-ERR-003 | object 저장 후 metadata 저장에 실패하면 본문 정리를 시도해야 한다. | Must | 실패 주입 테스트가 cleanup 시도를 검증한다. |
 | FR-ERR-004 | cleanup 실패 또는 metadata·본문 불일치는 consistency 오류로 기록·응답해야 한다. | Must | 상관 ID로 오류를 추적할 수 있다. |
 | FR-ERR-005 | 존재하지 않거나 soft-deleted 문서의 단건 metadata·콘텐츠·다운로드는 동일한 외부 not-found 정책으로 처리해야 한다. | Must | 존재 여부를 불필요하게 노출하지 않는 일관된 응답이 검증되며 목록의 명시적 deleted filter는 이 정책과 구분된다. |
-| FR-OPS-001 | 배포 template은 PostgreSQL을 기본 metadata store로, SQLite를 로컬 개발 대안으로, MinIO를 필수 object store로 구성할 수 있어야 한다. | Must | PostgreSQL은 개별 `POSTGRES_*`, SQLite는 `SQLITE_*`, object store는 `MINIO_*`로 구성하고 backend를 명시적으로 선택하며, 지원하지 않는 `POSTGRES_DSN`은 거부한다. |
-| FR-OPS-002 | 필수 저장소 설정 누락 또는 장애는 lifecycle 단계에 따라 기동 실패 또는 readiness 실패로 드러나야 한다. | Must | DMS factory 실패는 기동을 중단하고, 실행 중 필수 DMS health 실패는 readiness 503을 반환한다. DMS SDK와 FastAPI lifecycle이 같은 startup health 환경변수를 서로 다른 기본값으로 해석하지 않도록 배포 설정에 값을 명시한다. |
+| FR-OPS-001 | 배포 template은 PostgreSQL을 기본 metadata store로, SQLite를 로컬 개발 대안으로, MinIO를 필수 object store로 구성할 수 있어야 한다. | Must | `DMS_METADATA_BACKEND`는 `postgresql`(기본값) 또는 `sqlite`만 허용하고, PostgreSQL은 개별 `POSTGRES_*`, SQLite는 `SQLITE_*`, object store는 `MINIO_*`로 구성하며, 지원하지 않는 `POSTGRES_DSN`은 거부한다. |
+| FR-OPS-002 | 필수 저장소 설정 누락 또는 장애는 lifecycle 단계에 따라 기동 실패 또는 readiness 실패로 드러나야 한다. | Must | host-owned DMS factory 실패는 기동을 중단하고, 실행 중 필수 DMS health 실패는 readiness 503을 반환한다. DMS assembly는 중복 network health check를 실행하지 않고 FastAPI required managed resource가 startup/readiness check를 소유한다. |
 | FR-OPS-003 | CORS, 인증 URL, root path, 보안 모드, service 선택·대안, startup health·실패·재시도와 readiness 정책은 환경 설정으로 명시해야 한다. | Must | `TOKEN_URL`은 OpenAPI OAuth2 URL이고 실제 auth route는 `/token`임을 포함해 배포 환경별 정책을 코드 변경 없이 적용할 수 있다. |
 | FR-OPS-004 | secret과 연결 정보는 외부 secret 주입 또는 환경변수로 제공하고 로그·응답에 원문을 노출해서는 안 된다. | Must | credential, DSN, storage key, stack trace가 외부에 노출되지 않는다. |
 | FR-OPS-005 | 서비스는 운영 환경별 application log level·출력·JSON 형식과 access/health-access log 정책을 설정할 수 있어야 한다. | Must | 애플리케이션 로그의 level·대상·형식을 조정하고 access log를 코드 변경 없이 켜거나 끌 수 있으며, health probe 로그를 독립적으로 제어한다. |
+| FR-OPS-006 | host adapter는 선택적 strict configuration 진단으로 metadata backend 선택과 필수 MinIO 설정의 모호성을 조기에 검증해야 한다. | Must | `DMS_CONFIGURATION_STRICT`의 기본값은 `false`이고 `true`일 때 PostgreSQL·SQLite 동시 선택 또는 필수 MinIO bucket 누락을 client 생성 전에 거부하며, `true`·`false` 이외의 값은 구성 오류가 된다. |
 
 ## 5. 품질 및 릴리스 기준
 
@@ -104,7 +105,7 @@ DocMesh Document Service의 목적은 업무 시스템이 파일 저장소와 �
 | 자원 관리 | streaming 완료·예외·연결 종료와 application shutdown에서 stream 및 SDK close를 검증한다. |
 | 가용성 | liveness와 readiness를 분리하고 선택된 metadata store와 MinIO 장애가 readiness에 반영됨을 검증한다. |
 | 보안 | 인증, hard delete 권한, 안전한 오류 응답, 운영 CORS 정책을 API 계약 테스트로 검증한다. |
-| 호환성 | Python 3.11 이상 및 저장소에 고정된 `dms`, `fastapi-core`, `docmesh-py-core` 조합에서 테스트를 통과한다. |
+| 호환성 | Python 3.11 이상 및 저장소에 고정된 `dms`, `docmesh-config`, `docmesh-py-core`, `fastapi-core` 조합에서 테스트를 통과한다. |
 
 ## 6. 추적성
 

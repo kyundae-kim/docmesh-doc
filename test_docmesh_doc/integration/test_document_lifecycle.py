@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from hashlib import sha256
-
 import dms
 import pytest
 from fastapi.testclient import TestClient
@@ -20,7 +18,6 @@ def upload(client: TestClient, document_id: str):
         data={
             "document_id": document_id,
             "metadata": '{"suite":"integration"}',
-            "checksum": sha256(PAYLOAD).hexdigest(),
         },
         headers={"X-Correlation-ID": f"correlation-{document_id}"},
     )
@@ -113,15 +110,19 @@ def test_hard_delete_removes_postgres_metadata_and_minio_object(
         sdk.get_document_content(document_id)
 
 
-def test_sdk_health_checks_real_postgres_and_minio(
+def test_sdk_and_readiness_health_checks_real_postgres_and_minio(
     integration_client: tuple[
         TestClient, dms.DefaultDocumentManagementSDK, UserInfo
     ],
 ):
-    _, sdk, _ = integration_client
+    client, sdk, _ = integration_client
 
     health = sdk.check_health()
 
     assert health.ok is True
-    assert {service.service for service in health.services} == {"postgres", "minio"}
-    assert all(service.ok for service in health.services)
+    # DMS owns the PostgreSQL/MinIO wrappers and exposes their aggregate health
+    # through the required managed resource. Keep those services out of
+    # fastapi-core's runtime to avoid assembling duplicate clients.
+    readiness = client.get("/health/readiness")
+    assert readiness.status_code == 200
+    assert readiness.json()["status"] == "ok"

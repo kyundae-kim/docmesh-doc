@@ -1,10 +1,10 @@
 ---
 title: dms application optimization
 created: 2026-07-26
-updated: 2026-07-26
+updated: 2026-08-02
 type: query
 tags: [dms-core, dms, integration, performance, testing]
-sources: [raw/articles/dms-core-wiki-api-reference-v0.6.0.md, raw/articles/dms-core-wiki-examples-v0.6.0.md]
+sources: [raw/articles/dms-core-wiki-api-reference-v0.7.0.md, raw/articles/dms-core-wiki-examples-v0.7.0.md]
 confidence: high
 ---
 
@@ -12,7 +12,7 @@ confidence: high
 
 ## 결론
 
-현재 adapter는 DMS v0.6의 public metadata, cursor page, explicit delete, managed SDK lifecycle과 동기 stream 계약을 이미 올바르게 사용한다. 이번 최적화는 이 구조를 유지하면서 본문 전송의 메모리 상한과 통합 검증 안정성을 강화했다. DMS의 일반 실행 원칙은 [[dms-core-usage-patterns]], object/metadata 정합성과 공개 경계는 [[dms-core-document-lifecycle]]에 정리되어 있다. ^[raw/articles/dms-core-wiki-api-reference-v0.6.0.md]
+현재 adapter는 DMS의 public metadata, cursor page, explicit delete, managed SDK lifecycle과 동기 stream 계약을 이미 올바르게 사용한다. 이번 최적화는 이 구조를 유지하면서 본문 전송의 메모리 상한과 통합 검증 안정성을 강화했다. DMS의 일반 실행 원칙은 [[dms-core-usage-patterns]], object/metadata 정합성과 공개 경계는 [[dms-core-document-lifecycle]]에 정리되어 있다.
 
 ## 적용한 최적화
 
@@ -32,4 +32,4 @@ confidence: high
 
 ## 검증
 
-설치된 `dms 0.6.0`과 실제 PostgreSQL·MinIO 환경에서 전체 suite가 `61 passed, 1 skipped`로 통과했다. integration selection은 `3 passed, 1 skipped, 58 deselected`였고, unit selection에서는 integration 4개가 정상적으로 제외되었다. 남은 warning은 upstream FastAPI test client의 `httpx2` 전환 경고다.
+2026-07-26 검증 당시 설치된 `dms 0.6.0`과 실제 PostgreSQL·MinIO 환경에서 전체 suite가 `61 passed, 1 skipped`로 통과했다. integration selection은 `3 passed, 1 skipped, 58 deselected`였고, unit selection에서는 integration 4개가 정상적으로 제외되었다. 남은 warning은 upstream FastAPI test client의 `httpx2` 전환 경고다. 이 query는 해당 runtime 검증 결과를 보존하며, v0.6.0 raw source set 자체는 삭제되었다.

@@ -362,3 +362,132 @@
 - Verification: `61 passed, 1 skipped`; integration selection was `3 passed, 1 skipped, 58 deselected`. The upstream Starlette `httpx2` migration warning remains.
 - Created: `queries/dms-application-optimization.md`.
 - Updated: `concepts/dms-core-usage-patterns.md`, `concepts/dms-core-document-lifecycle.md`, `index.md`, `log.md`.
+
+## [2026-08-02] ingest | docmesh-config v0.1.0 source set
+- Captured immutable sources from the requested GitHub Wiki pages and tag file:
+  - `raw/articles/docmesh-config-wiki-api-reference-v0.1.0.md` — `https://raw.githubusercontent.com/wiki/kyundae-kim/docmesh-config/API-Reference-v0.1.0.md` — body SHA-256 `8c59c7d5e2f05f84416a6100292f577a908e3e076bbacf943ceabf0338fd8fdd`.
+  - `raw/articles/docmesh-config-wiki-configuration-v0.1.0.md` — `https://raw.githubusercontent.com/wiki/kyundae-kim/docmesh-config/Configuration-v0.1.0.md` — body SHA-256 `a1b0c9d61fda4653b52fbbefc8d6a6b92922c83f7166808a00194c684455d830`.
+  - `raw/articles/docmesh-config-wiki-examples-v0.1.0.md` — `https://raw.githubusercontent.com/wiki/kyundae-kim/docmesh-config/Examples-v0.1.0.md` — body SHA-256 `f9499e7ebea86614eee32d3fa9190abd81d6fe1714ce96c15c49108d545772a5`.
+  - `raw/articles/docmesh-config-env-example-v0.1.0.md` — `https://raw.githubusercontent.com/kyundae-kim/docmesh-config/v0.1.0/.env.example` — body SHA-256 `2dba7c7874c696ea270353d3188424d161c4390994638cf952ac88de0cc6ba19`.
+- The three Wiki documents identify version `0.1.0` and a 2026-07-31 update date. The source set documents process-environment-only settings, eight service configurations, secret-safe diagnostics, `RuntimePlan`/`HealthcheckPolicy`, and no external connection during loading/diagnosis.
+- Created: `entities/docmesh-config.md`, `concepts/docmesh-config-configuration.md`, `concepts/docmesh-config-runtime-plan.md`.
+- Updated: `entities/docmesh-py-core.md`, `entities/fastapi-core.md`, `entities/dms-core.md`, `concepts/fastapi-core-configuration.md`, `concepts/dms-core-configuration.md`, `concepts/docmesh-py-core-usage-patterns.md`, `concepts/fastapi-core-app-assembly.md`, `index.md`, `log.md`.
+- Source-set boundary: `pyproject.toml` declares `docmesh-config` Git ref `v0.1.0`, but this session's interpreter could not import `docmesh_config` and application source usage was not found. The wiki records the package as an upstream configuration/plan layer and does not infer direct integration with DMS storage or FastAPI runtime assembly.
+
+## [2026-08-02] ingest | docmesh-py-core GitHub Wiki source set v0.6.0
+- Captured immutable raw sources from the requested Wiki pages and tag file:
+  - `raw/articles/docmesh-py-core-wiki-api-reference-v0.6.0.md` — `https://raw.githubusercontent.com/wiki/kyundae-kim/docmesh-py-core/API-Reference-v0.6.0.md` — body SHA-256 `30c67211392e75b9d3122a00ed9e7473d8ae91d52003a41219fdefceeee199fc`.
+  - `raw/articles/docmesh-py-core-wiki-configuration-v0.6.0.md` — `https://raw.githubusercontent.com/wiki/kyundae-kim/docmesh-py-core/Configuration-v0.6.0.md` — body SHA-256 `86b2dd5e69d64b012c9e671eac36d3fa95115dcca84e61d4a65b3b6ce292b624`.
+  - `raw/articles/docmesh-py-core-wiki-examples-v0.6.0.md` — `https://raw.githubusercontent.com/wiki/kyundae-kim/docmesh-py-core/Examples-v0.6.0.md` — body SHA-256 `acde3de5bfcc85ba29960890ce9b01fcb73f6de83dc99252e7b2b5f0085473af`.
+  - `raw/articles/docmesh-py-core-env-example-v0.6.0.md` — `https://raw.githubusercontent.com/kyundae-kim/docmesh-py-core/v0.6.0/.env.example` — body SHA-256 `4fd9b8289d75c805800a31162d24368ccbd3ba6b67348ce6151546890210b996`.
+- All four documents self-report v0.6.0. The API source is 506 lines and has body SHA-256 `30c672...`, distinct from the preserved v0.5.0 API body SHA-256 `1c6f4b...` (275 lines); v0.6 adds the canonical package split, runtime/container contract, timeout/error semantics, factory ownership, observability, and generated catalog surfaces.
+- The v0.6 API/Examples explicitly establish the package-level bridge `docmesh_config` → `docmesh_py_core`; generic FastAPI usage remains a consumer pattern and does not prove `fastapi-core` app-factory integration. DMS storage/backend assembly remains a separate boundary.
+- `pyproject.toml` declares `docmesh-py-core` v0.6.0 and `docmesh-config` v0.1.0, but this session's interpreter has none of `docmesh-py-core`, `docmesh-config`, `fastapi-core`, or `dms` installed. Runtime reconciliation is therefore documentation-only.
+- Created: `concepts/docmesh-py-core-v060-runtime-contract.md`.
+- Updated: `entities/docmesh-py-core.md`, `concepts/docmesh-py-core-usage-patterns.md`, `entities/docmesh-config.md`, `concepts/docmesh-config-configuration.md`, `concepts/docmesh-config-runtime-plan.md`, `concepts/fastapi-core-configuration.md`, `concepts/fastapi-core-app-assembly.md`, `concepts/dms-core-configuration.md`, `entities/dms-core.md`, `index.md`, `log.md`.
+
+## [2026-08-02] ingest | fastapi-core GitHub Wiki source set v0.7.0
+- Captured immutable raw sources from the requested Wiki pages and tag file:
+  - `raw/articles/fastapi-core-wiki-api-reference-v0.7.0.md` — `https://raw.githubusercontent.com/wiki/kyundae-kim/fastapi-core/API-Reference-v0.7.0.md` — body SHA-256 `1525e0e121884525eefb2b547ad2025c409c12c2e321c808ab95d54ab617d8ff`.
+  - `raw/articles/fastapi-core-wiki-configuration-v0.7.0.md` — `https://raw.githubusercontent.com/wiki/kyundae-kim/fastapi-core/Configuration-v0.7.0.md` — body SHA-256 `c3121122f8bc158b0669428ad4489ea6fb7addcb45e4cc54d3fa246b7f10dd07`.
+  - `raw/articles/fastapi-core-wiki-examples-v0.7.0.md` — `https://raw.githubusercontent.com/wiki/kyundae-kim/fastapi-core/Examples-v0.7.0.md` — body SHA-256 `235427059b0b62926c2e00ef34e37c57d1ea6bcb2a042e3f946cbaf66715089c`.
+  - `raw/articles/fastapi-core-env-example-v0.7.0.md` — `https://raw.githubusercontent.com/kyundae-kim/fastapi-core/v0.7.0/.env.example` — body SHA-256 `844816f71d5ced283abe09f450b903ed670eb4f241b31d8da35c69209c81cc12`.
+- The API, Configuration, and Examples documents self-report `fastapi-core 0.7.0`; the API reference labels itself `current-implementation`. The `.env.example` is captured from the `v0.7.0` tag URL. The API/config/examples/env bodies are distinct from the preserved v0.6.0 snapshots.
+- The source set documents `__all__`-based public boundaries, explicit module/transport/error assembly, typed resources/readiness, safe error rendering, managed streaming cleanup, consumer contract assertions, application/access logging, service-free environment defaults, and process-environment-only configuration.
+- Recorded two unresolved source inconsistencies: the configuration document gives `NATS_NAME=docmesh-config` in its service table but `docmesh-py-core` in its inventory and environment template; the examples’ AST-check snippet names `fastapi-core-examples-guide-v0.7.0.md`, while the immutable capture is `fastapi-core-wiki-examples-v0.7.0.md`.
+- `pyproject.toml` declares `fastapi-core` Git ref `v0.7.0`, and application source imports the v0.6/v0.7 module/resource APIs, but this session's interpreter cannot import `fastapi_core` or `docmesh_config`. Runtime/signature reconciliation is therefore documentation-only.
+- Updated: `entities/fastapi-core.md`, `concepts/fastapi-core-configuration.md`, `concepts/fastapi-core-app-assembly.md`, `concepts/fastapi-core-usage-patterns.md`, `concepts/fastapi-core-messaging-integration.md`.
+- Reviewed `index.md`; its date and page count were already current (`2026-08-02`, 18 pages) and unchanged.
+
+## [2026-08-02] ingest | dms-core GitHub Wiki source set v0.7.0
+- Captured immutable raw sources from the three requested GitHub Wiki pages after normalizing them to raw endpoints:
+  - `raw/articles/dms-core-wiki-api-reference-v0.7.0.md` — `https://raw.githubusercontent.com/wiki/kyundae-kim/dms-core/API-Reference-v0.7.0.md` — self-reported `0.7.0`, 48,035 body bytes, SHA-256 `5d36e93e8627cee5e1ae755ee24855250fb1afa0dd42ff1426249fd9371574e1`.
+  - `raw/articles/dms-core-wiki-configuration-v0.7.0.md` — `https://raw.githubusercontent.com/wiki/kyundae-kim/dms-core/Configuration-v0.7.0.md` — self-reported `0.7.0`, 17,664 body bytes, SHA-256 `cd8bc47c393a39457a8ae6b393f0047f415a235b9b914cc29053582bf0429d55`.
+  - `raw/articles/dms-core-wiki-examples-v0.7.0.md` — `https://raw.githubusercontent.com/wiki/kyundae-kim/dms-core/Examples-v0.7.0.md` — self-reported `0.7.0`, 22,427 body bytes, SHA-256 `9d47eb43b280dbf67f86786b78161b4b800cfa3d996d408bdaaa0da57605c48b`.
+- Each archive has `source_url`, `ingested: 2026-08-02`, and a body-only hash; stored body bytes were verified byte-for-byte against the fetched temporary capture. The three source bodies are distinct. No prior v0.7 snapshot existed, so no source drift comparison was required.
+- v0.7.0 makes the host-injection boundary explicit: only client/component sync and async factories are public; environment loading, environment diagnosis, automatic connection creation, standalone HTTP, search, presigned URLs, and broker integration remain outside DMS. `DmsAssemblyPlan`, `DmsServiceConfigs`, managed-resource ownership, access/scoped policy, observers, reset/recovery, async facade, and transport-neutral error projection were added to the durable notes.
+- `pyproject.toml` declares `dms` Git ref `v0.7.0`, but the current interpreter has no `dms`, `fastapi-core`, `docmesh-config`, or `docmesh-py-core` installation. Runtime/signature reconciliation is therefore documentation-only; no v0.7 behavior was promoted to verified application runtime.
+- Updated: `entities/dms-core.md`, `concepts/dms-core-configuration.md`, `concepts/dms-core-document-lifecycle.md`, `concepts/dms-core-messaging-boundary.md`, `concepts/dms-core-usage-patterns.md`, `concepts/fastapi-core-app-assembly.md`, `concepts/fastapi-core-configuration.md`, `concepts/fastapi-core-usage-patterns.md`.
+- Reviewed `index.md`; no new entity/concept page was needed, and its current date/count (`2026-08-02`, 18 pages) remain correct.
+
+## [2026-08-02] lint | 4 issues found
+- Checked 18 curated pages, 155 wikilinks, 38 raw text sources, and 55 log entries.
+- No broken wikilinks, orphan pages, index gaps/count mismatch, invalid curated-page frontmatter or tags, cited-source staleness findings, source-hash mismatches among 35 parseable raw captures, oversized pages, or log-rotation condition were found.
+- Review required: `concepts/fastapi-core-configuration.md` is marked `contested: true`.
+- Raw-source format issues: `raw/articles/dms-core-wiki-api-reference-v0.7.0.md`, `raw/articles/dms-core-wiki-configuration-v0.7.0.md`, and `raw/articles/dms-core-wiki-examples-v0.7.0.md` encode frontmatter line breaks as literal `\\n` characters, so the standard raw frontmatter and body-hash checks cannot parse them. Raw sources remain immutable; re-capture or repair the ingestion process before changing these files.
+
+## [2026-08-02] delete | docmesh-py-core v0.2.0 raw source set
+- Removed: `raw/articles/docmesh-py-core-api-v0.2.0.md`, `raw/articles/docmesh-py-core-config-v0.2.0.md`, `raw/articles/docmesh-py-core-examples-v0.2.0.md`.
+- Removed their source/provenance references from `entities/docmesh-py-core.md`, `concepts/docmesh-py-core-usage-patterns.md`, `concepts/dms-core-configuration.md`, and `concepts/fastapi-core-configuration.md`.
+- Historical ingest entries remain unchanged because `log.md` is append-only.
+
+## [2026-08-02] delete | docmesh-py-core v0.5.0 API raw source
+- Removed: `raw/articles/docmesh-py-core-wiki-api-reference-v0.5.0.md`.
+- Replaced its source/provenance references with the v0.6.0 API reference in `entities/docmesh-py-core.md` and `concepts/docmesh-py-core-usage-patterns.md`.
+- The historical v0.5.0 ingest entry remains unchanged because `log.md` is append-only.
+
+## [2026-08-02] delete | dms-core v0.6.0 raw source set
+- Removed: `raw/articles/dms-core-wiki-api-reference-v0.6.0.md`, `raw/articles/dms-core-wiki-configuration-v0.6.0.md`, and `raw/articles/dms-core-wiki-examples-v0.6.0.md`.
+- Removed their source/provenance references from `entities/dms-core.md`, `concepts/dms-core-configuration.md`, `concepts/dms-core-document-lifecycle.md`, `concepts/dms-core-usage-patterns.md`, `concepts/fastapi-core-app-assembly.md`, and `concepts/fastapi-core-configuration.md`.
+- Updated `queries/dms-application-optimization.md` to reference the current v0.7.0 source set while retaining its historical v0.6.0 runtime verification result.
+- Historical v0.6.0 ingest and reconciliation entries remain unchanged because `log.md` is append-only; `index.md` remains unchanged at 18 pages.
+
+## [2026-08-02] delete | dms-core v0.5.0 raw source set
+- Removed: `raw/articles/dms-core-env-example-v0.5.0.md`, `raw/articles/dms-core-wiki-api-reference-v0.5.0.md`, `raw/articles/dms-core-wiki-configuration-v0.5.0.md`, and `raw/articles/dms-core-wiki-examples-v0.5.0.md`.
+- Removed their source/provenance references from `entities/dms-core.md`, `concepts/dms-core-configuration.md`, `concepts/dms-core-document-lifecycle.md`, `concepts/dms-core-usage-patterns.md`, `concepts/fastapi-core-app-assembly.md`, and `concepts/fastapi-core-configuration.md`.
+- Reworded historical assembly notes to use the retained v0.3.0/v0.4.0 evidence; current v0.7.0 host-owned configuration remains the active documented boundary.
+- Historical v0.5.0 ingest entries remain unchanged because `log.md` is append-only; `index.md` remains unchanged at 18 pages.
+
+## [2026-08-02] delete | dms-core v0.4.0 raw source set
+- Removed: `raw/articles/dms-core-env-example-v0.4.0.md`, `raw/articles/dms-core-wiki-api-reference-v0.4.0.md`, `raw/articles/dms-core-wiki-configuration-v0.4.0.md`, and `raw/articles/dms-core-wiki-examples-v0.4.0.md`.
+- Removed their source/provenance references from `entities/dms-core.md`, `concepts/dms-core-configuration.md`, `concepts/dms-core-document-lifecycle.md`, `concepts/dms-core-usage-patterns.md`, `concepts/fastapi-core-app-assembly.md`, and `concepts/fastapi-core-configuration.md`.
+- Removed v0.4.0-specific curated paragraphs and kept the retained v0.3.0 historical boundary plus current v0.7.0 documentation as applicable.
+- Historical v0.4.0 ingest entries remain unchanged because `log.md` is append-only; `index.md` remains unchanged at 18 pages.
+
+## [2026-08-02] update | DocMesh host-owned v0.7 assembly and stream contract
+- Updated code: `docmesh_doc/dms_factory.py`, `docmesh_doc/application.py`, and `docmesh_doc/router.py`.
+- Added regression coverage: `test_docmesh_doc/test_dms_factory.py`; updated application/upload contract tests.
+- Updated product/API/config documentation: `README.md`, `docs/prd.md`, and `docs/srs.md`.
+- Updated curated Layer 2 pages: `index.md`, `entities/dms-core.md`, `entities/docmesh-config.md`, `entities/docmesh-py-core.md`, `entities/fastapi-core.md`, `concepts/dms-core-configuration.md`, `concepts/docmesh-py-core-v060-runtime-contract.md`, `concepts/fastapi-core-app-assembly.md`, `concepts/fastapi-core-configuration.md`, and `concepts/fastapi-core-usage-patterns.md`.
+- Runtime reconciliation: `dms` v0.7 no longer supplies an environment factory or stream checksum request field; the host now loads selected services with `docmesh-config`, creates clients with `docmesh-py-core`, injects them with `dms.create_sdk_from_clients(...)`, and lets DMS derive the stream checksum.
+- Immutable `raw/` sources were not modified.
+
+## [2026-08-02] update | Product documentation link repair
+- Added missing linked documents: `docs/api.md`, `docs/config.md`, `docs/examples.md`, `docs/messaging.md`, and `docs/test.md`.
+- Documented the v0.7 host-owned config/client/DMS boundary and removed stream checksum form field.
+
+## [2026-08-02] lint | 3 raw frontmatter issues found
+- Layer 2 health: no broken wikilinks, orphan pages, index omissions, invalid tags, hash drift, or pages over 200 lines.
+- `raw/articles/dms-core-wiki-api-reference-v0.7.0.md`, `raw/articles/dms-core-wiki-configuration-v0.7.0.md`, and `raw/articles/dms-core-wiki-examples-v0.7.0.md` use literal escaped `\\n` delimiters instead of newline frontmatter delimiters. Their stored body hashes match, so the immutable raw sources were not edited; re-capture is required if machine-readable raw frontmatter is needed.
+- `concepts/fastapi-core-configuration.md` remains marked `contested: true` for its documented configuration boundary and requires user review.
+
+## [2026-08-04] query | docmesh-config consumer source minimization
+- Runtime evidence: installed `docmesh-config 0.1.0`, `docmesh-py-core 0.6.0`, `dms 0.7.0`, and `fastapi-core 0.7.0`; `load_service_configs()` accepts only a service set while `diagnose_services()` separately accepts a `RuntimePlan`.
+- Consumer evidence: `docmesh_doc/dms_factory.py` is 148 lines and manually repeats environment parsing, plan diagnosis, backend service selection, client injection, and rollback/close handling.
+- Created: `queries/docmesh-config-consumer-source-minimization.md`.
+- Updated: `entities/docmesh-config.md`, `index.md`, and `log.md`.
+- Verification: SQLite/MinIO complete diagnosis and strict PostgreSQL/SQLite ambiguity diagnosis passed; `uv run pytest -q` reported `66 passed, 1 skipped` with one upstream Starlette/httpx2 warning.
+
+## [2026-08-04] query | docmesh-py-core consumer source minimization
+- Runtime evidence: installed `docmesh-py-core 0.6.0` already exposes `assemble_services()`, `assemble_service_runtime()`, typed `ServiceBundle.require_client()`, and idempotent container close; `dms.create_sdk_from_clients()` accepts caller close callbacks.
+- Consumer evidence: `docmesh_doc/dms_factory.py` is 148 lines and its 56-line `create_dms_sdk()` directly calls three py-core factories, unwraps `.client`, and reimplements rollback/close ownership.
+- Runtime probe: a SQLite/MinIO `ServiceBundle` was injected into DMS with `close_callbacks=(bundle.close,)`; sync SDK close, repeated close, async runtime close, and typed Engine lookup succeeded. The low-level false health probe currently returns success and is recorded as a proposed adapter improvement.
+- Created: `queries/docmesh-py-core-consumer-source-minimization.md`.
+- Updated: `entities/docmesh-py-core.md`, `index.md`, and `log.md`.
+- Immutable `raw/` sources were not modified.
+
+## [2026-08-04] query | fastapi-core consumer source minimization
+- Runtime evidence: installed `fastapi-core 0.7.0` exposes `ResourceBinding`, `TransportPolicy`, `ExceptionMappingTable`, `create_error_renderer`, `invoke_resource`, `ManagedStreamingResponse`, and `ApplicationContractProfile`; probes confirmed worker-thread invocation, reverse resource close, rollback, strict false/`.ok` readiness handling, and 400/OpenAPI policy alignment.
+- Consumer evidence: FastAPI-specific source is 341 lines across `application.py`, `router.py`, `errors.py`, `dependencies.py`, `schemas.py`, and `main.py`; the most repetitive mechanics are resource descriptor/dependency pairing, error MRO/renderer code, router response metadata, direct thread-pool invocation, and distributed contract assertions.
+- Package-neutral recommendation: adopt existing ResourceBinding, module TransportPolicy, error table/renderer, invoke_resource, and contract profile before adding upstream API; keep DMS storage assembly and product HTTP policy outside `fastapi-core`.
+- Created: `queries/fastapi-core-consumer-source-minimization.md`.
+- Updated: `entities/fastapi-core.md`, `index.md`, and `log.md`.
+- Immutable `raw/` sources were not modified.
+
+## [2026-08-04] query | dms-core consumer source minimization
+- Runtime evidence: installed `dms 0.7.0` exposes client/component factories, `DmsAssemblyPlan`, scoped operation context, public metadata projection, close-safe streams, feature protocols, and transport-neutral error descriptors; `recommended_http_error` was probed for deleted/configuration policy differences.
+- Consumer evidence: host assembly is 148 lines (`create_dms_sdk()` is 56 lines); the DMS HTTP adapter is 364 lines; the measured two-layer surface is 512 lines. Repetition crosses DMS domain primitives, py-core/config/FastAPI bridges, and product policy.
+- Recommendation: use existing DMS primitives first; keep environment/client assembly and HTTP lifecycle in explicit bridge modules; consider additive streaming checksum/idempotency and bounded unknown-size input only after safety contracts are specified.
+- Created: `queries/dms-core-consumer-source-minimization.md`.
+- Updated: `entities/dms-core.md`, `concepts/dms-core-usage-patterns.md`, `index.md`, and `log.md`.
+- Verification: `uv run pytest -q` returned `66 passed, 1 skipped, 1 warning`. Immutable `raw/` sources were not modified.

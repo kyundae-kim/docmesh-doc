@@ -1,7 +1,11 @@
 import dms
 from fastapi import Request
-from fastapi.responses import JSONResponse
-from fastapi_core import ErrorMapping
+from fastapi_core import (
+    ErrorMapperSpec,
+    ErrorMapping,
+    ExceptionMappingTable,
+    create_error_renderer,
+)
 
 
 def _error(status: int, code: str, detail: str) -> ErrorMapping:
@@ -9,12 +13,11 @@ def _error(status: int, code: str, detail: str) -> ErrorMapping:
 
 
 ERRORS = {
+    dms.DmsError: _error(500, "INTERNAL_ERROR", "An internal error occurred."),
     dms.PayloadTooLargeError: _error(
         413, "DOCUMENT_TOO_LARGE", "The document exceeds the configured size limit."
     ),
-    dms.ValidationError: _error(
-        400, "VALIDATION_ERROR", "The request is invalid."
-    ),
+    dms.ValidationError: _error(400, "VALIDATION_ERROR", "The request is invalid."),
     dms.DocumentNotFoundError: _error(
         404, "DOCUMENT_NOT_FOUND", "Document was not found."
     ),
@@ -67,30 +70,38 @@ STATUS_CODES = {
 }
 
 
-def render_error(request: Request, mapping: ErrorMapping) -> JSONResponse:
-    return JSONResponse(
-        status_code=mapping.status_code,
-        content={
-            "error": {
-                "code": mapping.code
-                or STATUS_CODES.get(mapping.status_code, "HTTP_ERROR"),
-                "message": mapping.detail,
-                "correlation_id": request.state.correlation_id,
-            }
-        },
-        headers=mapping.headers,
-    )
+def _error_envelope(
+    _request: Request,
+    mapping: ErrorMapping,
+    correlation_id: str,
+) -> dict[str, dict[str, str]]:
+    return {
+        "error": {
+            "code": mapping.code or "HTTP_ERROR",
+            "message": mapping.detail,
+            "correlation_id": correlation_id,
+        }
+    }
 
 
-def map_dms_error(_request: Request, exc: Exception) -> ErrorMapping:
-    for error_type, mapping in ERRORS.items():
-        if isinstance(exc, error_type):
-            return mapping
-    return ErrorMapping(
-        status_code=500,
-        detail="An internal error occurred.",
-        code="INTERNAL_ERROR",
-    )
+render_error = create_error_renderer(
+    envelope_builder=_error_envelope,
+    fallback_codes=STATUS_CODES,
+    problem_details=False,
+)
+
+
+DMS_ERROR_MAPPING_TABLE = ExceptionMappingTable(ERRORS)
+
+
+async def map_dms_error(_request: Request, exc: Exception) -> ErrorMapping:
+    mapping = await DMS_ERROR_MAPPING_TABLE.resolve(_request, exc)
+    if mapping is None:  # pragma: no cover - DmsError is always in the table
+        raise LookupError(f"No DMS error mapping for {type(exc).__name__}")
+    return mapping
+
+
+DMS_ERROR_MAPPER = ErrorMapperSpec(dms.DmsError, map_dms_error)
 
 
 def map_validation_error(_request: Request, _exc: Exception) -> ErrorMapping:
