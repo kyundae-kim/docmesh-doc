@@ -1,16 +1,16 @@
 ---
 title: dms-core usage patterns
 created: 2026-07-11
-updated: 2026-08-04
+updated: 2026-08-15
 type: concept
 tags: [dms-core, dms, document, storage, workflow, testing, integration]
-sources: [raw/articles/dms-core-api-v0.2.0.md, raw/articles/dms-core-api-v0.3.0.md, raw/articles/dms-core-wiki-api-reference-v0.7.0.md, raw/articles/dms-core-wiki-configuration-v0.7.0.md, raw/articles/dms-core-wiki-examples-v0.7.0.md, raw/articles/dms-core-config-v0.2.0.md, raw/articles/dms-core-config-v0.3.0.md, raw/articles/dms-core-examples-v0.2.0.md, raw/articles/dms-core-examples-v0.3.0.md]
+sources: [raw/articles/dms-core-api-v0.2.0.md, raw/articles/dms-core-api-v0.3.0.md, raw/articles/dms-core-wiki-api-reference-v0.7.0.md, raw/articles/dms-core-wiki-configuration-v0.7.0.md, raw/articles/dms-core-wiki-examples-v0.7.0.md, raw/articles/dms-core-config-v0.2.0.md, raw/articles/dms-core-config-v0.3.0.md, raw/articles/dms-core-examples-v0.2.0.md, raw/articles/dms-core-examples-v0.3.0.md, raw/articles/dms-core-wiki-api-reference-v0.9.0.md, raw/articles/dms-core-wiki-examples-v0.9.0.md]
 confidence: medium
 ---
 
 # dms-core usage patterns
 
-DMS v0.7.0의 기본 사용 흐름은 호스트가 만든 client 또는 storage component를 sync/async factory에 주입하고, upload → metadata/content 조회 → delete → `close()`/`aclose()` 순서로 리소스를 정리하는 것이다. 운영 코드에서는 context manager를 우선 사용하고, caller-owned와 SDK-owned 자원을 명시적으로 구분해야 한다. 이전 버전의 environment factory 흐름은 historical example로만 읽는다. ^[raw/articles/dms-core-wiki-configuration-v0.7.0.md] ^[raw/articles/dms-core-wiki-examples-v0.7.0.md]
+DMS v0.9.0의 기본 사용 흐름은 호스트가 만든 `Engine`, MinIO client, 또는 storage component를 `DocumentManagementSDKFactory`/`DefaultDocumentManagementSDK`에 주입하고, upload → metadata/content 조회 → delete/reset/recovery 작업을 수행하는 것이다. SDK facade에는 전역 `close()`, `aclose()`, `check_health()`가 없으므로 host가 readiness와 shutdown을 소유하고, SDK가 반환한 content stream과 SDK가 직접 연 파일만 각 operation contract에 따라 정리한다. ^[raw/articles/dms-core-wiki-api-reference-v0.9.0.md] ^[raw/articles/dms-core-wiki-examples-v0.9.0.md]
 
 ## Upload and retrieval
 
@@ -20,16 +20,25 @@ v0.3.0에서는 `UploadDocumentStreamRequest`로 알려진 양의 `size`와 `Bin
 
 실행 예제는 파일 stream이 upload 호출 내내 열려 있어야 하고 `size`/`chunk_size`가 양수여야 함을 확인한다. 목록 API는 생성 시각·document ID 내림차순의 기본 정렬과 `DocumentStatus` 상태 필터만 제공하므로, 업무 검색이나 복합 필터가 필요한 application은 별도 query contract를 설계해야 한다. ^[raw/articles/dms-core-examples-v0.3.0.md]
 
-
 v0.7.0에서는 known-size sync binary stream만 직접 upload 입력으로 공개한다. unknown-size stream과 async input stream upload는 범위 밖이며, async facade는 동기 adapter 작업을 worker thread에서 실행한다. 이미 시작한 변경 작업이 취소되면 정합성 경계까지 완료한 뒤 취소를 전파할 수 있으므로 operation 또는 metadata 조회로 최종 상태를 확인해야 한다. ^[raw/articles/dms-core-wiki-api-reference-v0.7.0.md] ^[raw/articles/dms-core-wiki-examples-v0.7.0.md]
 
 v0.7.0 Examples는 `DmsAssemblyPlan`의 access policy와 operation observer, `scoped(context)` facade, `ManagedResource` reverse cleanup, reset/recovery plan, 기능별 runtime-checkable protocol, structured error descriptor와 HTTP 권고 변환을 host integration contract로 보여 준다. 일반 결과에는 `storage_key`를 넣지 않고 internal metadata/recovery 경로에서만 관리한다. ^[raw/articles/dms-core-wiki-api-reference-v0.7.0.md] ^[raw/articles/dms-core-wiki-examples-v0.7.0.md]
 
+## v0.9 current usage contract
+
+The v0.9.0 examples cover factory and component assembly, bytes/file/known-size stream upload, public/internal metadata projection, cursor pages and iterators, sync/async content streams, checksum-verified sink copy, soft/hard delete, reset, idempotency operation lookup, recovery plan execution, access policy, scoped context, observers, capability protocols, async facades, and stable SDK error handling. ^[raw/articles/dms-core-wiki-api-reference-v0.9.0.md] ^[raw/articles/dms-core-wiki-examples-v0.9.0.md]
+
+Use `list_documents()`/`list_documents_page()` with the returned opaque cursor, preserving the same status filter and page size. Use `iter_documents()` when the SDK should manage page traversal. Public metadata can be serialized through the documented projection methods, but `DocumentMetadata.storage_key` must remain inside recovery/management boundaries. ^[raw/articles/dms-core-wiki-api-reference-v0.9.0.md] ^[raw/articles/dms-core-wiki-examples-v0.9.0.md]
+
+For downloads, use context-managed streams or `iter_chunks_closing()` and use `copy_document_to()` when the caller needs checksum and byte-count verification without closing its sink. Async output streams are supported; unknown-size and async input-stream upload are not. Host transport maps stable DMS error fields to its own HTTP/product envelope because v0.9.0 exports no HTTP error helper. ^[raw/articles/dms-core-wiki-api-reference-v0.9.0.md] ^[raw/articles/dms-core-wiki-examples-v0.9.0.md]
+
 현재 adapter는 inline content와 attachment download 모두 `get_document_content_stream()`을 사용하고 하나의 context-managed response 경계에서 chunk를 전달한다. caller가 지정하는 read buffer는 1 byte~8 MiB로 제한해 전체 object 적재와 비정상적으로 큰 단일 read를 피한다. 통합 테스트는 실제 PostgreSQL·MinIO 문서를 fixture cleanup으로 제거하며 marker selection과 root-path-aware `Location`을 검증한다. 적용 범위와 후속 후보는 [[dms-application-optimization]]에 기록한다.
 
-소비자 source를 더 줄일 때는 DMS가 환경변수나 FastAPI를 소유하도록 확장하기보다 scoped facade, `delete_document(...)`, `error_descriptor(...)`, stream cleanup primitive를 host bridge에서 재사용한다. config/client assembly와 제품 HTTP 정책을 분리하는 판단은 [[dms-core-consumer-source-minimization]]에 기록한다.
+소비자 source를 더 줄일 때는 DMS가 환경변수나 FastAPI를 소유하도록 확장하기보다 scoped facade, `delete_document(...)`, stable error fields, stream cleanup primitive를 host bridge에서 재사용한다. config/client assembly와 제품 HTTP 정책을 분리하는 판단은 [[dms-core-consumer-source-minimization]]에 기록한다.
 
 ## Assembly choices
+
+v0.9.0의 현재 public assembly는 `DocumentManagementSDKFactory` 또는 `DefaultDocumentManagementSDK`다. 전자는 host-owned SQLAlchemy `Engine`과 MinIO client를 받아 dialect별 adapter와 operation store를 조립하고, 후자는 host가 준비한 structural storage component를 직접 받는다. `max_file_size`, access policy, operation observer, recovery audit hook은 명시적 생성 인자이며, 환경 factory·DMS health·SDK 전역 close는 공개 계약이 아니다. ^[raw/articles/dms-core-wiki-api-reference-v0.9.0.md] ^[raw/articles/dms-core-wiki-examples-v0.9.0.md]
 
 v0.7.0의 현재 public assembly는 `create_sdk_from_clients(...)`, `create_sdk_from_components(...)`와 각 async factory다. host는 환경·secret을 읽어 client/component를 만든 뒤 DMS에 주입하며, DMS가 environment를 자동 로드하지 않는다. PostgreSQL/SQLite metadata store와 MinIO 조합을 어떻게 만들지는 host configuration boundary에서 결정하고, DMS에는 `DmsAssemblyPlan`으로 startup/metadata/access policy를 전달한다. ^[raw/articles/dms-core-wiki-configuration-v0.7.0.md] ^[raw/articles/dms-core-wiki-api-reference-v0.7.0.md]
 
@@ -41,7 +50,7 @@ v0.3.0의 component assembly는 `max_file_size`, persistent idempotency용 `oper
 
 FastAPI route는 request parsing, SDK error-to-HTTP mapping, streaming response 변환을 책임지고, SDK는 문서 도메인 작업을 담당하도록 분리한다. SDK 생성·close는 [[fastapi-core-app-assembly]]의 custom lifespan/state 경계와 맞춰야 하며, `fastapi-core`의 application layer 역할은 [[fastapi-core]]를 따른다.
 
-v0.7.0 Configuration은 이 경계를 더 엄격히 한다. FastAPI가 engine/MinIO client 또는 component를 만들고 `ManagedResource` ownership, health check, close callback을 DMS plan/resource로 연결해야 하며, DMS의 비공개 환경 factory를 app bootstrap으로 가정하지 않는다. ^[raw/articles/dms-core-wiki-configuration-v0.7.0.md]
+v0.9.0 Configuration은 이 경계를 더 엄격히 한다. FastAPI가 engine/MinIO client 또는 component를 만들고 readiness와 shutdown을 host resource boundary에서 관리해야 하며, DMS facade에 health check나 global close가 있다고 가정하지 않는다. ^[raw/articles/dms-core-wiki-api-reference-v0.9.0.md] ^[raw/articles/dms-core-wiki-examples-v0.9.0.md]
 
 ## Policy, reset, and observability
 
@@ -62,3 +71,5 @@ host authorization은 `AccessContext`와 `DocumentAccessPolicy`로, tenant/작�
 - `raw/articles/dms-core-config-v0.3.0.md`
 - `raw/articles/dms-core-examples-v0.2.0.md`
 - `raw/articles/dms-core-examples-v0.3.0.md`
+- `raw/articles/dms-core-wiki-api-reference-v0.9.0.md`
+- `raw/articles/dms-core-wiki-examples-v0.9.0.md`

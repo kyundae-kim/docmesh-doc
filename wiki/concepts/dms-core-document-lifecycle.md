@@ -1,10 +1,10 @@
 ---
 title: dms-core document lifecycle
 created: 2026-07-11
-updated: 2026-08-02
+updated: 2026-08-15
 type: concept
 tags: [dms, document, metadata, storage, workflow, dms-core]
-sources: [raw/articles/dms-core-api-v0.2.0.md, raw/articles/dms-core-api-v0.3.0.md, raw/articles/dms-core-wiki-api-reference-v0.7.0.md, raw/articles/dms-core-wiki-examples-v0.7.0.md, raw/articles/dms-core-wiki-configuration-v0.7.0.md, raw/articles/dms-core-examples-v0.2.0.md, raw/articles/dms-core-examples-v0.3.0.md]
+sources: [raw/articles/dms-core-api-v0.2.0.md, raw/articles/dms-core-api-v0.3.0.md, raw/articles/dms-core-wiki-api-reference-v0.7.0.md, raw/articles/dms-core-wiki-examples-v0.7.0.md, raw/articles/dms-core-wiki-configuration-v0.7.0.md, raw/articles/dms-core-examples-v0.2.0.md, raw/articles/dms-core-examples-v0.3.0.md, raw/articles/dms-core-wiki-api-reference-v0.9.0.md, raw/articles/dms-core-wiki-examples-v0.9.0.md]
 confidence: medium
 ---
 
@@ -33,6 +33,14 @@ v0.7.0 Configuration은 DMS가 환경이나 connection을 만들지 않고 host�
 sync/async SDK와 content stream은 context manager를 제공하며, async facade는 sync storage 작업을 worker thread에서 실행한다. async output stream은 정상 소진·읽기 오류·취소·조기 `aclose()`에서 반복 호출에 안전하게 정리되고, `copy_document_to()`는 SDK-owned source만 닫고 caller-owned sink는 닫지 않는다. cleanup 실패가 있으면 `ResourceCleanupError.errors`로 모든 오류를 보존한다. ^[raw/articles/dms-core-wiki-api-reference-v0.7.0.md]
 
 v0.7.0의 전역 `clear_all_data()`/`initialize_for_data_load()`는 metadata, `documents/` prefix object, upload operation record를 대상으로 하며 분산 transaction을 주장하지 않는다. 한 store 실패 후에도 나머지를 시도하고 부분 결과를 `DataResetError.result`에 남기므로, application은 reset을 개별 document delete와 다른 관리 권한·운영 관찰 경계로 둔다. ^[raw/articles/dms-core-wiki-api-reference-v0.7.0.md] ^[raw/articles/dms-core-wiki-examples-v0.7.0.md]
+
+## v0.9 current lifecycle contract
+
+v0.9.0 preserves the object/metadata lifecycle while making ownership and transport boundaries explicit. `DocumentManagementSDKFactory` and direct component assembly accept host-owned resources; the SDK does not expose global `close()`, `aclose()`, or `check_health()`. SDK-opened file inputs and returned content streams are cleaned up by the documented operation/stream boundary, while caller-provided upload streams and copy sinks remain caller-owned. ^[raw/articles/dms-core-wiki-api-reference-v0.9.0.md] ^[raw/articles/dms-core-wiki-examples-v0.9.0.md]
+
+Public retrieval/listing returns `PublicDocumentMetadata` without `storage_key`; internal metadata, inspection, and recovery results remain explicit management surfaces. `list_documents()` is cursor-page based, binds the opaque cursor to status and page size, and hides `DELETING`/`DELETED` documents. Access policy callbacks receive public metadata, so authorization must not depend on storage locators. ^[raw/articles/dms-core-wiki-api-reference-v0.9.0.md] ^[raw/articles/dms-core-wiki-examples-v0.9.0.md]
+
+v0.9.0 reset and reconciliation keep partial results and per-item errors observable, and recovery plans are revalidated at execution time. `RecoveryAuditEvent` is a best-effort host hook. The SDK exposes stable error fields but no HTTP status or response-body contract; the FastAPI layer must perform that projection separately. ^[raw/articles/dms-core-wiki-api-reference-v0.9.0.md] ^[raw/articles/dms-core-wiki-examples-v0.9.0.md]
 
 소비 host의 inline content와 attachment download는 모두 sync `DocumentContentStream`을 context manager로 소비하므로 public body 조회가 object 전체를 메모리에 복사하지 않는다. 통합 test fixture도 assertion 실패와 명시 삭제 성공 양쪽에서 best-effort hard delete를 수행해 테스트 문서 lifecycle을 닫는다. 세부 최적화는 [[dms-application-optimization]]과 [[dms-core-usage-patterns]]에 연결한다.
 

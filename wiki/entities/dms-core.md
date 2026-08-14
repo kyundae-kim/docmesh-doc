@@ -1,10 +1,10 @@
 ---
 title: dms-core
 created: 2026-07-11
-updated: 2026-08-04
+updated: 2026-08-15
 type: entity
 tags: [dms-core, dms, document, metadata, storage, api]
-sources: [raw/articles/dms-core-api-v0.2.0.md, raw/articles/dms-core-api-v0.3.0.md, raw/articles/dms-core-wiki-api-reference-v0.7.0.md, raw/articles/dms-core-wiki-configuration-v0.7.0.md, raw/articles/dms-core-wiki-examples-v0.7.0.md, raw/articles/dms-core-config-v0.2.0.md, raw/articles/dms-core-config-v0.3.0.md, raw/articles/dms-core-env-example-v0.3.0.md, raw/articles/dms-core-examples-v0.2.0.md, raw/articles/dms-core-examples-v0.3.0.md, raw/articles/dms-core-messaging-v0.2.0.md, raw/articles/docmesh-config-wiki-api-reference-v0.1.0.md, raw/articles/docmesh-config-wiki-configuration-v0.1.0.md, raw/articles/docmesh-config-wiki-examples-v0.1.0.md, raw/articles/docmesh-config-env-example-v0.1.0.md, raw/articles/docmesh-py-core-wiki-api-reference-v0.6.0.md, raw/articles/docmesh-py-core-wiki-configuration-v0.6.0.md, raw/articles/docmesh-py-core-wiki-examples-v0.6.0.md, raw/articles/docmesh-py-core-env-example-v0.6.0.md]
+sources: [raw/articles/dms-core-api-v0.2.0.md, raw/articles/dms-core-api-v0.3.0.md, raw/articles/dms-core-wiki-api-reference-v0.7.0.md, raw/articles/dms-core-wiki-configuration-v0.7.0.md, raw/articles/dms-core-wiki-examples-v0.7.0.md, raw/articles/dms-core-config-v0.2.0.md, raw/articles/dms-core-config-v0.3.0.md, raw/articles/dms-core-env-example-v0.3.0.md, raw/articles/dms-core-examples-v0.2.0.md, raw/articles/dms-core-examples-v0.3.0.md, raw/articles/dms-core-messaging-v0.2.0.md, raw/articles/docmesh-config-wiki-api-reference-v0.1.0.md, raw/articles/docmesh-config-wiki-configuration-v0.1.0.md, raw/articles/docmesh-config-wiki-examples-v0.1.0.md, raw/articles/docmesh-config-env-example-v0.1.0.md, raw/articles/docmesh-py-core-wiki-api-reference-v0.6.0.md, raw/articles/docmesh-py-core-wiki-configuration-v0.6.0.md, raw/articles/docmesh-py-core-wiki-examples-v0.6.0.md, raw/articles/docmesh-py-core-env-example-v0.6.0.md, raw/articles/dms-core-wiki-api-reference-v0.9.0.md, raw/articles/dms-core-wiki-examples-v0.9.0.md]
 confidence: medium
 ---
 
@@ -35,11 +35,23 @@ v0.7.0은 `DmsAssemblyPlan`으로 metadata/backend 정책, startup timeout, acce
 
 v0.7.0 Examples는 public/internal metadata, cursor pagination, reset, recovery plan, structured metadata, transport-neutral error descriptor와 HTTP 권고 변환, sync/async facade 및 기능별 protocol을 하나의 소비자 흐름으로 연결한다. 반대로 unknown-size stream과 async input stream 직접 upload, search, presigned URL, broker, standalone API server는 범위 밖으로 남는다. ^[raw/articles/dms-core-wiki-examples-v0.7.0.md] ^[raw/articles/dms-core-wiki-api-reference-v0.7.0.md]
 
+## v0.9.0 current public contract
+
+The v0.9.0 API and Examples pages identify package version `0.9.0` at commit `f7a40f1` on `develop-v0.8.0`; this document/version pairing is retained as source-set provenance rather than silently normalized. The current contract remains a host-injected Python SDK, not a standalone API server: the host creates SQLAlchemy `Engine`, MinIO client, or storage components and owns readiness and shutdown. SDK facades do not expose global `close()`, `aclose()`, or `check_health()`. ^[raw/articles/dms-core-wiki-api-reference-v0.9.0.md] ^[raw/articles/dms-core-wiki-examples-v0.9.0.md]
+
+The public assembly surface is `DocumentManagementSDKFactory` for host clients or `DefaultDocumentManagementSDK` for structural storage components. Factory policy now includes `max_file_size`, `access_policy`, `operation_observer`, and `recovery_audit_hook`; environment-variable factories, environment diagnosis, internal storage ports, and DMS-owned client lifecycle are not package-root contracts. ^[raw/articles/dms-core-wiki-api-reference-v0.9.0.md]
+
+The package root exports 54 names and four facade forms: sync, async, scoped sync, and scoped async. The 26-operation surface includes cursor-page listing, iterators, checksum-verified `copy_document_to`, public/internal metadata projection, soft/hard delete, reset, and dry-run recovery plans. Public metadata structurally excludes `storage_key`; access policy callbacks receive public metadata, while recovery and inspection remain explicit management boundaries. ^[raw/articles/dms-core-wiki-api-reference-v0.9.0.md] ^[raw/articles/dms-core-wiki-examples-v0.9.0.md]
+
+v0.9.0 keeps stable SDK error fields (`code`, `category`, `retryable`, and optional `document_id`) but does not define HTTP status, response bodies, readiness endpoints, search, presigned URLs, broker APIs, or `recommended_http_error(...)`. Host transport must map these fields to product policy. Unknown-size and async input-stream upload remain outside the public contract, while async output streams and async facade operations are supported. ^[raw/articles/dms-core-wiki-api-reference-v0.9.0.md] ^[raw/articles/dms-core-wiki-examples-v0.9.0.md]
+
+The workspace declares `dms-core>=0.9.0`; its installed `dms-core` is `0.9.0`, exposes 54 root exports, and matches the documented `DocumentManagementSDKFactory`/`DefaultDocumentManagementSDK` signatures. The runtime does not expose the older `create_sdk_from_clients` or `recommended_http_error` names, so v0.7 integration notes are historical rather than current runtime guidance.
+
 ## docmesh-config boundary
 
 `docmesh-config` v0.1.0은 PostgreSQL·SQLite·MinIO 등 generic service settings와 plan/diagnosis metadata를 제공하지만 DMS metadata backend 선택, object-store factory, document lifecycle 또는 `dms` SDK 생성 계약을 정의하지 않는다. `POSTGRES_*`와 `MINIO_*`가 양쪽 문서에 나타나도 `docmesh-config`의 generic bundle을 DMS storage assembly로 직접 전달한다고 추론하지 않는다. DMS 고유 선택·DSN exclusion·MinIO 요구사항은 [[dms-core-configuration]]에 남긴다. ^[raw/articles/docmesh-config-wiki-api-reference-v0.1.0.md] ^[raw/articles/docmesh-config-wiki-configuration-v0.1.0.md]
 
-현재 consumer manifest와 application source는 `docmesh-config`와 `docmesh-py-core`를 실제로 bridge한다. `docmesh_doc.dms_factory`가 `load_service_configs(...)`로 선택 backend/MinIO 설정을 읽고 `create_postgres_client`·`create_sqlite_client`·`create_minio_client`로 caller-owned client를 만든 뒤 `create_sdk_from_clients(...)`에 close callbacks와 `DmsAssemblyPlan`을 전달한다. 이 구현으로 환경 읽기·client 생성은 host 소유이고, 문서 lifecycle·storage adapter는 DMS 소유라는 경계가 검증된다.
+과거 v0.7 workspace snapshot의 consumer manifest/application source는 `docmesh-config`와 `docmesh-py-core`를 bridge했다. `docmesh_doc.dms_factory`가 `load_service_configs(...)`로 선택 backend/MinIO 설정을 읽고 caller-owned client를 만든 뒤 `create_sdk_from_clients(...)`에 close callbacks와 `DmsAssemblyPlan`을 전달한다는 기록이다. 이는 v0.7 source-set/runtime evidence이며, 현재 v0.9 runtime의 factory 이름이나 전역 close 계약으로 해석하지 않는다.
 
 ## v0.6 docmesh-py-core boundary
 
@@ -80,3 +92,5 @@ v0.7.0의 source minimization 개선점은 환경 factory나 FastAPI 결합을 D
 - `raw/articles/docmesh-py-core-wiki-configuration-v0.6.0.md`
 - `raw/articles/docmesh-py-core-wiki-examples-v0.6.0.md`
 - `raw/articles/docmesh-py-core-env-example-v0.6.0.md`
+- `raw/articles/dms-core-wiki-api-reference-v0.9.0.md`
+- `raw/articles/dms-core-wiki-examples-v0.9.0.md`
