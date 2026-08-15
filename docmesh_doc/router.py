@@ -12,7 +12,6 @@ from docmesh_doc.dependencies import (
 )
 from docmesh_doc.document_http import (
     content_disposition,
-    parse_metadata,
     validate_upload_file,
 )
 from docmesh_doc.schemas import (
@@ -100,10 +99,8 @@ def upload_document(
     sdk: DmsSdk,
     file: Annotated[UploadFile, File(...)],
     document_id: Annotated[str | None, Form()] = None,
-    metadata: Annotated[str | None, Form()] = None,
 ) -> dms.PublicDocumentMetadata:
     filename, content_type, size = validate_upload_file(file)
-    request_metadata = parse_metadata(metadata)
     normalized_document_id = document_id.strip() if document_id else None
     result = sdk.upload_document_stream(
         dms.UploadDocumentStreamRequest(
@@ -112,7 +109,6 @@ def upload_document(
             filename=filename,
             content_type=content_type,
             document_id=normalized_document_id or None,
-            metadata=request_metadata,
         )
     )
     response.headers["Location"] = request.url_for(

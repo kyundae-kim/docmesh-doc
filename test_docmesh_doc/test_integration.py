@@ -73,14 +73,13 @@ def test_sqlite_minio_http_document_lifecycle(integration_client):
         files={"file": ("integration.txt", content, "text/plain")},
         data={
             "document_id": document_id,
-            "metadata": '{"suite":"integration"}',
         },
     )
 
     assert uploaded.status_code == 201
     assert uploaded.json()["document_id"] == document_id
     assert uploaded.json()["file_size"] == len(content)
-    assert uploaded.json()["metadata"] == {"suite": "integration"}
+    assert uploaded.json()["metadata"] == {}
 
     metadata = integration_client.get(f"/documents/{document_id}")
     assert metadata.status_code == 200

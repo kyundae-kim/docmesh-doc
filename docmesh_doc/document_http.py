@@ -1,23 +1,10 @@
 from __future__ import annotations
 
-import json
-from typing import Any, Literal
+from typing import Literal
 from urllib.parse import quote
 
 import dms
 from fastapi import UploadFile
-
-
-def parse_metadata(raw: str | None) -> dict[str, Any]:
-    if raw is None or not raw.strip():
-        return {}
-    try:
-        value = json.loads(raw)
-    except json.JSONDecodeError as error:
-        raise dms.ValidationError("metadata must be valid JSON") from error
-    if not isinstance(value, dict):
-        raise dms.ValidationError("metadata must be a JSON object")
-    return value
 
 
 def validate_upload_file(file: UploadFile) -> tuple[str, str, int]:

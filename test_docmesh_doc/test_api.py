@@ -10,7 +10,7 @@ from docmesh_doc.dms_factory import DmsRuntime, DmsSettings
 from test_docmesh_doc.support import FakeSDK, client_for
 
 
-def test_upload_uses_dms_stream_request_and_public_metadata():
+def test_upload_ignores_metadata_form_field():
     sdk = FakeSDK()
 
     with client_for(sdk) as client:
@@ -19,7 +19,7 @@ def test_upload_uses_dms_stream_request_and_public_metadata():
             files={"file": ("contract.pdf", b"pdf", "application/pdf")},
             data={
                 "document_id": "doc-1",
-                "metadata": '{"category":"contract"}',
+                "metadata": "not-json",
             },
             headers={"X-User-ID": "ignored", "X-Correlation-ID": "request-1"},
         )
@@ -30,7 +30,7 @@ def test_upload_uses_dms_stream_request_and_public_metadata():
     assert "storage_key" not in response.json()
     assert sdk.upload_request.size == 3
     assert sdk.upload_request.created_by is None
-    assert sdk.upload_request.metadata == {"category": "contract"}
+    assert sdk.upload_request.metadata is None
 
 
 def test_upload_location_respects_root_path():
