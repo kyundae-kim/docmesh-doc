@@ -4,31 +4,12 @@ from datetime import UTC, datetime
 from io import BytesIO
 
 import dms
-from docmesh_py_core import AuthenticatedUser
 from fastapi.testclient import TestClient
-from fastapi_core.config import AppConfig
-from fastapi_core.dependencies import get_current_user
 
 from docmesh_doc.application import create_application
-from docmesh_doc.router import DEFAULT_DOWNLOAD_CHUNK_SIZE
 
 
-NOW = datetime(2026, 7, 11, tzinfo=UTC)
-
-
-def metadata(document_id: str = "doc-1") -> dms.DocumentMetadata:
-    return dms.DocumentMetadata(
-        document_id=document_id,
-        original_filename="contract.pdf",
-        content_type="application/pdf",
-        file_size=3,
-        storage_key="private/object/key",
-        status=dms.DocumentStatus.AVAILABLE,
-        created_at=NOW,
-        updated_at=NOW,
-        created_by="user-1",
-        extra_metadata={"category": "contract"},
-    )
+NOW = datetime(2026, 8, 15, tzinfo=UTC)
 
 
 def public_metadata(document_id: str = "doc-1") -> dms.PublicDocumentMetadata:
@@ -47,41 +28,21 @@ def public_metadata(document_id: str = "doc-1") -> dms.PublicDocumentMetadata:
 
 class FakeSDK:
     def __init__(self) -> None:
-        self.closed = False
         self.upload_request = None
-        self.upload_stream_request = None
-        self.delete_call = None
         self.list_args = None
-        self.stream_closed = False
-        self.metadata_calls = 0
-        self.content_calls = 0
         self.content_stream_calls = 0
-
-    def upload_document(self, request):
-        self.upload_request = request
-        item = public_metadata(request.document_id or "generated-id")
-        return dms.UploadDocumentResult(
-            document_id=item.document_id,
-            metadata=item,
-        )
+        self.stream_closed = False
+        self.delete_args = None
+        self.closed = False
 
     def upload_document_stream(self, request):
-        self.upload_stream_request = request
-        content = request.stream.read()
-        assert len(content) == request.size
+        self.upload_request = request
+        payload = request.stream.read()
+        assert len(payload) == request.size
         item = public_metadata(request.document_id or "generated-id")
-        return dms.UploadDocumentResult(
-            document_id=item.document_id,
-            metadata=item,
-        )
+        return dms.UploadDocumentResult(document_id=item.document_id, metadata=item)
 
-    def get_document_metadata(self, document_id):
-        self.metadata_calls += 1
-        if document_id == "missing":
-            raise dms.DocumentNotFoundError(document_id)
-        return public_metadata(document_id)
-
-    def list_documents(self, *, cursor=None, limit=100, status=None):
+    def list_documents(self, *, cursor=None, limit=100, status=None, **_kwargs):
         self.list_args = (cursor, limit, status)
         return dms.DocumentPage(
             items=[public_metadata("doc-1"), public_metadata("doc-2")],
@@ -89,21 +50,15 @@ class FakeSDK:
             has_more=True,
         )
 
-    def get_document_content(self, document_id):
-        self.content_calls += 1
-        return dms.DocumentContent(
-            document_id=document_id,
-            content=b"pdf",
-            content_type="application/pdf",
-            filename="contract.pdf",
-            size=3,
-        )
+    def get_document_metadata(self, document_id, **_kwargs):
+        return public_metadata(document_id)
 
     def get_document_content_stream(
         self,
         document_id,
         *,
-        chunk_size=DEFAULT_DOWNLOAD_CHUNK_SIZE,
+        chunk_size=64 * 1024,
+        **_kwargs,
     ):
         self.content_stream_calls += 1
         return dms.DocumentContentStream(
@@ -116,32 +71,14 @@ class FakeSDK:
             _close_callback=lambda: setattr(self, "stream_closed", True),
         )
 
-    def soft_delete_document(self, document_id):
-        self.delete_call = ("soft", document_id)
+    def delete_document(self, document_id, *, hard_delete=False, **_kwargs):
+        self.delete_args = (document_id, hard_delete)
         return dms.DeleteDocumentResult(
             document_id=document_id,
             deleted=True,
-            hard_deleted=False,
+            hard_deleted=hard_delete,
             status=dms.DocumentStatus.DELETED,
         )
-
-    def hard_delete_document(self, document_id):
-        self.delete_call = ("hard", document_id)
-        return dms.DeleteDocumentResult(
-            document_id=document_id,
-            deleted=True,
-            hard_deleted=True,
-            status=dms.DocumentStatus.DELETED,
-        )
-
-    def delete_document(self, document_id, *, hard_delete=False):
-        delete = (
-            self.hard_delete_document if hard_delete else self.soft_delete_document
-        )
-        return delete(document_id)
-
-    def check_health(self):
-        return dms.HealthStatus(ok=True, services=[], checked_at=NOW)
 
     def close(self):
         self.closed = True
@@ -150,29 +87,10 @@ class FakeSDK:
 def client_for(
     sdk: FakeSDK,
     *,
-    roles: list[str] | None = None,
-    scopes: list[str] | None = None,
     root_path: str = "",
 ) -> TestClient:
     app = create_application(
         sdk,
-        config=AppConfig(
-            root_path=root_path,
-            startup_healthcheck=False,
-            enabled_services=[],
-            required_services=[],
-        ),
-        include_auth_router=False,
-    )
-    app.dependency_overrides[get_current_user] = lambda: AuthenticatedUser(
-        sub="user-1",
-        preferred_username="alice",
-        email=None,
-        given_name=None,
-        family_name=None,
-        name=None,
-        realm_roles=roles or [],
-        client_roles={},
-        claims={"scope": " ".join(scopes or [])},
+        root_path=root_path,
     )
     return TestClient(app)

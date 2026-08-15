@@ -26,6 +26,7 @@ services:
     command: server /data --console-address ":9001"
     ports:
       - 9000
+      - 9001
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]
       interval: 5s

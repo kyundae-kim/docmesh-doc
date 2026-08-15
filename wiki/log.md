@@ -491,3 +491,24 @@
 - Created: `queries/dms-core-consumer-source-minimization.md`.
 - Updated: `entities/dms-core.md`, `concepts/dms-core-usage-patterns.md`, `index.md`, and `log.md`.
 - Verification: `uv run pytest -q` returned `66 passed, 1 skipped, 1 warning`. Immutable `raw/` sources were not modified.
+
+## [2026-08-15] delete | raw/articles Markdown sources
+- User-directed deletion of all 23 Markdown files under `raw/articles/`.
+- Deleted: `raw/articles/dms-core-api-v0.2.0.md`, `raw/articles/dms-core-api-v0.3.0.md`, `raw/articles/dms-core-config-v0.2.0.md`, `raw/articles/dms-core-config-v0.3.0.md`, `raw/articles/dms-core-env-example-v0.3.0.md`, `raw/articles/dms-core-examples-v0.2.0.md`, `raw/articles/dms-core-examples-v0.3.0.md`, `raw/articles/dms-core-messaging-v0.2.0.md`, `raw/articles/dms-core-wiki-api-reference-v0.7.0.md`, `raw/articles/dms-core-wiki-configuration-v0.7.0.md`, `raw/articles/dms-core-wiki-examples-v0.7.0.md`, `raw/articles/docmesh-config-env-example-v0.1.0.md`, `raw/articles/docmesh-config-wiki-api-reference-v0.1.0.md`, `raw/articles/docmesh-config-wiki-configuration-v0.1.0.md`, `raw/articles/docmesh-config-wiki-examples-v0.1.0.md`, `raw/articles/docmesh-py-core-env-example-v0.6.0.md`, `raw/articles/docmesh-py-core-wiki-api-reference-v0.6.0.md`, `raw/articles/docmesh-py-core-wiki-configuration-v0.6.0.md`, `raw/articles/docmesh-py-core-wiki-examples-v0.6.0.md`, `raw/articles/fastapi-core-env-example-v0.7.0.md`, `raw/articles/fastapi-core-wiki-api-reference-v0.7.0.md`, `raw/articles/fastapi-core-wiki-configuration-v0.7.0.md`, and `raw/articles/fastapi-core-wiki-examples-v0.7.0.md`.
+- Curated pages and `index.md` were not modified; their existing `raw/articles/` provenance references now point to removed files.
+
+## [2026-08-15] lint | 23 page-level issues found
+- Checked 22 Layer 2 pages, 0 raw files, 69 log entries, and 498 log lines.
+- High severity: all 22 Layer 2 pages contain missing `raw/articles/*.md` source or provenance references, covering 48 unique absent source paths. This includes the 23 files deleted in the preceding action plus older historical references to files that were already absent.
+- Review: `concepts/fastapi-core-configuration.md` remains `contested: true`.
+- Passed: no broken wikilinks in Layer 2 pages, no orphan pages, no index omissions or extras, valid required frontmatter, valid tags, no low-confidence pages, no single-source pages missing confidence, no pages over 200 lines, and no stale candidates. Raw hash drift was not applicable because `raw/` is empty.
+- No wiki pages were changed by the lint; this log entry is the only file updated.
+
+## [2026-08-15] ingest | dms-core GitHub Wiki v0.9.0 API Reference and Examples
+- Requested sources: `https://github.com/kyundae-kim/dms-core/wiki/API-Reference-v0.9.0` and `https://github.com/kyundae-kim/dms-core/wiki/Examples-v0.9.0`.
+- Raw endpoints captured byte-preservingly: `https://raw.githubusercontent.com/wiki/kyundae-kim/dms-core/API-Reference-v0.9.0.md` and `https://raw.githubusercontent.com/wiki/kyundae-kim/dms-core/Examples-v0.9.0.md`.
+- Created: `raw/articles/dms-core-wiki-api-reference-v0.9.0.md` (body SHA-256 `8d6e76d528d5ee595af0532a3cf52cb43a1d248088ff56b1a10a1dcc0c5729e5`) and `raw/articles/dms-core-wiki-examples-v0.9.0.md` (body SHA-256 `babb5f47d35759d7b7062bea9ee09a75b11cd31b08d8ad972b580cbb98b5c98d`).
+- Source-set note: both documents report package version `0.9.0` at commit `f7a40f1` on `develop-v0.8.0`; both bodies differ from the historical v0.7.0 captures.
+- Runtime reconciliation: `pyproject.toml` declares `dms-core>=0.9.0`; the installed distribution is `0.9.0` with 54 root exports and the documented factory signatures. `create_sdk_from_clients` and `recommended_http_error` are absent from the installed runtime.
+- Updated: `entities/dms-core.md`, `concepts/dms-core-configuration.md`, `concepts/dms-core-document-lifecycle.md`, `concepts/dms-core-usage-patterns.md`, `concepts/fastapi-core-app-assembly.md`, `concepts/fastapi-core-usage-patterns.md`, `queries/dms-core-consumer-source-minimization.md`, `index.md`, and `log.md`.
+- Curated v0.9 host-injected assembly, public metadata/access boundaries, cursor listing, stream/copy cleanup, reset/recovery audit, stable error fields, and the removal of DMS-owned health/close/HTTP helper scope. Historical missing raw references were not mass-removed.

@@ -1,15 +1,19 @@
+from __future__ import annotations
+
 from typing import Annotated
 
-from dms import DefaultDocumentManagementSDK
-from docmesh_py_core import AuthenticatedUser
-from fastapi import Depends
-from fastapi_core import ResourceKey
-from fastapi_core.dependencies import get_current_user, require_permissions
+import dms
+from fastapi import Depends, HTTPException, Request, status
 
 
-DMS_RESOURCE = ResourceKey[DefaultDocumentManagementSDK]("dms")
-DmsSdk = Annotated[DefaultDocumentManagementSDK, Depends(DMS_RESOURCE.dependency)]
-CurrentUser = Annotated[AuthenticatedUser, Depends(get_current_user)]
+def get_dms_sdk(request: Request) -> dms.DefaultDocumentManagementSDK:
+    sdk = getattr(request.app.state, "dms_sdk", None)
+    if sdk is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="DMS application is not ready",
+        )
+    return sdk
 
-HARD_DELETE_PERMISSION = "document:delete:hard"
-require_hard_delete = require_permissions(HARD_DELETE_PERMISSION)
+
+DmsSdk = Annotated[dms.DefaultDocumentManagementSDK, Depends(get_dms_sdk)]

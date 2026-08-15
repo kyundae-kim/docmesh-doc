@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import datetime
 from typing import Any
 
@@ -15,10 +17,13 @@ class DocumentMetadataResponse(BaseModel):
     status: dms.DocumentStatus
     created_at: datetime
     updated_at: datetime
-    deleted_at: datetime | None
-    created_by: str | None
-    checksum: str | None
-    metadata: dict[str, Any] = Field(validation_alias="extra_metadata")
+    deleted_at: datetime | None = None
+    created_by: str | None = None
+    checksum: str | None = None
+    metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        validation_alias="extra_metadata",
+    )
 
 
 class DocumentPageResponse(BaseModel):
