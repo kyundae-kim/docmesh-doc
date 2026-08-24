@@ -1,10 +1,10 @@
 ---
 title: dms-core configuration model
 created: 2026-07-11
-updated: 2026-08-15
+updated: 2026-08-24
 type: concept
 tags: [dms-core, dms, configuration, storage, metadata, security, deployment]
-sources: [raw/articles/dms-core-api-v0.3.0.md, raw/articles/dms-core-wiki-api-reference-v0.7.0.md, raw/articles/dms-core-wiki-configuration-v0.7.0.md, raw/articles/dms-core-wiki-examples-v0.7.0.md, raw/articles/dms-core-config-v0.2.0.md, raw/articles/dms-core-config-v0.3.0.md, raw/articles/dms-core-env-example-v0.3.0.md, raw/articles/dms-core-examples-v0.2.0.md, raw/articles/dms-core-examples-v0.3.0.md, raw/articles/docmesh-config-wiki-api-reference-v0.1.0.md, raw/articles/docmesh-config-wiki-configuration-v0.1.0.md, raw/articles/docmesh-config-wiki-examples-v0.1.0.md, raw/articles/docmesh-config-env-example-v0.1.0.md, raw/articles/docmesh-py-core-wiki-api-reference-v0.6.0.md, raw/articles/docmesh-py-core-wiki-configuration-v0.6.0.md, raw/articles/docmesh-py-core-wiki-examples-v0.6.0.md, raw/articles/docmesh-py-core-env-example-v0.6.0.md, raw/articles/dms-core-wiki-api-reference-v0.9.0.md, raw/articles/dms-core-wiki-examples-v0.9.0.md]
+sources: [raw/articles/dms-core-api-v0.3.0.md, raw/articles/dms-core-wiki-api-reference-v0.7.0.md, raw/articles/dms-core-wiki-configuration-v0.7.0.md, raw/articles/dms-core-wiki-examples-v0.7.0.md, raw/articles/dms-core-config-v0.2.0.md, raw/articles/dms-core-config-v0.3.0.md, raw/articles/dms-core-env-example-v0.3.0.md, raw/articles/dms-core-examples-v0.2.0.md, raw/articles/dms-core-examples-v0.3.0.md, raw/articles/docmesh-config-wiki-api-reference-v0.1.0.md, raw/articles/docmesh-config-wiki-configuration-v0.1.0.md, raw/articles/docmesh-config-wiki-examples-v0.1.0.md, raw/articles/docmesh-config-env-example-v0.1.0.md, raw/articles/docmesh-py-core-wiki-api-reference-v0.6.0.md, raw/articles/docmesh-py-core-wiki-configuration-v0.6.0.md, raw/articles/docmesh-py-core-wiki-examples-v0.6.0.md, raw/articles/docmesh-py-core-env-example-v0.6.0.md, raw/articles/dms-core-wiki-api-reference-v0.9.0.md, raw/articles/dms-core-wiki-examples-v0.9.0.md, raw/articles/dms-core-wiki-api-reference-v0.10.0.md, raw/articles/dms-core-wiki-examples-v0.10.0.md]
 confidence: medium
 ---
 
@@ -18,11 +18,13 @@ v0.7.0 Configuration reference는 공개 DMS package에 환경변수를 읽는 f
 
 `DmsServiceConfigs`는 MinIO와 PostgreSQL/SQLite 중 정확히 하나를 표현하는 immutable host-side value object다. DMS public factory가 이 객체를 자동 소비하지 않으므로, 호스트는 이를 사용해 client를 만들거나 component adapter를 조립해야 한다. `metadata_backend`, `strict_configuration`, startup check/timeout, metadata limits, access policy와 observer는 `DmsAssemblyPlan`으로 전달되는 정책 값이며 환경변수 selector로 해석하지 않는다. 현재 interpreter에서 `dms` v0.7.0의 public factory와 plan signature를 확인했으며, workspace host adapter는 이 계약을 따르는 client injection과 close callback을 사용한다. ^[raw/articles/dms-core-wiki-api-reference-v0.7.0.md] ^[raw/articles/dms-core-wiki-configuration-v0.7.0.md]
 
-## v0.9 current assembly boundary
+## v0.10 current assembly boundary
 
-The v0.9.0 contract replaces the v0.7 plan/factory description as current runtime guidance. The host reads environment, secret, and deployment configuration, creates the SQLAlchemy `Engine` and MinIO client or structural storage components, then injects them through `DocumentManagementSDKFactory` or `DefaultDocumentManagementSDK`. Current factory policy is expressed by `bucket_name`, `max_file_size`, `access_policy`, `operation_observer`, and `recovery_audit_hook`; there is no public environment factory or DMS-owned diagnosis loader. ^[raw/articles/dms-core-wiki-api-reference-v0.9.0.md] ^[raw/articles/dms-core-wiki-examples-v0.9.0.md]
+The v0.10.0 contract keeps environment, secret, backend selection, and client lifecycle in the host. Sync applications inject a SQLAlchemy `Engine` and MinIO client through `DocumentManagementSDKFactory`, while native async applications inject an `AsyncEngine` through `AsyncDocumentManagementSDKFactory`. Direct sync components use `DefaultDocumentManagementSDK`; advanced native async components use `AsyncDocumentManagementSDK.from_async_components()`. Neither path introduces a public environment loader or DMS-owned diagnosis API. ^[raw/articles/dms-core-wiki-api-reference-v0.10.0.md] ^[raw/articles/dms-core-wiki-examples-v0.10.0.md]
 
-The host, not DMS, owns client/component readiness and shutdown. The SDK has no global health or close method. Per-operation files and returned content streams are SDK-managed where documented; caller-provided upload inputs and output sinks remain caller-owned. FastAPI readiness and lifecycle must therefore be represented by the hosting application boundary, not inferred from a DMS SDK health API. ^[raw/articles/dms-core-wiki-api-reference-v0.9.0.md]
+The sync factory validates dialect, bucket name, and maximum file size and may discover or create the bucket during `create()`. The async factory returns a lazy facade from `create()` or an initialized facade from `await create_async()`. Database engines, MinIO clients, buckets, injected components, readiness, and shutdown remain host-owned; SDK facades still have no global health or close method. ^[raw/articles/dms-core-wiki-api-reference-v0.10.0.md] ^[raw/articles/dms-core-wiki-examples-v0.10.0.md]
+
+In this workspace, `uv run` resolves `dms-core` `0.10.0` under the declared `dms-core>=0.9.0` range. Runtime signatures match both documented factories, but the ordinary factory test now reaches MinIO at `localhost:9000` during bucket setup and fails when no service is running. Unit assembly tests must inject or mock the object-store boundary, while integration/startup tests should provision MinIO and assert the host-owned readiness and cleanup policy.
 
 ## Storage and startup-health contract
 
@@ -76,3 +78,5 @@ v0.7.0 logging은 주입 logger의 `dms_` structured fields를 사용하되 본�
 - `raw/articles/docmesh-py-core-env-example-v0.6.0.md`
 - `raw/articles/dms-core-wiki-api-reference-v0.9.0.md`
 - `raw/articles/dms-core-wiki-examples-v0.9.0.md`
+- `raw/articles/dms-core-wiki-api-reference-v0.10.0.md`
+- `raw/articles/dms-core-wiki-examples-v0.10.0.md`
