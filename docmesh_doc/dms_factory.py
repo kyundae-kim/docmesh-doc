@@ -10,6 +10,7 @@ import dms
 from minio import Minio
 from sqlalchemy import create_engine
 from sqlalchemy.engine import URL, Engine
+from sqlalchemy.pool import StaticPool
 
 _METADATA_BACKENDS = frozenset({"postgresql", "sqlite"})
 
@@ -187,6 +188,7 @@ def _create_engine(settings: DmsSettings) -> Engine:
             return create_engine(
                 "sqlite:///:memory:",
                 connect_args={"check_same_thread": False},
+                poolclass=StaticPool,
             )
         sqlite_path = Path(path).expanduser()
         sqlite_path.parent.mkdir(parents=True, exist_ok=True)

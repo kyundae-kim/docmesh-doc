@@ -48,7 +48,8 @@ def integration_client(tmp_path, minio_bucket):
     _minio_client, bucket_name = minio_bucket
     settings = DmsSettings(
         metadata_backend="sqlite",
-        sqlite_path=str(tmp_path / "docmesh.sqlite3"),
+        # sqlite_path=str(tmp_path / "docmesh.sqlite3"),
+        sqlite_path=":memory:",
         minio_endpoint=MINIO_ENDPOINT,
         minio_access_key=MINIO_ACCESS_KEY,
         minio_secret_key=MINIO_SECRET_KEY,
