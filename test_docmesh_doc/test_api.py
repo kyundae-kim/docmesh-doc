@@ -4,7 +4,7 @@ import dms
 import pytest
 from fastapi.testclient import TestClient
 
-import docmesh_doc.application as application
+from docmesh_doc import application
 from docmesh_doc.application import create_application
 from docmesh_doc.dms_factory import DmsRuntime, DmsSettings
 from test_docmesh_doc.support import FakeSDK, client_for

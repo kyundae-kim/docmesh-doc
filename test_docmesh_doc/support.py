@@ -8,7 +8,6 @@ from fastapi.testclient import TestClient
 
 from docmesh_doc.application import create_application
 
-
 NOW = datetime(2026, 8, 15, tzinfo=UTC)
 
 

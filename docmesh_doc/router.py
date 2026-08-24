@@ -3,8 +3,9 @@ from __future__ import annotations
 import inspect
 import shutil
 import tempfile
+from collections.abc import Callable
 from pathlib import Path
-from typing import Annotated, Any, Callable, Literal
+from typing import Annotated, Any, Literal
 
 import dms
 from fastapi import APIRouter, File, Form, Query, Request, Response, UploadFile
@@ -39,7 +40,6 @@ from docmesh_doc.schemas import (
     UploadDocumentResponse,
     UploadOperationResponse,
 )
-
 
 DEFAULT_DOWNLOAD_CHUNK_SIZE = 64 * 1024
 MAX_DOWNLOAD_CHUNK_SIZE = 8 * 1024 * 1024

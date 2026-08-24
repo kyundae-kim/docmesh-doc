@@ -9,8 +9,7 @@ from minio.error import S3Error
 from urllib3.exceptions import HTTPError
 
 from docmesh_doc.application import create_application
-from docmesh_doc.dms_factory import DmsSettings, DmsRuntime, create_dms_runtime
-
+from docmesh_doc.dms_factory import DmsRuntime, DmsSettings, create_dms_runtime
 
 pytestmark = pytest.mark.integration
 

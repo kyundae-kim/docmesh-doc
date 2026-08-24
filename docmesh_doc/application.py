@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Callable
 from contextlib import asynccontextmanager
 from dataclasses import replace
-from typing import Callable
 from uuid import uuid4
 
 import dms
@@ -21,7 +21,6 @@ from docmesh_doc.errors import (
     validation_error_handler,
 )
 from docmesh_doc.router import API_ROUTE_PREFIXES, API_ROUTERS
-
 
 ReadinessCheck = Callable[[], bool | dict[str, object]]
 

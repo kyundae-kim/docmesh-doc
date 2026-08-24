@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import pytest
 import dms
+import pytest
 
-import docmesh_doc.dms_factory as dms_factory
+from docmesh_doc import dms_factory
 from docmesh_doc.dms_factory import DmsSettings, create_dms_runtime
 
 

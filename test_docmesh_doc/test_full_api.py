@@ -7,7 +7,7 @@ from types import SimpleNamespace
 import dms
 
 import docmesh_doc.router as router_module
-from test_docmesh_doc.support import FakeSDK, NOW, client_for, public_metadata
+from test_docmesh_doc.support import NOW, FakeSDK, client_for, public_metadata
 
 
 class FakeAsyncContentStream:

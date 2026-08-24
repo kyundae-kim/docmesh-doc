@@ -1,16 +1,15 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from threading import Lock
-from typing import Mapping
 
 import dms
 from minio import Minio
 from sqlalchemy import create_engine
-from sqlalchemy.engine import Engine, URL
-
+from sqlalchemy.engine import URL, Engine
 
 _METADATA_BACKENDS = frozenset({"postgresql", "sqlite"})
 
