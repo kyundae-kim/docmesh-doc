@@ -143,7 +143,7 @@ class DmsRuntime:
     def check_readiness(self) -> dict[str, object]:
         """Check host-owned resources without relying on a DMS health API."""
 
-        details: dict[str, object] = {}
+        details: dict[str, dict[str, bool]] = {}
         try:
             with self.engine.connect():
                 pass
