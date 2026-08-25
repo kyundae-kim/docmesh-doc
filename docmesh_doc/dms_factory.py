@@ -1,16 +1,16 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from threading import Lock
-from typing import Mapping
 
 import dms
 from minio import Minio
 from sqlalchemy import create_engine
-from sqlalchemy.engine import Engine, URL
-
+from sqlalchemy.engine import URL, Engine
+from sqlalchemy.pool import StaticPool
 
 _METADATA_BACKENDS = frozenset({"postgresql", "sqlite"})
 
@@ -143,7 +143,7 @@ class DmsRuntime:
     def check_readiness(self) -> dict[str, object]:
         """Check host-owned resources without relying on a DMS health API."""
 
-        details: dict[str, object] = {}
+        details: dict[str, dict[str, bool]] = {}
         try:
             with self.engine.connect():
                 pass
@@ -188,6 +188,7 @@ def _create_engine(settings: DmsSettings) -> Engine:
             return create_engine(
                 "sqlite:///:memory:",
                 connect_args={"check_same_thread": False},
+                poolclass=StaticPool,
             )
         sqlite_path = Path(path).expanduser()
         sqlite_path.parent.mkdir(parents=True, exist_ok=True)

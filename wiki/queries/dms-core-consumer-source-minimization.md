@@ -1,24 +1,26 @@
 ---
 title: dms-core consumer source minimization
 created: 2026-08-04
-updated: 2026-08-15
+updated: 2026-08-24
 type: query
 tags: [dms-core, dms, api, integration, architecture, performance, security, testing, dependency]
-sources: [raw/articles/dms-core-wiki-api-reference-v0.7.0.md, raw/articles/dms-core-wiki-configuration-v0.7.0.md, raw/articles/dms-core-wiki-examples-v0.7.0.md, raw/articles/docmesh-config-wiki-api-reference-v0.1.0.md, raw/articles/docmesh-py-core-wiki-api-reference-v0.6.0.md, raw/articles/docmesh-py-core-wiki-examples-v0.6.0.md, raw/articles/fastapi-core-wiki-api-reference-v0.7.0.md, raw/articles/fastapi-core-wiki-examples-v0.7.0.md, raw/articles/dms-core-wiki-api-reference-v0.9.0.md, raw/articles/dms-core-wiki-examples-v0.9.0.md]
+sources: [raw/articles/dms-core-wiki-api-reference-v0.7.0.md, raw/articles/dms-core-wiki-configuration-v0.7.0.md, raw/articles/dms-core-wiki-examples-v0.7.0.md, raw/articles/docmesh-config-wiki-api-reference-v0.1.0.md, raw/articles/docmesh-py-core-wiki-api-reference-v0.6.0.md, raw/articles/docmesh-py-core-wiki-examples-v0.6.0.md, raw/articles/fastapi-core-wiki-api-reference-v0.7.0.md, raw/articles/fastapi-core-wiki-examples-v0.7.0.md, raw/articles/dms-core-wiki-api-reference-v0.9.0.md, raw/articles/dms-core-wiki-examples-v0.9.0.md, raw/articles/dms-core-wiki-api-reference-v0.10.0.md, raw/articles/dms-core-wiki-examples-v0.10.0.md]
 confidence: medium
 ---
 
 # dms-core consumer source minimization
 
-> Version scope: the original sections below preserve the 2026-08-04 v0.7.0 consumer snapshot. The v0.9.0 reconciliation supersedes package API names and lifecycle claims where stated.
+> Version scope: the original sections below preserve the 2026-08-04 v0.7.0 consumer snapshot. The v0.10.0 reconciliation supersedes package API names and lifecycle claims where stated.
 
-## v0.9.0 reconciliation
+## v0.10.0 reconciliation
 
-The current public assembly surface is `DocumentManagementSDKFactory` for host-created SQLAlchemy/MinIO clients or `DefaultDocumentManagementSDK` for structural components. The host owns environment loading, readiness, and shutdown; DMS exposes no public environment factory, global health/close method, standalone HTTP surface, broker, or `recommended_http_error(...)`. ^[raw/articles/dms-core-wiki-api-reference-v0.9.0.md] ^[raw/articles/dms-core-wiki-examples-v0.9.0.md]
+The current public assembly surface is `DocumentManagementSDKFactory` for sync host clients, additive `AsyncDocumentManagementSDKFactory` for native async clients, and direct sync/async component assembly for advanced hosts. The host still owns environment loading, readiness, and shutdown; DMS exposes no public environment factory, global health/close method, standalone HTTP surface, broker, or HTTP error helper. ^[raw/articles/dms-core-wiki-api-reference-v0.10.0.md] ^[raw/articles/dms-core-wiki-examples-v0.10.0.md]
 
-For source reduction, a reusable host bridge should therefore centralize factory construction, `max_file_size`, access policy, observer/audit hooks, and FastAPI resource binding without importing FastAPI into DMS. The bridge should consume cursor-page listing, public metadata/schema projection, access-aware operations, `copy_document_to()` checksum verification, recovery plans, and stable DMS error fields. HTTP status, response envelopes, `storage_key` hiding, tenant policy, and readiness remain product/host policy. ^[raw/articles/dms-core-wiki-api-reference-v0.9.0.md] ^[raw/articles/dms-core-wiki-examples-v0.9.0.md]
+For source reduction, a reusable host bridge should select the sync/native-async factory once, centralize `max_file_size`, access policy, observer/audit hooks, and resource binding, and reuse `AccessContext.user_id` plus scoped operation defaults. Cursor pages, object namespaces, idempotency operations, read/delete/recovery/reset isolation, public metadata projection, sink copy, and stable errors can then replace repeated consumer glue. HTTP status, response envelopes, auth-to-user mapping, `storage_key` policy, and readiness remain product/host concerns. ^[raw/articles/dms-core-wiki-api-reference-v0.10.0.md] ^[raw/articles/dms-core-wiki-examples-v0.10.0.md]
 
-The earlier P1 proposal for unknown-size or async input-stream upload remains a future capability rather than a v0.9 fact: v0.9 supports async facades and output streams but keeps unknown-size and async input upload outside the public contract. Any future additive design still needs bounded reads, rollback, idempotency, cancellation, and caller-owned input-stream semantics. ^[raw/articles/dms-core-wiki-api-reference-v0.9.0.md]
+Factory construction is also a startup network boundary: installed v0.10.0 sync factory creation attempted MinIO bucket discovery in the ordinary test suite. A thin bridge must therefore preserve startup failure/rollback and separate network-isolated unit tests from provisioned integration tests rather than hiding this side effect behind a nominally pure constructor.
+
+The earlier P1 proposal for unknown-size or async input-stream upload remains future work rather than a v0.10 fact. Native async facades and async output streams do not change the public input contract, which still requires bytes, file paths, or known-size synchronous streams. Any additive design still needs bounded reads, rollback, idempotency, cancellation, and caller-owned input-stream semantics. ^[raw/articles/dms-core-wiki-api-reference-v0.10.0.md]
 
 ## 결론
 

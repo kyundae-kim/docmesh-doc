@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Callable
 from contextlib import asynccontextmanager
 from dataclasses import replace
-from typing import Callable
 from uuid import uuid4
 
 import dms
@@ -20,8 +20,7 @@ from docmesh_doc.errors import (
     unhandled_error_handler,
     validation_error_handler,
 )
-from docmesh_doc.router import router
-
+from docmesh_doc.router import API_ROUTE_PREFIXES, API_ROUTERS
 
 ReadinessCheck = Callable[[], bool | dict[str, object]]
 
@@ -56,7 +55,7 @@ def _readiness_payload(
         except Exception:
             result = False
         if isinstance(result, bool):
-            payload = {
+            payload: dict[str, object] = {
                 "status": "ok" if result else "error",
                 "ok": result,
                 "details": {"dms": {"ok": result, "required": True}},
@@ -128,7 +127,7 @@ def create_application(
 
     app = FastAPI(
         title="DocMesh Document Service",
-        version="0.4.0",
+        version="0.5.0",
         root_path=selected.root_path,
         lifespan=lifespan,
     )
@@ -163,7 +162,8 @@ def create_application(
         status_code, payload = _readiness_payload(app, readiness_check)
         return JSONResponse(status_code=status_code, content=payload)
 
-    app.include_router(router)
+    for api_router in API_ROUTERS:
+        app.include_router(api_router)
 
     def openapi() -> dict[str, object]:
         if app.openapi_schema:
@@ -174,7 +174,7 @@ def create_application(
             routes=app.routes,
         )
         for path, path_item in schema["paths"].items():
-            if not path.startswith("/documents"):
+            if not path.startswith(API_ROUTE_PREFIXES):
                 continue
             for operation in path_item.values():
                 if isinstance(operation, dict):

@@ -9,7 +9,6 @@ from fastapi import HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -108,17 +107,27 @@ def _correlation_id(request: Request) -> str:
     return value or str(uuid4())
 
 
-def _response(request: Request, mapping: ErrorMapping) -> JSONResponse:
+def _response(
+    request: Request,
+    mapping: ErrorMapping,
+    *,
+    error: dms.DmsError | None = None,
+) -> JSONResponse:
     correlation_id = _correlation_id(request)
+    detail: dict[str, object] = {
+        "code": mapping.code,
+        "message": mapping.message,
+        "correlation_id": correlation_id,
+    }
+    if error is not None:
+        detail["category"] = error.category
+        detail["retryable"] = error.retryable
+        document_id = getattr(error, "document_id", None)
+        if document_id is not None:
+            detail["document_id"] = document_id
     response = JSONResponse(
         status_code=mapping.status_code,
-        content={
-            "error": {
-                "code": mapping.code,
-                "message": mapping.message,
-                "correlation_id": correlation_id,
-            }
-        },
+        content={"error": detail},
     )
     response.headers["X-Correlation-ID"] = correlation_id
     return response
@@ -133,7 +142,7 @@ def mapping_for_dms_error(error: dms.DmsError) -> ErrorMapping:
 
 
 async def dms_error_handler(request: Request, error: dms.DmsError) -> JSONResponse:
-    return _response(request, mapping_for_dms_error(error))
+    return _response(request, mapping_for_dms_error(error), error=error)
 
 
 async def validation_error_handler(

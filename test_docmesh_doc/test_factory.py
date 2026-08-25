@@ -1,13 +1,23 @@
 from __future__ import annotations
 
-import pytest
 import dms
+import pytest
 
-import docmesh_doc.dms_factory as dms_factory
+from docmesh_doc import dms_factory
 from docmesh_doc.dms_factory import DmsSettings, create_dms_runtime
 
 
-def test_sqlite_settings_create_a_host_owned_dms_runtime():
+def test_sqlite_settings_create_a_host_owned_dms_runtime(monkeypatch):
+    class AvailableMinio:
+        @staticmethod
+        def bucket_exists(_bucket_name):
+            return True
+
+    monkeypatch.setattr(
+        dms_factory,
+        "_create_minio_client",
+        lambda _settings: AvailableMinio(),
+    )
     settings = DmsSettings(
         metadata_backend="sqlite",
         sqlite_path=":memory:",
