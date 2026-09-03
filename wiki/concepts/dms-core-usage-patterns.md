@@ -1,16 +1,16 @@
 ---
 title: dms-core usage patterns
 created: 2026-07-11
-updated: 2026-08-24
+updated: 2026-09-03
 type: concept
 tags: [dms-core, dms, document, storage, workflow, testing, integration]
-sources: [raw/articles/dms-core-api-v0.2.0.md, raw/articles/dms-core-api-v0.3.0.md, raw/articles/dms-core-wiki-api-reference-v0.7.0.md, raw/articles/dms-core-wiki-configuration-v0.7.0.md, raw/articles/dms-core-wiki-examples-v0.7.0.md, raw/articles/dms-core-config-v0.2.0.md, raw/articles/dms-core-config-v0.3.0.md, raw/articles/dms-core-examples-v0.2.0.md, raw/articles/dms-core-examples-v0.3.0.md, raw/articles/dms-core-wiki-api-reference-v0.9.0.md, raw/articles/dms-core-wiki-examples-v0.9.0.md, raw/articles/dms-core-wiki-api-reference-v0.10.0.md, raw/articles/dms-core-wiki-examples-v0.10.0.md]
+sources: [raw/articles/dms-core-api-v0.2.0.md, raw/articles/dms-core-api-v0.3.0.md, raw/articles/dms-core-wiki-api-reference-v0.7.0.md, raw/articles/dms-core-wiki-configuration-v0.7.0.md, raw/articles/dms-core-wiki-examples-v0.7.0.md, raw/articles/dms-core-config-v0.2.0.md, raw/articles/dms-core-config-v0.3.0.md, raw/articles/dms-core-examples-v0.2.0.md, raw/articles/dms-core-examples-v0.3.0.md, raw/articles/dms-core-wiki-api-reference-v0.9.0.md, raw/articles/dms-core-wiki-examples-v0.9.0.md, raw/articles/dms-core-wiki-api-reference-v0.10.0.md, raw/articles/dms-core-wiki-examples-v0.10.0.md, raw/articles/dms-core-wiki-api-reference-v0.11.0.md, raw/articles/dms-core-wiki-examples-v0.11.0.md]
 confidence: medium
 ---
 
 # dms-core usage patterns
 
-DMS v0.10.0의 기본 사용 흐름은 호스트가 만든 sync/async database engine, MinIO client, 또는 storage component를 적절한 factory/facade에 주입하고 upload → metadata/content 조회 → delete/reset/recovery 작업을 수행하는 것이다. SDK facade에는 전역 `close()`, `aclose()`, `check_health()`가 없으므로 host가 readiness와 shutdown을 소유하고, SDK가 반환한 content stream과 SDK가 직접 연 파일만 각 operation contract에 따라 정리한다. ^[raw/articles/dms-core-wiki-api-reference-v0.10.0.md] ^[raw/articles/dms-core-wiki-examples-v0.10.0.md]
+DMS v0.11.0의 기본 사용 흐름은 호스트가 만든 sync/async database engine, MinIO client, 또는 storage component를 적절한 factory/facade에 주입하고 upload → metadata/content 조회 → delete/reset/recovery 작업을 수행하는 것이다. SDK facade에는 전역 `close()`, `aclose()`, `check_health()`가 없으므로 host가 readiness와 shutdown을 소유하고, SDK가 반환한 content stream과 SDK가 직접 연 파일만 각 operation contract에 따라 정리한다. ^[raw/articles/dms-core-wiki-api-reference-v0.11.0.md] ^[raw/articles/dms-core-wiki-examples-v0.11.0.md]
 
 ## Upload and retrieval
 
@@ -24,7 +24,7 @@ v0.7.0에서는 known-size sync binary stream만 직접 upload 입력으로 공�
 
 v0.7.0 Examples는 `DmsAssemblyPlan`의 access policy와 operation observer, `scoped(context)` facade, `ManagedResource` reverse cleanup, reset/recovery plan, 기능별 runtime-checkable protocol, structured error descriptor와 HTTP 권고 변환을 host integration contract로 보여 준다. 일반 결과에는 `storage_key`를 넣지 않고 internal metadata/recovery 경로에서만 관리한다. ^[raw/articles/dms-core-wiki-api-reference-v0.7.0.md] ^[raw/articles/dms-core-wiki-examples-v0.7.0.md]
 
-## v0.10 current usage contract
+## v0.10 historical usage contract
 
 The v0.10.0 examples cover sync and native-async factory assembly, direct components, bytes/file/known-size stream upload, public/internal metadata, cursor pages and iterators, close-safe content streams, sink copy, deletion/reset, idempotency operations, recovery, access policy, user-scoped facades, observers, capability protocols, and stable SDK errors. ^[raw/articles/dms-core-wiki-api-reference-v0.10.0.md] ^[raw/articles/dms-core-wiki-examples-v0.10.0.md]
 
@@ -36,7 +36,19 @@ For downloads, use context-managed streams or `iter_chunks_closing()` and use `c
 
 소비자 source를 더 줄일 때는 DMS가 환경변수나 FastAPI를 소유하도록 확장하기보다 scoped facade, `delete_document(...)`, stable error fields, stream cleanup primitive를 host bridge에서 재사용한다. config/client assembly와 제품 HTTP 정책을 분리하는 판단은 [[dms-core-consumer-source-minimization]]에 기록한다.
 
+## v0.11 current usage contract
+
+Construct `DocumentPartition.personal(id)` or `DocumentPartition.group(id)` at the host boundary and pass it as `partition=` to every normal document and recovery operation. Reuse the same partition, status, and limit when following a `DocumentPage.next_cursor`; do not use a cursor from another partition. `clear_all_data()` and `initialize_for_data_load()` are the only global reset calls that omit partition. ^[raw/articles/dms-core-wiki-api-reference-v0.11.0.md] ^[raw/articles/dms-core-wiki-examples-v0.11.0.md]
+
+Use `AccessContext` plus `DocumentAccessPolicy` for authorization and pass public metadata to policy code only through the SDK contract. The v0.10 `DmsOperationContext` and scoped facade are removed, so a consumer bridge must derive partition, access context, creator, idempotency values, and audit inputs explicitly rather than calling `sdk.scoped(...)`. ^[raw/articles/dms-core-wiki-api-reference-v0.11.0.md] ^[raw/articles/dms-core-wiki-examples-v0.11.0.md]
+
+The v0.11 upload inputs remain bytes, SDK-opened file paths, and known-size synchronous binary streams; unknown-size and async input streams are not public. Native async assembly uses `AsyncDocumentManagementSDKFactory` or `from_async_components()`, while the host still owns injected resources and must complete `create_async()`/`ready()` inside its startup boundary. ^[raw/articles/dms-core-wiki-api-reference-v0.11.0.md] ^[raw/articles/dms-core-wiki-examples-v0.11.0.md]
+
+The installed runtime is `dms-core` `0.11.0` and matches these signatures, but the current consumer is not yet compatible: `uv run pytest -q` fails during collection at `docmesh_doc/dependencies.py:75` because `DmsOperationContext` no longer exists.
+
 ## Assembly choices
+
+### v0.10 historical assembly
 
 v0.10.0의 current assembly는 sync `DocumentManagementSDKFactory`, native `AsyncDocumentManagementSDKFactory`, sync direct `DefaultDocumentManagementSDK`, advanced async `AsyncDocumentManagementSDK.from_async_components()`다. Sync factory에는 `create_async()`가 없고 async factory의 `create()`는 lazy, `create_async()`는 ready 상태를 반환한다. Factory 생성은 MinIO bucket discovery/creation을 수행할 수 있으므로 startup network boundary와 rollback을 host lifecycle test에서 다룬다. ^[raw/articles/dms-core-wiki-api-reference-v0.10.0.md] ^[raw/articles/dms-core-wiki-examples-v0.10.0.md]
 
@@ -75,3 +87,5 @@ host authorization은 `AccessContext`와 `DocumentAccessPolicy`로, user/tenant/
 - `raw/articles/dms-core-wiki-examples-v0.9.0.md`
 - `raw/articles/dms-core-wiki-api-reference-v0.10.0.md`
 - `raw/articles/dms-core-wiki-examples-v0.10.0.md`
+- `raw/articles/dms-core-wiki-api-reference-v0.11.0.md`
+- `raw/articles/dms-core-wiki-examples-v0.11.0.md`

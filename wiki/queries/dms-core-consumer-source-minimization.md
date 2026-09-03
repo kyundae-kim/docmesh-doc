@@ -1,16 +1,26 @@
 ---
 title: dms-core consumer source minimization
 created: 2026-08-04
-updated: 2026-08-24
+updated: 2026-09-03
 type: query
 tags: [dms-core, dms, api, integration, architecture, performance, security, testing, dependency]
-sources: [raw/articles/dms-core-wiki-api-reference-v0.7.0.md, raw/articles/dms-core-wiki-configuration-v0.7.0.md, raw/articles/dms-core-wiki-examples-v0.7.0.md, raw/articles/docmesh-config-wiki-api-reference-v0.1.0.md, raw/articles/docmesh-py-core-wiki-api-reference-v0.6.0.md, raw/articles/docmesh-py-core-wiki-examples-v0.6.0.md, raw/articles/fastapi-core-wiki-api-reference-v0.7.0.md, raw/articles/fastapi-core-wiki-examples-v0.7.0.md, raw/articles/dms-core-wiki-api-reference-v0.9.0.md, raw/articles/dms-core-wiki-examples-v0.9.0.md, raw/articles/dms-core-wiki-api-reference-v0.10.0.md, raw/articles/dms-core-wiki-examples-v0.10.0.md]
+sources: [raw/articles/dms-core-wiki-api-reference-v0.7.0.md, raw/articles/dms-core-wiki-configuration-v0.7.0.md, raw/articles/dms-core-wiki-examples-v0.7.0.md, raw/articles/docmesh-config-wiki-api-reference-v0.1.0.md, raw/articles/docmesh-py-core-wiki-api-reference-v0.6.0.md, raw/articles/docmesh-py-core-wiki-examples-v0.6.0.md, raw/articles/fastapi-core-wiki-api-reference-v0.7.0.md, raw/articles/fastapi-core-wiki-examples-v0.7.0.md, raw/articles/dms-core-wiki-api-reference-v0.9.0.md, raw/articles/dms-core-wiki-examples-v0.9.0.md, raw/articles/dms-core-wiki-api-reference-v0.10.0.md, raw/articles/dms-core-wiki-examples-v0.10.0.md, raw/articles/dms-core-wiki-api-reference-v0.11.0.md, raw/articles/dms-core-wiki-examples-v0.11.0.md]
 confidence: medium
 ---
 
 # dms-core consumer source minimization
 
-> Version scope: the original sections below preserve the 2026-08-04 v0.7.0 consumer snapshot. The v0.10.0 reconciliation supersedes package API names and lifecycle claims where stated.
+> Version scope: the original sections below preserve the 2026-08-04 v0.7.0 consumer snapshot. The v0.11.0 reconciliation is current; the v0.10.0 reconciliation remains historical context and is superseded where stated.
+
+## v0.11.0 reconciliation
+
+v0.11.0 is an explicit consumer-boundary change. The package root exposes 56 names and the SDK root exposes 55; the public assembly remains host-injected, with sync/native-async factories, direct component paths, structured errors, access policies, capability protocols, observers, and close-safe content streams. Environment loading, standalone HTTP, global health/close, HTTP error helpers, broker APIs, and unknown-size/async input-stream upload remain outside the SDK. ^[raw/articles/dms-core-wiki-api-reference-v0.11.0.md] ^[raw/articles/dms-core-wiki-examples-v0.11.0.md]
+
+The v0.10 `DmsOperationContext` and scoped facades are no longer public. A reusable host bridge should instead derive `AccessContext` and `DocumentPartition` explicitly. `DocumentPartition.personal(id)` and `.group(id)` are separate namespaces even for the same identifier, and the partition must be forwarded to every ordinary document/recovery operation, cursor continuation, storage/idempotency namespace, and partition reset. Only `clear_all_data()` and `initialize_for_data_load()` are explicitly global. ^[raw/articles/dms-core-wiki-api-reference-v0.11.0.md] ^[raw/articles/dms-core-wiki-examples-v0.11.0.md]
+
+Source minimization therefore moves repeated scope construction into the FastAPI/host bridge without moving authorization or product policy into DMS. The bridge can centralize authenticated-claim → `AccessContext`/partition conversion, but it must retain host ownership of engine/client readiness, HTTP status/envelope mapping, hidden-deletion policy, response schemas, and storage-key exclusion. Stable `DmsError.code`, `category`, and `retryable` fields are the transport-neutral handoff; v0.11 has no `recommended_http_error()` helper. ^[raw/articles/dms-core-wiki-api-reference-v0.11.0.md]
+
+The workspace declares and resolves `dms-core` `0.11.0`; runtime probes match the documented exports and signatures. The consumer migration is incomplete: `docmesh_doc/dependencies.py:75` accesses removed `dms.DmsOperationContext`, and `uv run pytest -q` fails during collection in four test modules. The first migration gate is replacing that context/scoped dependency with explicit partition and access-context dependencies, then adding cursor, policy, and global/partition reset contract tests.
 
 ## v0.10.0 reconciliation
 

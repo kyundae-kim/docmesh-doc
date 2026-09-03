@@ -1,16 +1,16 @@
 ---
 title: dms-core
 created: 2026-07-11
-updated: 2026-08-24
+updated: 2026-09-03
 type: entity
 tags: [dms-core, dms, document, metadata, storage, api]
-sources: [raw/articles/dms-core-api-v0.2.0.md, raw/articles/dms-core-api-v0.3.0.md, raw/articles/dms-core-wiki-api-reference-v0.7.0.md, raw/articles/dms-core-wiki-configuration-v0.7.0.md, raw/articles/dms-core-wiki-examples-v0.7.0.md, raw/articles/dms-core-config-v0.2.0.md, raw/articles/dms-core-config-v0.3.0.md, raw/articles/dms-core-env-example-v0.3.0.md, raw/articles/dms-core-examples-v0.2.0.md, raw/articles/dms-core-examples-v0.3.0.md, raw/articles/dms-core-messaging-v0.2.0.md, raw/articles/docmesh-config-wiki-api-reference-v0.1.0.md, raw/articles/docmesh-config-wiki-configuration-v0.1.0.md, raw/articles/docmesh-config-wiki-examples-v0.1.0.md, raw/articles/docmesh-config-env-example-v0.1.0.md, raw/articles/docmesh-py-core-wiki-api-reference-v0.6.0.md, raw/articles/docmesh-py-core-wiki-configuration-v0.6.0.md, raw/articles/docmesh-py-core-wiki-examples-v0.6.0.md, raw/articles/docmesh-py-core-env-example-v0.6.0.md, raw/articles/dms-core-wiki-api-reference-v0.9.0.md, raw/articles/dms-core-wiki-examples-v0.9.0.md, raw/articles/dms-core-wiki-api-reference-v0.10.0.md, raw/articles/dms-core-wiki-examples-v0.10.0.md]
+sources: [raw/articles/dms-core-api-v0.2.0.md, raw/articles/dms-core-api-v0.3.0.md, raw/articles/dms-core-wiki-api-reference-v0.7.0.md, raw/articles/dms-core-wiki-configuration-v0.7.0.md, raw/articles/dms-core-wiki-examples-v0.7.0.md, raw/articles/dms-core-config-v0.2.0.md, raw/articles/dms-core-config-v0.3.0.md, raw/articles/dms-core-env-example-v0.3.0.md, raw/articles/dms-core-examples-v0.2.0.md, raw/articles/dms-core-examples-v0.3.0.md, raw/articles/dms-core-messaging-v0.2.0.md, raw/articles/docmesh-config-wiki-api-reference-v0.1.0.md, raw/articles/docmesh-config-wiki-configuration-v0.1.0.md, raw/articles/docmesh-config-wiki-examples-v0.1.0.md, raw/articles/docmesh-config-env-example-v0.1.0.md, raw/articles/docmesh-py-core-wiki-api-reference-v0.6.0.md, raw/articles/docmesh-py-core-wiki-configuration-v0.6.0.md, raw/articles/docmesh-py-core-wiki-examples-v0.6.0.md, raw/articles/docmesh-py-core-env-example-v0.6.0.md, raw/articles/dms-core-wiki-api-reference-v0.9.0.md, raw/articles/dms-core-wiki-examples-v0.9.0.md, raw/articles/dms-core-wiki-api-reference-v0.10.0.md, raw/articles/dms-core-wiki-examples-v0.10.0.md, raw/articles/dms-core-wiki-api-reference-v0.11.0.md, raw/articles/dms-core-wiki-examples-v0.11.0.md]
 confidence: medium
 ---
 
 # dms-core
 
-`dms-core`는 root 패키지 `dms`를 권장 진입점으로 제공하는 Python Document Management SDK다. SDK는 문서 업로드·metadata/content 조회·streaming download·soft/hard delete·health check·resource close를 공개하며, 일반 애플리케이션은 구현체를 직접 만들기보다 factory로 생성하는 것이 권장된다. ^[raw/articles/dms-core-api-v0.2.0.md]
+`dms-core`는 root 패키지 `dms`를 권장 진입점으로 제공하는 Python Document Management SDK다. 현재 v0.11.0 public facade는 문서 업로드·metadata/content 조회·streaming download·soft/hard delete·reset·recovery를 제공하며, 일반 애플리케이션은 host가 만든 engine과 MinIO client를 factory에 주입해 생성한다. SDK facade에는 전역 health/close API가 없고 host가 readiness와 shutdown을 소유한다. ^[raw/articles/dms-core-wiki-api-reference-v0.11.0.md] ^[raw/articles/dms-core-wiki-examples-v0.11.0.md]
 
 v0.3.0 environment template은 `dms-core`가 standalone API server가 아닌 Python SDK임을 명시한다. 따라서 SDK의 PostgreSQL/SQLite·MinIO 조립 설정과 [[fastapi-core]]가 제공할 수 있는 HTTP hosting 설정은 분리해 운영한다. ^[raw/articles/dms-core-env-example-v0.3.0.md]
 
@@ -35,7 +35,7 @@ v0.7.0은 `DmsAssemblyPlan`으로 metadata/backend 정책, startup timeout, acce
 
 v0.7.0 Examples는 public/internal metadata, cursor pagination, reset, recovery plan, structured metadata, transport-neutral error descriptor와 HTTP 권고 변환, sync/async facade 및 기능별 protocol을 하나의 소비자 흐름으로 연결한다. 반대로 unknown-size stream과 async input stream 직접 upload, search, presigned URL, broker, standalone API server는 범위 밖으로 남는다. ^[raw/articles/dms-core-wiki-examples-v0.7.0.md] ^[raw/articles/dms-core-wiki-api-reference-v0.7.0.md]
 
-## v0.10.0 current public contract
+## v0.10.0 historical public contract
 
 The v0.10.0 API and Examples pages identify package version `0.10.0` at commit `d508b7c2ea82fb79bfcf008c948a364fcaa962d9` on branch `feature-v0.9.0-dev`. The branch/version mismatch is retained as source-set provenance rather than silently normalized. The current contract remains a host-injected Python SDK, not a standalone API server: the host creates database engines, MinIO clients, or storage components and owns readiness and shutdown. SDK facades still expose no global `close()`, `aclose()`, or `check_health()`. ^[raw/articles/dms-core-wiki-api-reference-v0.10.0.md] ^[raw/articles/dms-core-wiki-examples-v0.10.0.md]
 
@@ -46,6 +46,16 @@ v0.10.0 adds explicit user isolation to `AccessContext`, `DmsOperationContext`, 
 The 26-operation sync surface retains cursor pages, iterators, close-safe output streams, checksum-verified `copy_document_to()`, deletion/reset, recovery plans, observers, and stable error fields. Unknown-size and async input-stream upload, HTTP status/body helpers, readiness endpoints, search, presigned URLs, and broker APIs remain outside the public contract. Host transport must continue mapping DMS errors to product policy. ^[raw/articles/dms-core-wiki-api-reference-v0.10.0.md] ^[raw/articles/dms-core-wiki-examples-v0.10.0.md]
 
 The workspace still declares `dms-core>=0.9.0`, while `uv run` now resolves and installs `dms-core` `0.10.0`. Runtime probes confirmed 55 root exports, the documented sync/native-async factory signatures, `user_id` fields, and the absence of `create_sdk_from_clients`, `recommended_http_error`, `HealthStatus`, and `ServiceHealth`. The ordinary test run reached 20 passing tests but one factory test attempted `localhost:9000` and failed because v0.10.0 sync factory creation performs MinIO bucket discovery/creation; this consumer test is not yet network-isolated for the new startup boundary.
+
+## v0.11.0 current public contract
+
+The v0.11.0 API and Examples sources identify `dms-core` commit `1f3325ed914fc970e4e040e161e6de117ede5aeb`. The package root exposes 56 names and `dms.sdk` exposes 55; `DocumentStatus` is the root-only addition. The current contract remains a host-injected Python SDK, not a standalone API server: the host creates engines, MinIO clients, or storage components and owns readiness and shutdown. ^[raw/articles/dms-core-wiki-api-reference-v0.11.0.md] ^[raw/articles/dms-core-wiki-examples-v0.11.0.md]
+
+All ordinary document and recovery operations require keyword-only `partition: DocumentPartition`. `personal` and `group` partitions with the same identifier are separate namespaces, and partition kind/id bind cursor continuation, storage and idempotency namespaces, and access decisions. `clear_all_data()` and `initialize_for_data_load()` are the explicitly global operations without a partition; partition reset methods require one. ^[raw/articles/dms-core-wiki-api-reference-v0.11.0.md] ^[raw/articles/dms-core-wiki-examples-v0.11.0.md]
+
+The v0.11 facade keeps sync/native-async factories, host `AccessContext`/access-policy seams, operation observers, capability protocols, close-safe streams, public/internal metadata separation, and structured error fields. It does not expose the v0.10 `DmsOperationContext` or scoped facade, environment/client factory, HTTP helper, global health/close, search, presigned URLs, broker API, or unknown-size/async input-stream upload. ^[raw/articles/dms-core-wiki-api-reference-v0.11.0.md] ^[raw/articles/dms-core-wiki-examples-v0.11.0.md]
+
+This workspace declares `dms-core>=0.11.0` and `uv run` resolves `dms-core` `0.11.0`; the runtime probe matched the documented export counts, factory signatures, and partition-required methods. The consumer is not yet v0.11-compatible: `uv run pytest -q` fails during collection because `docmesh_doc/dependencies.py:75` references removed `dms.DmsOperationContext`, so four test modules do not collect.
 
 ## docmesh-config boundary
 
@@ -96,3 +106,5 @@ v0.7.0의 source minimization 개선점은 환경 factory나 FastAPI 결합을 D
 - `raw/articles/dms-core-wiki-examples-v0.9.0.md`
 - `raw/articles/dms-core-wiki-api-reference-v0.10.0.md`
 - `raw/articles/dms-core-wiki-examples-v0.10.0.md`
+- `raw/articles/dms-core-wiki-api-reference-v0.11.0.md`
+- `raw/articles/dms-core-wiki-examples-v0.11.0.md`

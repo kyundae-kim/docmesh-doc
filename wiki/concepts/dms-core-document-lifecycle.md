@@ -1,10 +1,10 @@
 ---
 title: dms-core document lifecycle
 created: 2026-07-11
-updated: 2026-08-24
+updated: 2026-09-03
 type: concept
 tags: [dms, document, metadata, storage, workflow, dms-core]
-sources: [raw/articles/dms-core-api-v0.2.0.md, raw/articles/dms-core-api-v0.3.0.md, raw/articles/dms-core-wiki-api-reference-v0.7.0.md, raw/articles/dms-core-wiki-examples-v0.7.0.md, raw/articles/dms-core-wiki-configuration-v0.7.0.md, raw/articles/dms-core-examples-v0.2.0.md, raw/articles/dms-core-examples-v0.3.0.md, raw/articles/dms-core-wiki-api-reference-v0.9.0.md, raw/articles/dms-core-wiki-examples-v0.9.0.md, raw/articles/dms-core-wiki-api-reference-v0.10.0.md, raw/articles/dms-core-wiki-examples-v0.10.0.md]
+sources: [raw/articles/dms-core-api-v0.2.0.md, raw/articles/dms-core-api-v0.3.0.md, raw/articles/dms-core-wiki-api-reference-v0.7.0.md, raw/articles/dms-core-wiki-examples-v0.7.0.md, raw/articles/dms-core-wiki-configuration-v0.7.0.md, raw/articles/dms-core-examples-v0.2.0.md, raw/articles/dms-core-examples-v0.3.0.md, raw/articles/dms-core-wiki-api-reference-v0.9.0.md, raw/articles/dms-core-wiki-examples-v0.9.0.md, raw/articles/dms-core-wiki-api-reference-v0.10.0.md, raw/articles/dms-core-wiki-examples-v0.10.0.md, raw/articles/dms-core-wiki-api-reference-v0.11.0.md, raw/articles/dms-core-wiki-examples-v0.11.0.md]
 confidence: medium
 ---
 
@@ -34,7 +34,7 @@ sync/async SDK와 content stream은 context manager를 제공하며, async facad
 
 v0.7.0의 전역 `clear_all_data()`/`initialize_for_data_load()`는 metadata, `documents/` prefix object, upload operation record를 대상으로 하며 분산 transaction을 주장하지 않는다. 한 store 실패 후에도 나머지를 시도하고 부분 결과를 `DataResetError.result`에 남기므로, application은 reset을 개별 document delete와 다른 관리 권한·운영 관찰 경계로 둔다. ^[raw/articles/dms-core-wiki-api-reference-v0.7.0.md] ^[raw/articles/dms-core-wiki-examples-v0.7.0.md]
 
-## v0.10 current lifecycle contract
+## v0.10 historical lifecycle contract
 
 v0.10.0 preserves the object/metadata lifecycle and host ownership boundary while adding native async assembly. Sync and async factories accept host-owned engines and MinIO clients; direct assembly accepts host-owned components. SDK-opened files and returned content streams are cleaned up by their operation/stream contracts, while caller-provided upload streams and copy sinks remain caller-owned. No facade exposes global `close()`, `aclose()`, or `check_health()`. ^[raw/articles/dms-core-wiki-api-reference-v0.10.0.md] ^[raw/articles/dms-core-wiki-examples-v0.10.0.md]
 
@@ -42,7 +42,17 @@ User scope is now part of lifecycle isolation rather than only an external autho
 
 Public retrieval/listing can include `user_id` but still returns `PublicDocumentMetadata` without `storage_key`; internal metadata, inspection, and recovery results remain explicit management surfaces. Reset and reconciliation preserve partial results and item errors, plans are revalidated at execution, and recovery audit callbacks remain best-effort. Stable DMS errors still have no HTTP status or response-body contract, so [[fastapi-core-app-assembly]] must project them separately. ^[raw/articles/dms-core-wiki-api-reference-v0.10.0.md] ^[raw/articles/dms-core-wiki-examples-v0.10.0.md]
 
-소비 host의 inline content와 attachment download는 모두 sync `DocumentContentStream`을 context manager로 소비하므로 public body 조회가 object 전체를 메모리에 복사하지 않는다. 통합 test fixture도 assertion 실패와 명시 삭제 성공 양쪽에서 best-effort hard delete를 수행해 테스트 문서 lifecycle을 닫는다. 세부 최적화는 [[dms-application-optimization]]과 [[dms-core-usage-patterns]]에 연결한다.
+## v0.11 current lifecycle contract
+
+v0.11.0 makes `DocumentPartition` part of the lifecycle boundary rather than relying on the removed user-scoped facade. Every ordinary upload, read, list, content, delete, and recovery call requires a keyword-only partition. Personal and group partitions are distinct even when their identifiers match; the partition is also bound into cursor, storage, and idempotency namespaces. ^[raw/articles/dms-core-wiki-api-reference-v0.11.0.md] ^[raw/articles/dms-core-wiki-examples-v0.11.0.md]
+
+Public metadata now carries the partition projection and continues to exclude `storage_key`. Host authorization is expressed with `AccessContext` and `DocumentAccessPolicy`/`AsyncDocumentAccessPolicy`; policy callbacks receive public metadata or `None` for partition-wide operations, and denial or policy failure becomes `AccessDeniedError`. `DmsOperationContext` and scoped facades are not part of the v0.11 public contract. ^[raw/articles/dms-core-wiki-api-reference-v0.11.0.md] ^[raw/articles/dms-core-wiki-examples-v0.11.0.md]
+
+The object/metadata consistency flow, close-safe sync/async content streams, caller-owned upload streams and copy sinks, deletion results, structured errors, and bounded recovery remain in place. `clear_partition_data()` and `initialize_partition_for_data_load()` require a partition; only `clear_all_data()` and `initialize_for_data_load()` operate globally without one. Recovery candidate listing remains bounded with status plus offset/limit, while ordinary document listing is cursor-based and binds partition, status, and page size. ^[raw/articles/dms-core-wiki-api-reference-v0.11.0.md] ^[raw/articles/dms-core-wiki-examples-v0.11.0.md]
+
+The current consumer has not migrated this boundary: the normal pytest command fails during collection at `docmesh_doc/dependencies.py:75` because `dms.DmsOperationContext` was removed in the installed `dms-core` `0.11.0`.
+
+소비 host의 inline content와 attachment download는 모두 `sync DocumentContentStream`을 context manager로 소비하므로 public body 조회가 object 전체를 메모리에 복사하지 않는다. 통합 test fixture도 assertion 실패와 명시 삭제 성공 양쪽에서 best-effort hard delete를 수행해 테스트 문서 lifecycle을 닫는다. 세부 최적화는 [[dms-application-optimization]]과 [[dms-core-usage-patterns]]에 연결한다.
 
 SDK 생성에 필요한 MinIO·metadata store·startup health 설정은 [[dms-core-configuration]]에서 관리한다. lifecycle integration은 이 설정의 health/close 정책과 정합성을 유지해야 한다.
 
@@ -57,7 +67,7 @@ v0.3.0의 `inspect_document`는 metadata/object 존재 여부, 상태, 일관성
 ## Operational questions
 
 - DMS API는 SDK error를 어떤 HTTP 상태·오류 모델로 매핑할 것인가?
-- SDK의 `check_health()`와 FastAPI readiness를 어떻게 함께 보고할 것인가?
+- host-owned engine/MinIO readiness와 FastAPI readiness를 어떤 계약으로 함께 보고할 것인가?
 - SDK close callback과 FastAPI shutdown 순서는 어떤 contract로 보장할 것인가?
 
 ## Source
@@ -73,3 +83,5 @@ v0.3.0의 `inspect_document`는 metadata/object 존재 여부, 상태, 일관성
 - `raw/articles/dms-core-wiki-examples-v0.9.0.md`
 - `raw/articles/dms-core-wiki-api-reference-v0.10.0.md`
 - `raw/articles/dms-core-wiki-examples-v0.10.0.md`
+- `raw/articles/dms-core-wiki-api-reference-v0.11.0.md`
+- `raw/articles/dms-core-wiki-examples-v0.11.0.md`
