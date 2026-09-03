@@ -139,7 +139,7 @@ def create_application(
 
     app = FastAPI(
         title="DocMesh Document Service",
-        version="0.6.0",
+        version="0.7.0",
         root_path=selected.root_path,
         lifespan=lifespan,
     )
