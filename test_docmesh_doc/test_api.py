@@ -250,7 +250,7 @@ def test_liveness_and_injected_sdk_readiness_are_available_without_dms_health_ap
 def test_application_version_matches_the_distribution_version():
     app = create_application(FakeSDK())
 
-    assert app.version == "0.6.0"
+    assert app.version == "0.7.0"
 
 
 def test_host_readiness_check_can_return_service_unavailable():
