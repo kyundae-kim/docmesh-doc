@@ -1,10 +1,10 @@
 ---
 title: fastapi-core usage patterns
 created: 2026-07-11
-updated: 2026-08-24
+updated: 2026-09-03
 type: concept
 tags: [fastapi, fastapi-core, api, deployment, testing, integration]
-sources: [raw/articles/fastapi-core-api-v0.1.6.md, raw/articles/fastapi-core-wiki-api-reference.md, raw/articles/fastapi-core-wiki-api-reference-v0.5.0.md, raw/articles/fastapi-core-wiki-api-reference-v0.6.0.md, raw/articles/fastapi-core-wiki-api-reference-v0.7.0.md, raw/articles/fastapi-core-config-v0.1.6.md, raw/articles/fastapi-core-wiki-configuration-v0.7.0.md, raw/articles/fastapi-core-env-example-v0.7.0.md, raw/articles/fastapi-core-examples-v0.1.6.md, raw/articles/fastapi-core-examples-v0.2.0.md, raw/articles/fastapi-core-examples-v0.3.0.md, raw/articles/fastapi-core-wiki-examples.md, raw/articles/fastapi-core-wiki-examples-v0.5.0.md, raw/articles/fastapi-core-wiki-examples-v0.6.0.md, raw/articles/fastapi-core-wiki-examples-v0.7.0.md, raw/articles/fastapi-core-messaging-v0.1.6.md, raw/articles/dms-core-wiki-api-reference-v0.7.0.md, raw/articles/dms-core-wiki-configuration-v0.7.0.md, raw/articles/dms-core-wiki-examples-v0.7.0.md, raw/articles/dms-core-wiki-api-reference-v0.9.0.md, raw/articles/dms-core-wiki-examples-v0.9.0.md, raw/articles/dms-core-wiki-api-reference-v0.10.0.md, raw/articles/dms-core-wiki-examples-v0.10.0.md]
+sources: [raw/articles/fastapi-core-api-v0.1.6.md, raw/articles/fastapi-core-wiki-api-reference.md, raw/articles/fastapi-core-wiki-api-reference-v0.5.0.md, raw/articles/fastapi-core-wiki-api-reference-v0.6.0.md, raw/articles/fastapi-core-wiki-api-reference-v0.7.0.md, raw/articles/fastapi-core-config-v0.1.6.md, raw/articles/fastapi-core-wiki-configuration-v0.7.0.md, raw/articles/fastapi-core-env-example-v0.7.0.md, raw/articles/fastapi-core-examples-v0.1.6.md, raw/articles/fastapi-core-examples-v0.2.0.md, raw/articles/fastapi-core-examples-v0.3.0.md, raw/articles/fastapi-core-wiki-examples.md, raw/articles/fastapi-core-wiki-examples-v0.5.0.md, raw/articles/fastapi-core-wiki-examples-v0.6.0.md, raw/articles/fastapi-core-wiki-examples-v0.7.0.md, raw/articles/fastapi-core-messaging-v0.1.6.md, raw/articles/dms-core-wiki-api-reference-v0.7.0.md, raw/articles/dms-core-wiki-configuration-v0.7.0.md, raw/articles/dms-core-wiki-examples-v0.7.0.md, raw/articles/dms-core-wiki-api-reference-v0.9.0.md, raw/articles/dms-core-wiki-examples-v0.9.0.md, raw/articles/dms-core-wiki-api-reference-v0.10.0.md, raw/articles/dms-core-wiki-examples-v0.10.0.md, raw/articles/dms-core-wiki-api-reference-v0.11.0.md, raw/articles/dms-core-wiki-examples-v0.11.0.md]
 confidence: medium
 ---
 
@@ -54,6 +54,14 @@ domain SDK 같은 추가 자원은 `ManagedResource`로 등록하면 선언 순�
 
 The current flow selects `DocumentManagementSDKFactory` for sync clients, `AsyncDocumentManagementSDKFactory` for native async clients, or direct component assembly for advanced hosts. Authentication dependencies should translate the principal to `AccessContext`/`DmsOperationContext`, preserving user scope across cursor, idempotency, read/delete/recovery/reset operations. FastAPI continues to own readiness, shutdown, response schemas, HTTP error projection, and `storage_key` exclusion. ^[raw/articles/dms-core-wiki-api-reference-v0.10.0.md] ^[raw/articles/dms-core-wiki-examples-v0.10.0.md]
 
+## dms-core v0.11 usage boundary
+
+For v0.11, authentication dependencies construct `AccessContext` and a `DocumentPartition` rather than a removed `DmsOperationContext`/scoped facade. Pass the partition to every ordinary upload, read, list, content, delete, and recovery call; follow cursors only with the same partition, status, and page size. Global reset methods are explicit exceptions and intentionally omit partition. ^[raw/articles/dms-core-wiki-api-reference-v0.11.0.md] ^[raw/articles/dms-core-wiki-examples-v0.11.0.md]
+
+The host selects sync or native-async factory assembly, registers engine/client/component readiness and shutdown with the FastAPI resource lifecycle, and lets DMS close only operation-owned files and content streams. HTTP error envelopes, status mapping, response schemas, and storage-key exclusion remain FastAPI/product policy because v0.11 provides structured DMS errors but no HTTP helper or global health/close API. ^[raw/articles/dms-core-wiki-api-reference-v0.11.0.md]
+
+The installed `dms-core` `0.11.0` runtime matches the documented factory and partition signatures. The consumer now derives a fixed application identity and personal partition, passes the v0.11 `partition`/`access_context` arguments through every operation, and its unit plus MinIO-backed integration tests pass.
+
 ## Version note
 
 Git tag `v0.1.6`, `v0.2.0`, `v0.3.0`의 examples는 모두 문서 내부에서 `2026-07-03` 구현 반영본으로 표기한다. GitHub Wiki Examples도 `0.3.0` 기준을 표방하지만 body hash가 다르고, `ResourceKey`·error renderer·runtime-centric dependency/lifecycle 예제를 포함한다. Git ref나 문서 내부 버전만으로 설치 패키지 API를 확정할 수 없으므로 예제 채택 전 대상 패키지와 테스트 스위트를 확인해야 한다. 현재 `pyproject.toml`과 interpreter는 `fastapi-core` v0.7.0을 사용하고, app/module/resource smoke와 consumer contract test를 실행했다. 이전 v0.6.0 결과는 수집 시점의 evidence로 보존한다. ^[raw/articles/fastapi-core-examples-v0.3.0.md] ^[raw/articles/fastapi-core-wiki-examples.md] ^[raw/articles/fastapi-core-wiki-api-reference-v0.6.0.md] ^[raw/articles/fastapi-core-wiki-examples-v0.7.0.md]
@@ -78,3 +86,5 @@ Git tag `v0.1.6`, `v0.2.0`, `v0.3.0`의 examples는 모두 문서 내부에서 `
 - `raw/articles/fastapi-core-messaging-v0.1.6.md`
 - `raw/articles/dms-core-wiki-api-reference-v0.10.0.md`
 - `raw/articles/dms-core-wiki-examples-v0.10.0.md`
+- `raw/articles/dms-core-wiki-api-reference-v0.11.0.md`
+- `raw/articles/dms-core-wiki-examples-v0.11.0.md`

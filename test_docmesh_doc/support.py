@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 from docmesh_doc.application import create_application
 
 NOW = datetime(2026, 8, 15, tzinfo=UTC)
+DEFAULT_PARTITION = dms.DocumentPartition.personal("docmesh-doc")
 
 
 def public_metadata(document_id: str = "doc-1") -> dms.PublicDocumentMetadata:
@@ -20,8 +21,8 @@ def public_metadata(document_id: str = "doc-1") -> dms.PublicDocumentMetadata:
         status=dms.DocumentStatus.AVAILABLE,
         created_at=NOW,
         updated_at=NOW,
+        partition=DEFAULT_PARTITION,
         created_by="user-1",
-        user_id="user-1",
         checksum="checksum",
         extra_metadata={"category": "contract"},
     )
@@ -29,7 +30,6 @@ def public_metadata(document_id: str = "doc-1") -> dms.PublicDocumentMetadata:
 
 class FakeSDK:
     def __init__(self) -> None:
-        self.scoped_contexts = []
         self.upload_request = None
         self.list_args = None
         self.content_stream_calls = 0
@@ -37,11 +37,7 @@ class FakeSDK:
         self.delete_args = None
         self.closed = False
 
-    def scoped(self, context):
-        self.scoped_contexts.append(context)
-        return self
-
-    def upload_document_stream(self, request):
+    def upload_document_stream(self, request, **_kwargs):
         self.upload_request = request
         payload = request.stream.read()
         assert len(payload) == request.size

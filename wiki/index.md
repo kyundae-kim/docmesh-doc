@@ -1,11 +1,11 @@
 # Wiki Index
 
 > DMS를 `dms-core` 로직 코어와 `fastapi-core` FastAPI 컴포넌트로 구성하여 배포하기 위한 지식 카탈로그.
-> Last updated: 2026-08-24 | Total pages: 22
+> Last updated: 2026-09-03 | Total pages: 22
 
 ## Entities
 <!-- Alphabetical within section -->
-- [[dms-core]] — host-injected v0.10.0 문서 SDK; sync/native-async assembly와 user-scoped cursor·stream·삭제·복구를 제공하고 HTTP/health/lifecycle은 host에 둔다.
+- [[dms-core]] — host-injected v0.11.0 문서 SDK; personal/group partition과 cursor·stream·삭제·복구를 제공하고 HTTP/health/lifecycle은 host에 둔다.
 - [[docmesh-config]] — process environment 설정·network-free diagnosis·runtime plan metadata를 제공하고 DMS host adapter가 선택 로딩에 사용하는 v0.1.0 패키지.
 - [[docmesh-py-core]] — canonical config object로 PostgreSQL/SQLite·MinIO client wrapper를 만들며 DMS에 주입되는 v0.6.0 공통 의존성.
 - [[fastapi-core]] — v0.7.0 DMS FastAPI 서비스의 module 조립·managed resource·라우터·dependency·contract-test 공개 표면.

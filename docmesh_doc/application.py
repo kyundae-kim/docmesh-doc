@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
 
+from docmesh_doc.dependencies import build_dms_application_context
 from docmesh_doc.dms_factory import DmsRuntime, DmsSettings, create_dms_runtime
 from docmesh_doc.errors import (
     dms_error_handler,
@@ -29,17 +30,25 @@ def _effective_settings(
     settings: DmsSettings | None,
     *,
     root_path: str | None,
+    application_user_id: str | None,
 ) -> DmsSettings:
     selected = settings or DmsSettings.from_env(dict(os.environ))
+    changes: dict[str, str] = {}
     if root_path is not None:
-        selected = replace(selected, root_path=root_path)
+        changes["root_path"] = root_path
+    if application_user_id is not None:
+        changes["application_user_id"] = application_user_id
+    if changes:
+        selected = replace(selected, **changes)
     return selected
 
 
 def _correlation_id(request: Request) -> str:
     supplied = request.headers.get("X-Correlation-ID", "").strip()
-    if supplied and len(supplied) <= 128 and all(
-        32 <= ord(character) < 127 for character in supplied
+    if (
+        supplied
+        and len(supplied) <= 128
+        and all(32 <= ord(character) < 127 for character in supplied)
     ):
         return supplied
     return str(uuid4())
@@ -52,7 +61,7 @@ def _readiness_payload(
     if readiness_check is not None:
         try:
             result = readiness_check()
-        except Exception:
+        except Exception:  # noqa: BLE001 - readiness must fail closed
             result = False
         if isinstance(result, bool):
             payload: dict[str, object] = {
@@ -93,9 +102,10 @@ def create_application(
     settings: DmsSettings | None = None,
     runtime: DmsRuntime | None = None,
     root_path: str | None = None,
+    application_user_id: str | None = None,
     readiness_check: ReadinessCheck | None = None,
 ) -> FastAPI:
-    """Create the HTTP API around a host-injected dms-core facade.
+    """Create the HTTP API around a host-injected dms-core v0.11 facade.
 
     An injected SDK or runtime remains owned by the caller and is not closed
     by the application lifespan. When neither is supplied, the application
@@ -108,7 +118,9 @@ def create_application(
     selected = _effective_settings(
         settings,
         root_path=root_path,
+        application_user_id=application_user_id,
     )
+    dms_context = build_dms_application_context(selected.application_user_id)
     if runtime is not None:
         sdk = runtime.sdk
 
@@ -127,13 +139,14 @@ def create_application(
 
     app = FastAPI(
         title="DocMesh Document Service",
-        version="0.5.0",
+        version="0.7.0",
         root_path=selected.root_path,
         lifespan=lifespan,
     )
     app.state.settings = selected
     app.state.dms_sdk = sdk
     app.state.dms_runtime = runtime
+    app.state.dms_context = dms_context
     app.state.readiness_check = readiness_check
 
     if selected.cors_origins:

@@ -12,9 +12,7 @@ from fastapi import APIRouter, File, Form, Query, Request, Response, UploadFile
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import StreamingResponse
 
-from docmesh_doc.dependencies import (
-    DmsSdk,
-)
+from docmesh_doc.dependencies import DmsApplicationContext, DmsContext, DmsSdk
 from docmesh_doc.document_http import (
     content_disposition,
     decode_base64_content,
@@ -245,6 +243,7 @@ def upload_document(
     request: Request,
     response: Response,
     sdk: DmsSdk,
+    context: DmsContext,
     file: Annotated[UploadFile, File(...)],
     document_id: Annotated[str | None, Form()] = None,
     metadata: Annotated[str | None, Form()] = None,
@@ -261,7 +260,9 @@ def upload_document(
             document_id=normalized_document_id or None,
             metadata=parse_metadata(metadata),
             created_by=created_by,
-        )
+        ),
+        partition=context.partition,
+        access_context=context.access_context,
     )
     _set_upload_headers(request, response, result)
     return _upload_response(result)
@@ -279,6 +280,7 @@ def upload_document_bytes(
     request: Request,
     response: Response,
     sdk: DmsSdk,
+    context: DmsContext,
 ) -> UploadDocumentResponse:
     result = sdk.upload_document(
         dms.UploadDocumentRequest(
@@ -288,11 +290,16 @@ def upload_document_bytes(
             document_id=payload.document_id,
             metadata=payload.metadata,
             created_by=payload.created_by,
-            user_id=payload.user_id,
             checksum=payload.checksum,
             idempotency_key=payload.idempotency_key,
-            idempotency_scope=payload.idempotency_scope,
-        )
+            idempotency_scope=(
+                context.user_id
+                if payload.idempotency_scope is None
+                else payload.idempotency_scope
+            ),
+        ),
+        partition=context.partition,
+        access_context=context.access_context,
     )
     _set_upload_headers(request, response, result)
     return _upload_response(result)
@@ -309,21 +316,23 @@ def upload_document_file(
     request: Request,
     response: Response,
     sdk: DmsSdk,
+    context: DmsContext,
     file: Annotated[UploadFile, File(...)],
     document_id: Annotated[str | None, Form()] = None,
     metadata: Annotated[str | None, Form()] = None,
     created_by: Annotated[str | None, Form()] = None,
 ) -> UploadDocumentResponse:
     filename, content_type, _size = validate_upload_file(file)
-    temporary = tempfile.NamedTemporaryFile(
-        prefix="docmesh-upload-",
-        suffix=Path(filename).suffix,
-        delete=False,
-    )
-    path = Path(temporary.name)
+    path: Path | None = None
     try:
-        with temporary:
+        with tempfile.NamedTemporaryFile(
+            prefix="docmesh-upload-",
+            suffix=Path(filename).suffix,
+            delete=False,
+        ) as temporary:
+            path = Path(temporary.name)
             shutil.copyfileobj(file.file, temporary)
+        assert path is not None
         result = sdk.upload_file(
             path,
             filename=filename,
@@ -331,9 +340,12 @@ def upload_document_file(
             document_id=document_id.strip() if document_id else None,
             metadata=parse_metadata(metadata),
             created_by=created_by,
+            partition=context.partition,
+            access_context=context.access_context,
         )
     finally:
-        path.unlink(missing_ok=True)
+        if path is not None:
+            path.unlink(missing_ok=True)
     _set_upload_headers(request, response, result)
     return _upload_response(result)
 
@@ -344,11 +356,14 @@ def _list_documents(
     cursor: str | None,
     limit: int,
     document_status: dms.DocumentStatus | None,
+    context: DmsApplicationContext,
 ) -> dms.DocumentPage:
     return list_method(
         cursor=cursor,
         limit=limit,
         status=document_status,
+        partition=context.partition,
+        access_context=context.access_context,
     )
 
 
@@ -360,6 +375,7 @@ def _list_documents(
 )
 def list_documents(
     sdk: DmsSdk,
+    context: DmsContext,
     cursor: str | None = None,
     limit: Annotated[int, Query(ge=1, le=1000)] = 100,
     document_status: Annotated[
@@ -372,6 +388,7 @@ def list_documents(
         cursor=cursor,
         limit=limit,
         document_status=document_status,
+        context=context,
     )
 
 
@@ -383,6 +400,7 @@ def list_documents(
 )
 def list_documents_page(
     sdk: DmsSdk,
+    context: DmsContext,
     cursor: str | None = None,
     limit: Annotated[int, Query(ge=1, le=1000)] = 100,
     document_status: Annotated[
@@ -395,6 +413,7 @@ def list_documents_page(
         cursor=cursor,
         limit=limit,
         document_status=document_status,
+        context=context,
     )
 
 
@@ -406,6 +425,7 @@ def list_documents_page(
 )
 def iterate_documents(
     sdk: DmsSdk,
+    context: DmsContext,
     page_size: Annotated[int, Query(ge=1, le=1000)] = 100,
     document_status: Annotated[
         dms.DocumentStatus | None,
@@ -417,6 +437,8 @@ def iterate_documents(
             sdk.iter_documents(
                 status=document_status,
                 page_size=page_size,
+                partition=context.partition,
+                access_context=context.access_context,
             )
         )
     }
@@ -431,8 +453,13 @@ def iterate_documents(
 def get_document_metadata(
     document_id: str,
     sdk: DmsSdk,
+    context: DmsContext,
 ) -> dms.PublicDocumentMetadata:
-    return sdk.get_document_metadata(document_id)
+    return sdk.get_document_metadata(
+        document_id,
+        partition=context.partition,
+        access_context=context.access_context,
+    )
 
 
 @router.get(
@@ -444,8 +471,13 @@ def get_document_metadata(
 def get_document_content(
     document_id: str,
     sdk: DmsSdk,
+    context: DmsContext,
 ) -> StreamingResponse:
-    item = sdk.get_document_content_stream(document_id)
+    item = sdk.get_document_content_stream(
+        document_id,
+        partition=context.partition,
+        access_context=context.access_context,
+    )
     return _stream_document(item, disposition="inline")
 
 
@@ -458,6 +490,7 @@ def get_document_content(
 def download_document(
     document_id: str,
     sdk: DmsSdk,
+    context: DmsContext,
     chunk_size: Annotated[
         int,
         Query(ge=1, le=MAX_DOWNLOAD_CHUNK_SIZE),
@@ -466,6 +499,8 @@ def download_document(
     item = sdk.get_document_content_stream(
         document_id,
         chunk_size=chunk_size,
+        partition=context.partition,
+        access_context=context.access_context,
     )
     return _stream_document(item, disposition="attachment")
 
@@ -479,12 +514,15 @@ def download_document(
 async def delete_document(
     document_id: str,
     sdk: DmsSdk,
+    context: DmsContext,
     hard: bool = Query(False),
 ) -> dms.DeleteDocumentResult:
     return await run_in_threadpool(
         sdk.delete_document,
         document_id,
         hard_delete=hard,
+        partition=context.partition,
+        access_context=context.access_context,
     )
 
 
@@ -497,8 +535,13 @@ async def delete_document(
 def get_document_content_eager(
     document_id: str,
     sdk: DmsSdk,
+    context: DmsContext,
 ) -> Response:
-    item = sdk.get_document_content(document_id)
+    item = sdk.get_document_content(
+        document_id,
+        partition=context.partition,
+        access_context=context.access_context,
+    )
     headers = _content_headers(
         disposition="inline",
         filename=item.filename,
@@ -521,6 +564,7 @@ def get_document_content_eager(
 async def get_document_content_async_stream(
     document_id: str,
     sdk: DmsSdk,
+    context: DmsContext,
     chunk_size: Annotated[
         int,
         Query(ge=1, le=MAX_DOWNLOAD_CHUNK_SIZE),
@@ -529,6 +573,8 @@ async def get_document_content_async_stream(
     item = await sdk.get_document_content_async_stream(
         document_id,
         chunk_size=chunk_size,
+        partition=context.partition,
+        access_context=context.access_context,
     )
     return _stream_async_document(item, disposition="inline")
 
@@ -542,15 +588,22 @@ async def get_document_content_async_stream(
 def iterate_document_chunks(
     document_id: str,
     sdk: DmsSdk,
+    context: DmsContext,
     chunk_size: Annotated[
         int,
         Query(ge=1, le=MAX_DOWNLOAD_CHUNK_SIZE),
     ] = DEFAULT_DOWNLOAD_CHUNK_SIZE,
 ) -> StreamingResponse:
-    metadata = sdk.get_document_metadata(document_id)
+    metadata = sdk.get_document_metadata(
+        document_id,
+        partition=context.partition,
+        access_context=context.access_context,
+    )
     chunks = sdk.iter_document_chunks(
         document_id,
         chunk_size=chunk_size,
+        partition=context.partition,
+        access_context=context.access_context,
     )
     return _stream_document_chunks(chunks, metadata=metadata)
 
@@ -564,14 +617,19 @@ def iterate_document_chunks(
 def copy_document(
     document_id: str,
     sdk: DmsSdk,
+    context: DmsContext,
     chunk_size: Annotated[
         int,
         Query(ge=1, le=MAX_DOWNLOAD_CHUNK_SIZE),
     ] = DEFAULT_DOWNLOAD_CHUNK_SIZE,
     verify_checksum: bool = True,
 ) -> StreamingResponse:
-    metadata = sdk.get_document_metadata(document_id)
-    sink = tempfile.SpooledTemporaryFile(
+    metadata = sdk.get_document_metadata(
+        document_id,
+        partition=context.partition,
+        access_context=context.access_context,
+    )
+    sink = tempfile.SpooledTemporaryFile(  # noqa: SIM115 - response owns sink
         max_size=COPY_SPOOL_MEMORY_LIMIT,
         mode="w+b",
     )
@@ -581,6 +639,8 @@ def copy_document(
             sink,
             chunk_size=chunk_size,
             verify_checksum=verify_checksum,
+            partition=context.partition,
+            access_context=context.access_context,
         )
         sink.seek(0)
     except BaseException:
@@ -598,9 +658,7 @@ def copy_document(
     )
     response = _stream_document(item, disposition="attachment")
     response.headers["X-Document-Checksum"] = result.checksum
-    response.headers["X-Checksum-Verified"] = str(
-        result.checksum_verified
-    ).lower()
+    response.headers["X-Checksum-Verified"] = str(result.checksum_verified).lower()
     return response
 
 
@@ -613,8 +671,13 @@ def copy_document(
 def soft_delete_document(
     document_id: str,
     sdk: DmsSdk,
+    context: DmsContext,
 ) -> dms.DeleteDocumentResult:
-    return sdk.soft_delete_document(document_id)
+    return sdk.soft_delete_document(
+        document_id,
+        partition=context.partition,
+        access_context=context.access_context,
+    )
 
 
 @router.delete(
@@ -626,8 +689,13 @@ def soft_delete_document(
 def hard_delete_document(
     document_id: str,
     sdk: DmsSdk,
+    context: DmsContext,
 ) -> dms.DeleteDocumentResult:
-    return sdk.hard_delete_document(document_id)
+    return sdk.hard_delete_document(
+        document_id,
+        partition=context.partition,
+        access_context=context.access_context,
+    )
 
 
 @upload_operations_router.get(
@@ -639,11 +707,15 @@ def hard_delete_document(
 def get_upload_operation(
     idempotency_key: str,
     sdk: DmsSdk,
+    context: DmsContext,
     scope: str | None = None,
 ) -> dms.UploadOperationResult:
+    resolved_scope = context.user_id if scope is None else scope
     return sdk.get_upload_operation(
         idempotency_key=idempotency_key,
-        scope=scope,
+        scope=resolved_scope,
+        partition=context.partition,
+        access_context=context.access_context,
     )
 
 
@@ -656,8 +728,13 @@ def get_upload_operation(
 def get_internal_document_metadata(
     document_id: str,
     sdk: DmsSdk,
+    context: DmsContext,
 ) -> dms.DocumentMetadata:
-    return sdk.get_internal_document_metadata(document_id)
+    return sdk.get_internal_document_metadata(
+        document_id,
+        partition=context.partition,
+        access_context=context.access_context,
+    )
 
 
 @management_router.get(
@@ -669,8 +746,13 @@ def get_internal_document_metadata(
 def inspect_document(
     document_id: str,
     sdk: DmsSdk,
+    context: DmsContext,
 ) -> dms.DocumentInspection:
-    return sdk.inspect_document(document_id)
+    return sdk.inspect_document(
+        document_id,
+        partition=context.partition,
+        access_context=context.access_context,
+    )
 
 
 @management_router.get(
@@ -681,6 +763,7 @@ def inspect_document(
 )
 def list_recovery_candidates(
     sdk: DmsSdk,
+    context: DmsContext,
     status: dms.DocumentStatus,
     offset: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=1000)] = 100,
@@ -690,6 +773,8 @@ def list_recovery_candidates(
             status=status,
             offset=offset,
             limit=limit,
+            partition=context.partition,
+            access_context=context.access_context,
         )
     }
 
@@ -702,6 +787,7 @@ def list_recovery_candidates(
 )
 def iterate_recovery_candidates(
     sdk: DmsSdk,
+    context: DmsContext,
     status: dms.DocumentStatus,
     page_size: Annotated[int, Query(ge=1, le=1000)] = 100,
 ) -> dict[str, object]:
@@ -710,6 +796,8 @@ def iterate_recovery_candidates(
             sdk.iter_recovery_candidates(
                 status=status,
                 page_size=page_size,
+                partition=context.partition,
+                access_context=context.access_context,
             )
         )
     }
@@ -725,6 +813,7 @@ def reconcile_document(
     document_id: str,
     payload: ReconcileDocumentRequest,
     sdk: DmsSdk,
+    context: DmsContext,
 ) -> dms.ReconciliationResult:
     return sdk.reconcile_document(
         document_id,
@@ -732,6 +821,8 @@ def reconcile_document(
         storage_key=payload.storage_key,
         dry_run=payload.dry_run,
         actor=payload.actor,
+        partition=context.partition,
+        access_context=context.access_context,
     )
 
 
@@ -744,6 +835,7 @@ def reconcile_document(
 def reconcile_documents(
     payload: ReconcileDocumentsRequest,
     sdk: DmsSdk,
+    context: DmsContext,
 ) -> dms.BatchReconciliationResult:
     return sdk.reconcile_documents(
         status=payload.status,
@@ -752,6 +844,8 @@ def reconcile_documents(
         limit=payload.limit,
         dry_run=payload.dry_run,
         actor=payload.actor,
+        partition=context.partition,
+        access_context=context.access_context,
     )
 
 
@@ -764,9 +858,11 @@ def reconcile_documents(
 def execute_reconciliation_plan(
     payload: ExecuteReconciliationPlanRequest,
     sdk: DmsSdk,
+    context: DmsContext,
 ) -> dms.BatchReconciliationResult:
     try:
         plan = dms.ReconciliationPlan(
+            partition=context.partition,
             status=payload.status,
             action=payload.action,
             items=tuple(
@@ -780,7 +876,12 @@ def execute_reconciliation_plan(
         )
     except ValueError as error:
         raise dms.ValidationError(str(error)) from error
-    return sdk.execute_reconciliation_plan(plan, actor=payload.actor)
+    return sdk.execute_reconciliation_plan(
+        plan,
+        actor=payload.actor,
+        partition=context.partition,
+        access_context=context.access_context,
+    )
 
 
 @management_router.delete(
@@ -789,8 +890,21 @@ def execute_reconciliation_plan(
     response_model=DataResetResponse,
     responses=_ERROR_RESPONSES,
 )
-def clear_all_data(sdk: DmsSdk) -> dms.DataResetResult:
-    return sdk.clear_all_data()
+def clear_all_data(sdk: DmsSdk, context: DmsContext) -> dms.DataResetResult:
+    return sdk.clear_all_data(access_context=context.access_context)
+
+
+@management_router.delete(
+    "/data/partition",
+    name="clear_partition_data",
+    response_model=DataResetResponse,
+    responses=_ERROR_RESPONSES,
+)
+def clear_partition_data(sdk: DmsSdk, context: DmsContext) -> dms.DataResetResult:
+    return sdk.clear_partition_data(
+        partition=context.partition,
+        access_context=context.access_context,
+    )
 
 
 @management_router.post(
@@ -799,5 +913,24 @@ def clear_all_data(sdk: DmsSdk) -> dms.DataResetResult:
     response_model=DataResetResponse,
     responses=_ERROR_RESPONSES,
 )
-def initialize_for_data_load(sdk: DmsSdk) -> dms.DataResetResult:
-    return sdk.initialize_for_data_load()
+def initialize_for_data_load(
+    sdk: DmsSdk,
+    context: DmsContext,
+) -> dms.DataResetResult:
+    return sdk.initialize_for_data_load(access_context=context.access_context)
+
+
+@management_router.post(
+    "/data/partition/initializations",
+    name="initialize_partition_for_data_load",
+    response_model=DataResetResponse,
+    responses=_ERROR_RESPONSES,
+)
+def initialize_partition_for_data_load(
+    sdk: DmsSdk,
+    context: DmsContext,
+) -> dms.DataResetResult:
+    return sdk.initialize_partition_for_data_load(
+        partition=context.partition,
+        access_context=context.access_context,
+    )

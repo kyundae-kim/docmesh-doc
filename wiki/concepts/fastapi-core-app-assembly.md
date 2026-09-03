@@ -1,10 +1,10 @@
 ---
 title: fastapi-core application assembly
 created: 2026-07-11
-updated: 2026-08-24
+updated: 2026-09-03
 type: concept
 tags: [fastapi, fastapi-core, architecture, deployment, configuration, observability]
-sources: [raw/articles/fastapi-core-api-v0.1.6.md, raw/articles/fastapi-core-api-v0.3.0.md, raw/articles/fastapi-core-wiki-api-reference.md, raw/articles/fastapi-core-wiki-api-reference-v0.5.0.md, raw/articles/fastapi-core-wiki-api-reference-v0.6.0.md, raw/articles/fastapi-core-wiki-api-reference-v0.7.0.md, raw/articles/fastapi-core-config-v0.1.6.md, raw/articles/fastapi-core-config-v0.2.0.md, raw/articles/fastapi-core-config-v0.3.0.md, raw/articles/fastapi-core-wiki-configuration.md, raw/articles/fastapi-core-wiki-configuration-v0.5.0.md, raw/articles/fastapi-core-wiki-configuration-v0.6.0.md, raw/articles/fastapi-core-wiki-configuration-v0.7.0.md, raw/articles/fastapi-core-env-example-v0.4.0.md, raw/articles/fastapi-core-env-example-v0.5.0.md, raw/articles/fastapi-core-env-example-v0.6.0.md, raw/articles/fastapi-core-env-example-v0.7.0.md, raw/articles/fastapi-core-examples-v0.1.6.md, raw/articles/fastapi-core-examples-v0.2.0.md, raw/articles/fastapi-core-examples-v0.3.0.md, raw/articles/fastapi-core-wiki-examples.md, raw/articles/fastapi-core-wiki-examples-v0.5.0.md, raw/articles/fastapi-core-wiki-examples-v0.6.0.md, raw/articles/fastapi-core-wiki-examples-v0.7.0.md, raw/articles/fastapi-core-messaging-v0.1.6.md, raw/articles/fastapi-core-messaging-v0.2.0.md, raw/articles/dms-core-wiki-api-reference-v0.7.0.md, raw/articles/dms-core-wiki-configuration-v0.7.0.md, raw/articles/dms-core-wiki-examples-v0.7.0.md, raw/articles/dms-core-wiki-api-reference-v0.9.0.md, raw/articles/dms-core-wiki-examples-v0.9.0.md, raw/articles/dms-core-wiki-api-reference-v0.10.0.md, raw/articles/dms-core-wiki-examples-v0.10.0.md, raw/articles/docmesh-config-wiki-api-reference-v0.1.0.md, raw/articles/docmesh-config-wiki-configuration-v0.1.0.md, raw/articles/docmesh-config-wiki-examples-v0.1.0.md, raw/articles/docmesh-config-env-example-v0.1.0.md, raw/articles/docmesh-py-core-wiki-api-reference-v0.6.0.md, raw/articles/docmesh-py-core-wiki-configuration-v0.6.0.md, raw/articles/docmesh-py-core-wiki-examples-v0.6.0.md, raw/articles/docmesh-py-core-env-example-v0.6.0.md]
+sources: [raw/articles/fastapi-core-api-v0.1.6.md, raw/articles/fastapi-core-api-v0.3.0.md, raw/articles/fastapi-core-wiki-api-reference.md, raw/articles/fastapi-core-wiki-api-reference-v0.5.0.md, raw/articles/fastapi-core-wiki-api-reference-v0.6.0.md, raw/articles/fastapi-core-wiki-api-reference-v0.7.0.md, raw/articles/fastapi-core-config-v0.1.6.md, raw/articles/fastapi-core-config-v0.2.0.md, raw/articles/fastapi-core-config-v0.3.0.md, raw/articles/fastapi-core-wiki-configuration.md, raw/articles/fastapi-core-wiki-configuration-v0.5.0.md, raw/articles/fastapi-core-wiki-configuration-v0.6.0.md, raw/articles/fastapi-core-wiki-configuration-v0.7.0.md, raw/articles/fastapi-core-env-example-v0.4.0.md, raw/articles/fastapi-core-env-example-v0.5.0.md, raw/articles/fastapi-core-env-example-v0.6.0.md, raw/articles/fastapi-core-env-example-v0.7.0.md, raw/articles/fastapi-core-examples-v0.1.6.md, raw/articles/fastapi-core-examples-v0.2.0.md, raw/articles/fastapi-core-examples-v0.3.0.md, raw/articles/fastapi-core-wiki-examples.md, raw/articles/fastapi-core-wiki-examples-v0.5.0.md, raw/articles/fastapi-core-wiki-examples-v0.6.0.md, raw/articles/fastapi-core-wiki-examples-v0.7.0.md, raw/articles/fastapi-core-messaging-v0.1.6.md, raw/articles/fastapi-core-messaging-v0.2.0.md, raw/articles/dms-core-wiki-api-reference-v0.7.0.md, raw/articles/dms-core-wiki-configuration-v0.7.0.md, raw/articles/dms-core-wiki-examples-v0.7.0.md, raw/articles/dms-core-wiki-api-reference-v0.9.0.md, raw/articles/dms-core-wiki-examples-v0.9.0.md, raw/articles/dms-core-wiki-api-reference-v0.10.0.md, raw/articles/dms-core-wiki-examples-v0.10.0.md, raw/articles/dms-core-wiki-api-reference-v0.11.0.md, raw/articles/dms-core-wiki-examples-v0.11.0.md, raw/articles/docmesh-config-wiki-api-reference-v0.1.0.md, raw/articles/docmesh-config-wiki-configuration-v0.1.0.md, raw/articles/docmesh-config-wiki-examples-v0.1.0.md, raw/articles/docmesh-config-env-example-v0.1.0.md, raw/articles/docmesh-py-core-wiki-api-reference-v0.6.0.md, raw/articles/docmesh-py-core-wiki-configuration-v0.6.0.md, raw/articles/docmesh-py-core-wiki-examples-v0.6.0.md, raw/articles/docmesh-py-core-env-example-v0.6.0.md]
 confidence: medium
 ---
 
@@ -74,6 +74,14 @@ v0.10.0 sync factory는 SDK assembly 중 MinIO bucket discovery/creation을 수�
 
 HTTP 인증 주체는 `AccessContext.user_id`/`DmsOperationContext.user_id`로 명시적으로 변환한다. v0.10.0 cursor, object namespace, idempotency operation, read/delete/recovery/reset은 user scope를 공유하므로 다른 사용자 cursor나 document ID가 adapter 경계를 통과하지 않게 한다. Public response에는 `user_id`를 허용할 수 있지만 `storage_key`는 계속 internal/recovery 경계에만 둔다. ^[raw/articles/dms-core-wiki-api-reference-v0.10.0.md] ^[raw/articles/dms-core-wiki-examples-v0.10.0.md]
 
+## dms-core v0.11 consumer boundary
+
+The v0.11 DMS API removes `DmsOperationContext` and scoped facades. FastAPI authentication dependencies should construct `AccessContext` from verified claims and construct a `DocumentPartition` for the request's personal or group scope. Every ordinary DMS document and recovery call must receive that partition explicitly; only named global reset operations omit it. ^[raw/articles/dms-core-wiki-api-reference-v0.11.0.md] ^[raw/articles/dms-core-wiki-examples-v0.11.0.md]
+
+`DocumentManagementSDKFactory` and `AsyncDocumentManagementSDKFactory` remain host-injected assembly points. The managed resource owns host-created engine/client/component readiness and shutdown, while DMS owns per-operation file/stream cleanup. FastAPI continues to provide HTTP response schemas, error/status projection, storage-key exclusion, and product authorization policy because v0.11 exposes no environment loader, HTTP helper, global health, or global close API. ^[raw/articles/dms-core-wiki-api-reference-v0.11.0.md]
+
+The workspace resolves `dms-core` `0.11.0`, and its adapter now derives a fixed application identity and personal partition instead of using the removed `dms.DmsOperationContext`. The ordinary and MinIO-backed integration test selections pass; migration coverage includes partition derivation, cursor/partition forwarding, and explicit global-versus-partition reset calls.
+
 ## Open questions
 
 - DMS에서 활성화해야 할 서비스와 필수 서비스의 정확한 목록은 무엇인가?
@@ -110,6 +118,8 @@ HTTP 인증 주체는 `AccessContext.user_id`/`DmsOperationContext.user_id`로 �
 - `raw/articles/dms-core-wiki-examples-v0.7.0.md`
 - `raw/articles/dms-core-wiki-api-reference-v0.10.0.md`
 - `raw/articles/dms-core-wiki-examples-v0.10.0.md`
+- `raw/articles/dms-core-wiki-api-reference-v0.11.0.md`
+- `raw/articles/dms-core-wiki-examples-v0.11.0.md`
 - `raw/articles/docmesh-config-wiki-api-reference-v0.1.0.md`
 - `raw/articles/docmesh-config-wiki-configuration-v0.1.0.md`
 - `raw/articles/docmesh-config-wiki-examples-v0.1.0.md`

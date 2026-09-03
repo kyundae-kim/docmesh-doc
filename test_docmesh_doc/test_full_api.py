@@ -56,7 +56,7 @@ class FullFakeSDK(FakeSDK):
         self.clear_calls = 0
         self.initialize_calls = 0
 
-    def upload_document(self, request):
+    def upload_document(self, request, **_kwargs):
         self.bytes_upload_request = request
         item = public_metadata(request.document_id or "generated-bytes-id")
         return dms.UploadDocumentResult(
@@ -74,6 +74,7 @@ class FullFakeSDK(FakeSDK):
         document_id=None,
         metadata=None,
         created_by=None,
+        **_kwargs,
     ):
         self.file_upload_path = str(path)
         self.file_upload_content = Path(path).read_bytes()
@@ -87,7 +88,13 @@ class FullFakeSDK(FakeSDK):
         item = public_metadata(document_id or "generated-file-id")
         return dms.UploadDocumentResult(document_id=item.document_id, metadata=item)
 
-    def get_upload_operation(self, *, idempotency_key, scope=None):
+    def get_upload_operation(
+        self,
+        *,
+        idempotency_key,
+        scope=None,
+        **_kwargs,
+    ):
         self.upload_operation_args = (scope, idempotency_key)
         return SimpleNamespace(
             scope=scope or "context-scope",
@@ -98,7 +105,7 @@ class FullFakeSDK(FakeSDK):
             updated_at=NOW,
         )
 
-    def get_internal_document_metadata(self, document_id):
+    def get_internal_document_metadata(self, document_id, **_kwargs):
         self.internal_metadata_calls.append(document_id)
         public = public_metadata(document_id)
         return dms.DocumentMetadata(
@@ -113,11 +120,18 @@ class FullFakeSDK(FakeSDK):
             checksum=public.checksum,
             deleted_at=public.deleted_at,
             created_by=public.created_by,
-            user_id=public.user_id,
+            partition=public.partition,
             extra_metadata=public.extra_metadata,
         )
 
-    def list_documents_page(self, *, cursor=None, limit=100, status=None):
+    def list_documents_page(
+        self,
+        *,
+        cursor=None,
+        limit=100,
+        status=None,
+        **_kwargs,
+    ):
         self.page_args = (cursor, limit, status)
         return dms.DocumentPage(
             items=[public_metadata("page-doc")],
@@ -125,12 +139,12 @@ class FullFakeSDK(FakeSDK):
             has_more=False,
         )
 
-    def iter_documents(self, *, status=None, page_size=100):
+    def iter_documents(self, *, status=None, page_size=100, **_kwargs):
         self.iterator_args = (status, page_size)
         yield public_metadata("iter-doc-1")
         yield public_metadata("iter-doc-2")
 
-    def get_document_content(self, document_id):
+    def get_document_content(self, document_id, **_kwargs):
         self.eager_content_calls += 1
         return dms.DocumentContent(
             document_id=document_id,
@@ -141,12 +155,24 @@ class FullFakeSDK(FakeSDK):
             checksum="checksum",
         )
 
-    async def get_document_content_async_stream(self, document_id, *, chunk_size=64 * 1024):
+    async def get_document_content_async_stream(
+        self,
+        document_id,
+        *,
+        chunk_size=64 * 1024,
+        **_kwargs,
+    ):
         del chunk_size
         self.async_stream = FakeAsyncContentStream(document_id)
         return self.async_stream
 
-    def iter_document_chunks(self, document_id, *, chunk_size=64 * 1024):
+    def iter_document_chunks(
+        self,
+        document_id,
+        *,
+        chunk_size=64 * 1024,
+        **_kwargs,
+    ):
         self.chunk_args = (document_id, chunk_size)
         yield b"p"
         yield b"df"
@@ -158,6 +184,7 @@ class FullFakeSDK(FakeSDK):
         *,
         chunk_size=64 * 1024,
         verify_checksum=True,
+        **_kwargs,
     ):
         self.copy_args = (document_id, chunk_size, verify_checksum)
         self.copy_sink = sink
@@ -169,7 +196,7 @@ class FullFakeSDK(FakeSDK):
             checksum_verified=verify_checksum,
         )
 
-    def inspect_document(self, document_id):
+    def inspect_document(self, document_id, **_kwargs):
         self.inspection_calls.append(document_id)
         return dms.DocumentInspection(
             document_id=document_id,
@@ -181,11 +208,24 @@ class FullFakeSDK(FakeSDK):
             storage_key=f"private/{document_id}",
         )
 
-    def list_recovery_candidates(self, *, status, offset=0, limit=100):
+    def list_recovery_candidates(
+        self,
+        *,
+        status,
+        offset=0,
+        limit=100,
+        **_kwargs,
+    ):
         self.recovery_candidate_args = (status, offset, limit)
         return [self.get_internal_document_metadata("failed-doc")]
 
-    def iter_recovery_candidates(self, *, status, page_size=100):
+    def iter_recovery_candidates(
+        self,
+        *,
+        status,
+        page_size=100,
+        **_kwargs,
+    ):
         self.recovery_iterator_args = (status, page_size)
         yield self.get_internal_document_metadata("iter-failed-doc")
 
@@ -214,6 +254,7 @@ class FullFakeSDK(FakeSDK):
         storage_key=None,
         dry_run=False,
         actor=None,
+        **_kwargs,
     ):
         self.reconcile_document_args = (
             document_id,
@@ -237,6 +278,7 @@ class FullFakeSDK(FakeSDK):
         limit=100,
         dry_run=False,
         actor=None,
+        **_kwargs,
     ):
         self.reconcile_documents_args = (
             status,
@@ -247,6 +289,7 @@ class FullFakeSDK(FakeSDK):
             actor,
         )
         return dms.BatchReconciliationResult(
+            partition=_kwargs["partition"],
             status=status,
             action=action,
             dry_run=dry_run,
@@ -261,9 +304,10 @@ class FullFakeSDK(FakeSDK):
             ],
         )
 
-    def execute_reconciliation_plan(self, plan, *, actor=None):
+    def execute_reconciliation_plan(self, plan, *, actor=None, **_kwargs):
         self.plan_args = (plan, actor)
         return dms.BatchReconciliationResult(
+            partition=plan.partition,
             status=plan.status,
             action=plan.action,
             dry_run=False,
@@ -275,15 +319,15 @@ class FullFakeSDK(FakeSDK):
             ],
         )
 
-    def soft_delete_document(self, document_id):
+    def soft_delete_document(self, document_id, **_kwargs):
         self.special_delete_args = ("soft", document_id)
         return super().delete_document(document_id, hard_delete=False)
 
-    def hard_delete_document(self, document_id):
+    def hard_delete_document(self, document_id, **_kwargs):
         self.special_delete_args = ("hard", document_id)
         return super().delete_document(document_id, hard_delete=True)
 
-    def clear_all_data(self):
+    def clear_all_data(self, **_kwargs):
         self.clear_calls += 1
         return dms.DataResetResult(
             metadata_deleted=2,
@@ -291,7 +335,7 @@ class FullFakeSDK(FakeSDK):
             upload_operations_deleted=1,
         )
 
-    def initialize_for_data_load(self):
+    def initialize_for_data_load(self, **_kwargs):
         self.initialize_calls += 1
         return dms.DataResetResult(
             metadata_deleted=0,
@@ -300,32 +344,22 @@ class FullFakeSDK(FakeSDK):
         )
 
 
-def test_request_headers_are_converted_to_a_scoped_dms_context():
+def test_request_headers_cannot_override_the_fixed_application_identity():
     sdk = FullFakeSDK()
 
     with client_for(sdk) as client:
         response = client.get(
             "/documents",
             headers={
-                "X-Subject": "subject-1",
-                "X-User-ID": "user-1",
-                "X-Tenant-ID": "tenant-1",
-                "X-Roles": "reader, editor",
-                "X-Idempotency-Scope": "scope-1",
-                "X-Default-Metadata": '{"source":"header"}',
+                "X-Subject": "attacker",
+                "X-User-ID": "attacker",
+                "X-Tenant-ID": "attacker-tenant",
+                "X-Roles": "none",
             },
         )
 
     assert response.status_code == 200
-    context = sdk.scoped_contexts[-1]
-    assert context.user_id == "user-1"
-    assert context.created_by == "subject-1"
-    assert context.audit_actor == "subject-1"
-    assert context.idempotency_scope == "scope-1"
-    assert context.default_metadata == {"source": "header"}
-    assert context.access.subject == "subject-1"
-    assert context.access.tenant == "tenant-1"
-    assert context.access.roles == frozenset({"reader", "editor"})
+    assert sdk.list_args == (None, 100, None)
 
 
 def test_bytes_and_file_upload_variants_delegate_to_their_dms_operations():
@@ -341,7 +375,6 @@ def test_bytes_and_file_upload_variants_delegate_to_their_dms_operations():
                 "document_id": "bytes-doc",
                 "metadata": {"source": "bytes"},
                 "created_by": "author-1",
-                "user_id": "user-1",
                 "checksum": "bytes-checksum",
                 "idempotency_key": "upload-1",
                 "idempotency_scope": "scope-1",
@@ -361,7 +394,7 @@ def test_bytes_and_file_upload_variants_delegate_to_their_dms_operations():
     assert bytes_response.json()["created"] is False
     assert sdk.bytes_upload_request.content == b"pdf"
     assert sdk.bytes_upload_request.idempotency_key == "upload-1"
-    assert sdk.bytes_upload_request.user_id == "user-1"
+    assert not hasattr(sdk.bytes_upload_request, "user_id")
     assert sdk.bytes_upload_request.checksum == "bytes-checksum"
     assert file_response.status_code == 201
     assert sdk.file_upload_content == b"pdf"
@@ -422,9 +455,7 @@ def test_all_content_read_and_copy_forms_are_exposed():
         eager = client.get("/documents/doc-1/content/eager")
         async_stream = client.get("/documents/doc-1/content/async?chunk_size=2")
         chunks = client.get("/documents/doc-1/chunks?chunk_size=2")
-        copied = client.get(
-            "/documents/doc-1/copy?chunk_size=2&verify_checksum=true"
-        )
+        copied = client.get("/documents/doc-1/copy?chunk_size=2&verify_checksum=true")
 
     assert eager.status_code == 200
     assert eager.content == b"pdf"
@@ -609,7 +640,9 @@ def test_openapi_exposes_every_dms_operation_boundary():
         ("/management/reconciliations", "post"),
         ("/management/reconciliation-plans/executions", "post"),
         ("/management/data", "delete"),
+        ("/management/data/partition", "delete"),
         ("/management/data/initializations", "post"),
+        ("/management/data/partition/initializations", "post"),
     }
     actual = {
         (path, method)
@@ -649,9 +682,9 @@ def test_openapi_constrains_upload_operation_states():
     with client_for(FullFakeSDK()) as client:
         schema = client.get("/openapi.json").json()
 
-    state = schema["components"]["schemas"]["UploadOperationResponse"][
-        "properties"
-    ]["state"]
+    state = schema["components"]["schemas"]["UploadOperationResponse"]["properties"][
+        "state"
+    ]
     assert state["enum"] == ["pending", "succeeded", "failed"]
 
 
@@ -659,7 +692,5 @@ def test_openapi_error_schema_does_not_advertise_internal_diagnostics():
     with client_for(FullFakeSDK()) as client:
         schema = client.get("/openapi.json").json()
 
-    properties = schema["components"]["schemas"]["ErrorDetailResponse"][
-        "properties"
-    ]
+    properties = schema["components"]["schemas"]["ErrorDetailResponse"]["properties"]
     assert "details" not in properties

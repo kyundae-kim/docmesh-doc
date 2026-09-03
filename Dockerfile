@@ -1,15 +1,35 @@
-FROM python:3.11-slim
+# syntax=docker/dockerfile:1
+
+FROM python:3.11-slim AS builder
 
 WORKDIR /app
 
-RUN apt update && apt install -y curl git
-RUN pip install uv
+RUN pip install --no-cache-dir uv
 
 COPY pyproject.toml uv.lock* /app/
-RUN uv sync --no-dev
+RUN uv sync --no-dev --no-install-project
 
-COPY . /app
+COPY docmesh_doc /app/docmesh_doc
+
+FROM python:3.11-slim AS runtime
+
+ENV PATH="/app/.venv/bin:${PATH}" \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+COPY --from=builder --chown=10001:10001 /app/.venv /app/.venv
+COPY --from=builder --chown=10001:10001 /app/docmesh_doc /app/docmesh_doc
+
+RUN mkdir -p /app/data && chown -R 10001:10001 /app/data
+
+USER 10001:10001
+
 
 EXPOSE 8000
 
-CMD ["uv", "run", "python", "-m", "fastapi", "run", "--host", "0.0.0.0"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD ["python", "-c", "import sys, urllib.request; response = urllib.request.urlopen(\"http://127.0.0.1:8000/health/readiness\", timeout=3); status = response.status; response.close(); sys.exit(0 if status == 200 else 1)"]
+
+CMD ["python", "-m", "fastapi", "run", "docmesh_doc/main.py", "--host", "0.0.0.0"]

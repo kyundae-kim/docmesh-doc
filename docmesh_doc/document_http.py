@@ -3,7 +3,7 @@ from __future__ import annotations
 import base64
 import binascii
 import json
-from typing import Literal
+from typing import Any, Literal
 from urllib.parse import quote
 
 import dms
@@ -21,19 +21,20 @@ def parse_json_value(value: str, *, field_name: str) -> object:
         parsed = json.loads(value, parse_constant=_reject_json_constant)
         return ensure_json_serializable(parsed)
     except (json.JSONDecodeError, TypeError, ValueError) as error:
-        raise dms.ValidationError(
-            f"{field_name} must contain valid JSON"
-        ) from error
+        raise dms.ValidationError(f"{field_name} must contain valid JSON") from error
 
 
 def parse_metadata(
     value: str | None,
     *,
     field_name: str = "metadata",
-) -> object:
+) -> dict[str, Any] | None:
     if value is None or not value.strip():
         return None
-    return parse_json_value(value, field_name=field_name)
+    parsed = parse_json_value(value, field_name=field_name)
+    if not isinstance(parsed, dict):
+        raise dms.ValidationError(f"{field_name} must contain a JSON object")
+    return parsed
 
 
 def decode_base64_content(value: str) -> bytes:
@@ -63,7 +64,5 @@ def validate_upload_file(file: UploadFile) -> tuple[str, str, int]:
     return filename, content_type, int(size)
 
 
-def content_disposition(
-    kind: Literal["inline", "attachment"], filename: str
-) -> str:
+def content_disposition(kind: Literal["inline", "attachment"], filename: str) -> str:
     return f"{kind}; filename*=UTF-8''{quote(filename, safe='')}"
