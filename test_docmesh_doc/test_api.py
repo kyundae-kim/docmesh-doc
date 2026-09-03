@@ -34,7 +34,6 @@ def test_upload_parses_metadata_and_returns_creation_state():
     assert sdk.upload_request.size == 3
     assert sdk.upload_request.created_by == "author-1"
     assert sdk.upload_request.metadata == {"source": "api"}
-    assert sdk.scoped_contexts[-1].user_id == "user-1"
 
 
 def test_upload_location_respects_root_path():
@@ -67,18 +66,20 @@ def test_upload_rejects_non_standard_json_metadata(metadata):
     assert sdk.upload_request is None
 
 
-def test_context_rejects_non_standard_json_default_metadata():
+def test_request_identity_headers_do_not_change_the_application_user():
     sdk = FakeSDK()
 
     with client_for(sdk) as client:
         response = client.get(
             "/documents",
-            headers={"X-Default-Metadata": "NaN"},
+            headers={
+                "X-User-ID": "attacker",
+                "X-Roles": "not-an-application-role",
+            },
         )
 
-    assert response.status_code == 400
-    assert response.json()["error"]["code"] == "VALIDATION_ERROR"
-    assert sdk.list_args is None
+    assert response.status_code == 200
+    assert sdk.list_args is not None
 
 
 def test_list_passes_opaque_cursor_limit_and_status_to_dms():
@@ -249,7 +250,7 @@ def test_liveness_and_injected_sdk_readiness_are_available_without_dms_health_ap
 def test_application_version_matches_the_distribution_version():
     app = create_application(FakeSDK())
 
-    assert app.version == "0.5.0"
+    assert app.version == "0.6.0"
 
 
 def test_host_readiness_check_can_return_service_unavailable():

@@ -1,7 +1,7 @@
 ---
 title: dms-core
 created: 2026-07-11
-updated: 2026-09-03
+updated: 2026-09-04
 type: entity
 tags: [dms-core, dms, document, metadata, storage, api]
 sources: [raw/articles/dms-core-api-v0.2.0.md, raw/articles/dms-core-api-v0.3.0.md, raw/articles/dms-core-wiki-api-reference-v0.7.0.md, raw/articles/dms-core-wiki-configuration-v0.7.0.md, raw/articles/dms-core-wiki-examples-v0.7.0.md, raw/articles/dms-core-config-v0.2.0.md, raw/articles/dms-core-config-v0.3.0.md, raw/articles/dms-core-env-example-v0.3.0.md, raw/articles/dms-core-examples-v0.2.0.md, raw/articles/dms-core-examples-v0.3.0.md, raw/articles/dms-core-messaging-v0.2.0.md, raw/articles/docmesh-config-wiki-api-reference-v0.1.0.md, raw/articles/docmesh-config-wiki-configuration-v0.1.0.md, raw/articles/docmesh-config-wiki-examples-v0.1.0.md, raw/articles/docmesh-config-env-example-v0.1.0.md, raw/articles/docmesh-py-core-wiki-api-reference-v0.6.0.md, raw/articles/docmesh-py-core-wiki-configuration-v0.6.0.md, raw/articles/docmesh-py-core-wiki-examples-v0.6.0.md, raw/articles/docmesh-py-core-env-example-v0.6.0.md, raw/articles/dms-core-wiki-api-reference-v0.9.0.md, raw/articles/dms-core-wiki-examples-v0.9.0.md, raw/articles/dms-core-wiki-api-reference-v0.10.0.md, raw/articles/dms-core-wiki-examples-v0.10.0.md, raw/articles/dms-core-wiki-api-reference-v0.11.0.md, raw/articles/dms-core-wiki-examples-v0.11.0.md]
@@ -55,7 +55,7 @@ All ordinary document and recovery operations require keyword-only `partition: D
 
 The v0.11 facade keeps sync/native-async factories, host `AccessContext`/access-policy seams, operation observers, capability protocols, close-safe streams, public/internal metadata separation, and structured error fields. It does not expose the v0.10 `DmsOperationContext` or scoped facade, environment/client factory, HTTP helper, global health/close, search, presigned URLs, broker API, or unknown-size/async input-stream upload. ^[raw/articles/dms-core-wiki-api-reference-v0.11.0.md] ^[raw/articles/dms-core-wiki-examples-v0.11.0.md]
 
-This workspace declares `dms-core>=0.11.0` and `uv run` resolves `dms-core` `0.11.0`; the runtime probe matched the documented export counts, factory signatures, and partition-required methods. The consumer is not yet v0.11-compatible: `uv run pytest -q` fails during collection because `docmesh_doc/dependencies.py:75` references removed `dms.DmsOperationContext`, so four test modules do not collect.
+This workspace declares `dms-core>=0.11.0` and `uv run` resolves `dms-core` `0.11.0`; the runtime probe matched the documented export counts, factory signatures, and partition-required methods. The FastAPI consumer now binds every request to its configured single personal partition and passes the v0.11 `partition`/`access_context` contract through all 27 sync operations. Unit and MinIO-backed integration tests pass.
 
 ## docmesh-config boundary
 

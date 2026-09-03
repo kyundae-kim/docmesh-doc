@@ -1,11 +1,36 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Annotated
 
 import dms
-from fastapi import Depends, Header, HTTPException, Request, status
+from fastapi import Depends, HTTPException, Request, status
 
-from docmesh_doc.document_http import parse_metadata
+
+@dataclass(frozen=True, slots=True)
+class DmsApplicationContext:
+    """The one DMS identity and partition owned by this application."""
+
+    user_id: str
+    partition: dms.DocumentPartition
+    access_context: dms.AccessContext
+
+
+def build_dms_application_context(user_id: str) -> DmsApplicationContext:
+    normalized_user_id = user_id.strip()
+    if not normalized_user_id:
+        raise dms.ConfigurationError(
+            "DMS_APPLICATION_USER_ID must be a non-empty string"
+        )
+    return DmsApplicationContext(
+        user_id=normalized_user_id,
+        partition=dms.DocumentPartition.personal(normalized_user_id),
+        access_context=dms.AccessContext(
+            subject=normalized_user_id,
+            user_id=normalized_user_id,
+            roles=frozenset({"admin"}),
+        ),
+    )
 
 
 def get_dms_sdk(request: Request) -> dms.DefaultDocumentManagementSDK:
@@ -18,70 +43,19 @@ def get_dms_sdk(request: Request) -> dms.DefaultDocumentManagementSDK:
     return sdk
 
 
+def get_dms_application_context(request: Request) -> DmsApplicationContext:
+    context = getattr(request.app.state, "dms_context", None)
+    if context is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="DMS application is not ready",
+        )
+    return context
+
+
 RawDmsSdk = Annotated[dms.DefaultDocumentManagementSDK, Depends(get_dms_sdk)]
-
-
-def get_dms_operation_context(
-    subject: Annotated[str | None, Header(alias="X-Subject")] = None,
-    user_id: Annotated[str | None, Header(alias="X-User-ID")] = None,
-    tenant: Annotated[str | None, Header(alias="X-Tenant-ID")] = None,
-    roles: Annotated[str | None, Header(alias="X-Roles")] = None,
-    created_by: Annotated[str | None, Header(alias="X-Created-By")] = None,
-    idempotency_scope: Annotated[
-        str | None,
-        Header(alias="X-Idempotency-Scope"),
-    ] = None,
-    audit_actor: Annotated[str | None, Header(alias="X-Audit-Actor")] = None,
-    default_metadata: Annotated[
-        str | None,
-        Header(alias="X-Default-Metadata"),
-    ] = None,
-) -> dms.DmsOperationContext:
-    """Build the transport-neutral DMS scope from trusted request headers.
-
-    Deployments with an authentication provider can override this dependency
-    and construct the same context from verified claims instead.
-    """
-
-    normalized_roles = frozenset(
-        role
-        for role in (
-            item.strip() for item in (roles or "").split(",")
-        )
-        if role
-    )
-    access = None
-    if subject or user_id or tenant or normalized_roles:
-        access = dms.AccessContext(
-            subject=subject,
-            user_id=user_id,
-            tenant=tenant,
-            roles=normalized_roles,
-        )
-    return dms.DmsOperationContext(
-        access=access,
-        user_id=user_id,
-        created_by=created_by or subject,
-        idempotency_scope=idempotency_scope,
-        audit_actor=audit_actor or subject,
-        default_metadata=parse_metadata(
-            default_metadata,
-            field_name="X-Default-Metadata",
-        ),
-    )
-
-
+DmsSdk = RawDmsSdk
 DmsContext = Annotated[
-    dms.DmsOperationContext,
-    Depends(get_dms_operation_context),
+    DmsApplicationContext,
+    Depends(get_dms_application_context),
 ]
-
-
-def get_scoped_dms_sdk(
-    sdk: RawDmsSdk,
-    context: DmsContext,
-) -> dms.ScopedDocumentManagementSDK:
-    return sdk.scoped(context)
-
-
-DmsSdk = Annotated[dms.ScopedDocumentManagementSDK, Depends(get_scoped_dms_sdk)]

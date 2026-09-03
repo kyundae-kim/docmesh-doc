@@ -34,6 +34,7 @@ class DmsSettings:
     minio_secure: bool = False
     minio_region: str | None = None
     max_file_size: int | None = None
+    application_user_id: str = "docmesh-doc"
     root_path: str = ""
     cors_origins: tuple[str, ...] = ()
 
@@ -90,8 +91,7 @@ class DmsSettings:
         origins = tuple(
             origin
             for origin in (
-                part.strip()
-                for part in (read("CORS_ORIGINS", "") or "").split(",")
+                part.strip() for part in (read("CORS_ORIGINS", "") or "").split(",")
             )
             if origin
         )
@@ -107,6 +107,11 @@ class DmsSettings:
                 ) from error
             if max_file_size <= 0:
                 raise dms.ConfigurationError("DMS_MAX_FILE_SIZE must be positive")
+
+        application_user_id = read("DMS_APPLICATION_USER_ID") or read(
+            "DMS_USER_ID",
+            "docmesh-doc",
+        )
 
         return cls(
             metadata_backend=backend,
@@ -124,6 +129,7 @@ class DmsSettings:
             minio_secure=boolean("MINIO_SECURE", False),
             minio_region=read("MINIO_REGION"),
             max_file_size=max_file_size,
+            application_user_id=application_user_id or "docmesh-doc",
             root_path=root_path,
             cors_origins=origins,
         )
@@ -147,14 +153,14 @@ class DmsRuntime:
         try:
             with self.engine.connect():
                 pass
-        except Exception:
+        except Exception:  # noqa: BLE001 - readiness must fail closed
             details["metadata"] = {"ok": False}
         else:
             details["metadata"] = {"ok": True}
 
         try:
             bucket_exists = self.minio_client.bucket_exists(self.bucket_name)
-        except Exception:
+        except Exception:  # noqa: BLE001 - readiness must fail closed
             bucket_exists = False
         details["object_store"] = {"ok": bool(bucket_exists)}
 
@@ -228,7 +234,7 @@ def _create_minio_client(settings: DmsSettings) -> Minio:
 
 
 def create_dms_runtime(settings: DmsSettings | None = None) -> DmsRuntime:
-    """Create the host resources and inject them into the v0.9 DMS factory."""
+    """Create host resources and inject them into the v0.11 DMS factory."""
 
     selected = settings or DmsSettings.from_env()
     engine = _create_engine(selected)

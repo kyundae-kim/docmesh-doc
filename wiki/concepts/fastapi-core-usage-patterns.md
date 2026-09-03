@@ -60,7 +60,7 @@ For v0.11, authentication dependencies construct `AccessContext` and a `Document
 
 The host selects sync or native-async factory assembly, registers engine/client/component readiness and shutdown with the FastAPI resource lifecycle, and lets DMS close only operation-owned files and content streams. HTTP error envelopes, status mapping, response schemas, and storage-key exclusion remain FastAPI/product policy because v0.11 provides structured DMS errors but no HTTP helper or global health/close API. ^[raw/articles/dms-core-wiki-api-reference-v0.11.0.md]
 
-The installed `dms-core` `0.11.0` runtime matches the documented factory and partition signatures. The current consumer still fails pytest collection at `docmesh_doc/dependencies.py:75` while referring to removed `DmsOperationContext`; the adapter must migrate before these patterns are executable.
+The installed `dms-core` `0.11.0` runtime matches the documented factory and partition signatures. The consumer now derives a fixed application identity and personal partition, passes the v0.11 `partition`/`access_context` arguments through every operation, and its unit plus MinIO-backed integration tests pass.
 
 ## Version note
 

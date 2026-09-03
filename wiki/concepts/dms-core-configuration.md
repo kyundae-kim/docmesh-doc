@@ -34,7 +34,7 @@ The sync factory validates the engine dialect, bucket name, and positive `max_fi
 
 Unlike the v0.10 user-scoped facade model, v0.11 has no `DmsOperationContext` or scoped facade. The host supplies `AccessContext` and an optional sync/async access policy, then constructs the required `DocumentPartition` for each normal document or recovery operation. Only explicitly global reset operations omit partition. ^[raw/articles/dms-core-wiki-api-reference-v0.11.0.md] ^[raw/articles/dms-core-wiki-examples-v0.11.0.md]
 
-The workspace declares and resolves `dms-core` `0.11.0`, and runtime signatures match this assembly boundary. The ordinary `uv run pytest -q` command currently fails at collection because the consumer still imports `dms.DmsOperationContext` from `docmesh_doc/dependencies.py:75`; this is a downstream migration blocker, not evidence that the v0.11 package factory is unavailable.
+The workspace declares and resolves `dms-core` `0.11.0`, and runtime signatures match this assembly boundary. The consumer now derives its configured application identity in the host layer and uses the v0.11 partition-required facade; the ordinary and MinIO-backed integration test selections pass.
 
 ## Storage and startup-health contract
 

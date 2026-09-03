@@ -44,7 +44,7 @@ Use `AccessContext` plus `DocumentAccessPolicy` for authorization and pass publi
 
 The v0.11 upload inputs remain bytes, SDK-opened file paths, and known-size synchronous binary streams; unknown-size and async input streams are not public. Native async assembly uses `AsyncDocumentManagementSDKFactory` or `from_async_components()`, while the host still owns injected resources and must complete `create_async()`/`ready()` inside its startup boundary. ^[raw/articles/dms-core-wiki-api-reference-v0.11.0.md] ^[raw/articles/dms-core-wiki-examples-v0.11.0.md]
 
-The installed runtime is `dms-core` `0.11.0` and matches these signatures, but the current consumer is not yet compatible: `uv run pytest -q` fails during collection at `docmesh_doc/dependencies.py:75` because `DmsOperationContext` no longer exists.
+The installed runtime is `dms-core` `0.11.0` and matches these signatures. The consumer derives one configured personal partition and fixed `AccessContext` at the application boundary, and its unit plus MinIO-backed integration tests pass.
 
 ## Assembly choices
 

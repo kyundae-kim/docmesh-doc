@@ -20,7 +20,7 @@ The v0.10 `DmsOperationContext` and scoped facades are no longer public. A reusa
 
 Source minimization therefore moves repeated scope construction into the FastAPI/host bridge without moving authorization or product policy into DMS. The bridge can centralize authenticated-claim → `AccessContext`/partition conversion, but it must retain host ownership of engine/client readiness, HTTP status/envelope mapping, hidden-deletion policy, response schemas, and storage-key exclusion. Stable `DmsError.code`, `category`, and `retryable` fields are the transport-neutral handoff; v0.11 has no `recommended_http_error()` helper. ^[raw/articles/dms-core-wiki-api-reference-v0.11.0.md]
 
-The workspace declares and resolves `dms-core` `0.11.0`; runtime probes match the documented exports and signatures. The consumer migration is incomplete: `docmesh_doc/dependencies.py:75` accesses removed `dms.DmsOperationContext`, and `uv run pytest -q` fails during collection in four test modules. The first migration gate is replacing that context/scoped dependency with explicit partition and access-context dependencies, then adding cursor, policy, and global/partition reset contract tests.
+The workspace declares and resolves `dms-core` `0.11.0`; runtime probes match the documented exports and signatures. The consumer migration is complete for the single-user application boundary: `docmesh_doc/dependencies.py` derives a fixed `AccessContext` and personal `DocumentPartition`, and the adapter passes them to all 27 sync operations. Unit and MinIO-backed integration tests cover the migration boundary.
 
 ## v0.10.0 reconciliation
 

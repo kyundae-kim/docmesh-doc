@@ -80,7 +80,7 @@ The v0.11 DMS API removes `DmsOperationContext` and scoped facades. FastAPI auth
 
 `DocumentManagementSDKFactory` and `AsyncDocumentManagementSDKFactory` remain host-injected assembly points. The managed resource owns host-created engine/client/component readiness and shutdown, while DMS owns per-operation file/stream cleanup. FastAPI continues to provide HTTP response schemas, error/status projection, storage-key exclusion, and product authorization policy because v0.11 exposes no environment loader, HTTP helper, global health, or global close API. ^[raw/articles/dms-core-wiki-api-reference-v0.11.0.md]
 
-The workspace resolves `dms-core` `0.11.0`, but its current adapter still references `dms.DmsOperationContext` at `docmesh_doc/dependencies.py:75`; the ordinary pytest command fails during collection in four test modules. Migration tests should cover partition derivation, cursor/partition isolation, access-policy mapping, and explicit global-versus-partition reset calls before treating the app assembly as v0.11-compatible.
+The workspace resolves `dms-core` `0.11.0`, and its adapter now derives a fixed application identity and personal partition instead of using the removed `dms.DmsOperationContext`. The ordinary and MinIO-backed integration test selections pass; migration coverage includes partition derivation, cursor/partition forwarding, and explicit global-versus-partition reset calls.
 
 ## Open questions
 

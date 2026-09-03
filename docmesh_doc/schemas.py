@@ -9,6 +9,13 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from docmesh_doc.json_utils import ensure_json_serializable
 
 
+class DocumentPartitionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    kind: dms.PartitionKind
+    partition_id: str
+
+
 class DocumentMetadataResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
@@ -19,9 +26,9 @@ class DocumentMetadataResponse(BaseModel):
     status: dms.DocumentStatus
     created_at: datetime
     updated_at: datetime
+    partition: DocumentPartitionResponse
     deleted_at: datetime | None = None
     created_by: str | None = None
-    user_id: str | None = None
     checksum: str | None = None
     metadata: Any = Field(
         default_factory=dict,
@@ -38,9 +45,8 @@ class BytesUploadRequest(BaseModel):
     filename: str = Field(min_length=1)
     content_type: str = Field(min_length=1)
     document_id: str | None = None
-    metadata: Any = None
+    metadata: dict[str, Any] | None = None
     created_by: str | None = None
-    user_id: str | None = None
     checksum: str | None = None
     idempotency_key: str | None = None
     idempotency_scope: str | None = None
@@ -131,6 +137,7 @@ class ReconciliationResultResponse(BaseModel):
 class BatchReconciliationResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
+    partition: DocumentPartitionResponse
     status: dms.DocumentStatus
     action: dms.RecoveryAction
     dry_run: bool

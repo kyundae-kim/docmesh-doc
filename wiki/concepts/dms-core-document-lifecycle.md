@@ -50,7 +50,7 @@ Public metadata now carries the partition projection and continues to exclude `s
 
 The object/metadata consistency flow, close-safe sync/async content streams, caller-owned upload streams and copy sinks, deletion results, structured errors, and bounded recovery remain in place. `clear_partition_data()` and `initialize_partition_for_data_load()` require a partition; only `clear_all_data()` and `initialize_for_data_load()` operate globally without one. Recovery candidate listing remains bounded with status plus offset/limit, while ordinary document listing is cursor-based and binds partition, status, and page size. ^[raw/articles/dms-core-wiki-api-reference-v0.11.0.md] ^[raw/articles/dms-core-wiki-examples-v0.11.0.md]
 
-The current consumer has not migrated this boundary: the normal pytest command fails during collection at `docmesh_doc/dependencies.py:75` because `dms.DmsOperationContext` was removed in the installed `dms-core` `0.11.0`.
+The current consumer has migrated this boundary: the application derives one configured personal partition and fixed `AccessContext`, passes them to every v0.11 operation, and exposes both global and partition-scoped reset routes.
 
 소비 host의 inline content와 attachment download는 모두 `sync DocumentContentStream`을 context manager로 소비하므로 public body 조회가 object 전체를 메모리에 복사하지 않는다. 통합 test fixture도 assertion 실패와 명시 삭제 성공 양쪽에서 best-effort hard delete를 수행해 테스트 문서 lifecycle을 닫는다. 세부 최적화는 [[dms-application-optimization]]과 [[dms-core-usage-patterns]]에 연결한다.
 
